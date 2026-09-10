@@ -10,6 +10,14 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+- The interface uses the whole window. Screens were laid out in a narrow
+  column with empty space either side of it; now a diff, a file tree, a
+  commit log and a file get the width the window has. Running text is
+  still set to a readable line length, so the signed-out page and the
+  documentation read the same as before.
+- The signed-out page opens with what you can do here instead of
+  repeating the name and the logo from the bar above it.
+
 ## v0.2.0 - 2026-09-10
 
 - An installation can carry a name of its own. `ORIGOWEB_PRODUCT_NAME` is
