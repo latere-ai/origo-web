@@ -388,7 +388,32 @@ request and the cookie.
 | `ORIGOWEB_PUBLIC_URL` | none, required | its own base URL, used to build the redirect URI and absolute links |
 | `ORIGOWEB_CLONE_HOST` | `ORIGOWEB_ORIGO_URL` | what the clone URLs on the overview name, for an installation whose git host differs from its API address |
 | `ORIGOWEB_SSH_CLONE_HOST` | unset | the host shown for the SSH clone form; unset means only the HTTPS form is shown, which is what an installation without the SSH surface gets |
+| `ORIGOWEB_KEYS_URL` | unset | a key management surface; the key screen and its navigation entry exist only when it is set |
+| `ORIGOWEB_ISSUER_NAME` | unset | what the sign-in button calls the identity provider |
+| `ORIGOWEB_PRODUCT_NAME` | `Origo` | what the installation calls itself, in the masthead, the tab title and the sign-in heading |
+| `ORIGOWEB_PROJECT_URL` | the Origo repository | where the signed-out page links to the open-source project |
+| `ORIGOWEB_BRAND_MARK` | unset | the brand mark drawn beside the product name; `latere` is the only value this binary carries, and an unknown value is refused at start |
 | `AUTH_URL`, `AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET`, `AUTH_REDIRECT_URL`, `AUTH_COOKIE_KEY`, `AUTH_AUDIENCE`, `AUTH_SCOPES` | the library's | read by `authkit/oidc` with the prefix `ORIGOWEB`; `AUTH_AUDIENCE` must be the audience Origo verifies, and `AUTH_URL` must be an issuer in the installation's `ORIGO_OIDC_ISSUERS` |
+
+### The software and the installation are not the same name
+
+Origo is the open-source project. A running installation is an instance
+of it, and may be operated under a name of its own: Latere's is Latere
+Code. The distinction is a configuration boundary and not a string in a
+template.
+
+- `ORIGOWEB_PRODUCT_NAME` is the name the interface calls itself,
+  everywhere it names itself. Unset, it is the project's own name, so
+  an installation nobody named is Origo and says so.
+- `ORIGOWEB_BRAND_MARK` is separate from the name, because a mark
+  belongs to whoever owns it. Nothing is drawn unless an operator asks
+  for one by name; the only mark the binary carries is Latere's, and an
+  operator who names their own installation gets their name and not
+  Latere's logo.
+- The signed-out page, the one screen a stranger reads, says which
+  installation this is, that the software is open source, and links to
+  `ORIGOWEB_PROJECT_URL`. Every other screen is for a person who is
+  already inside and says none of it.
 
 **It runs on its own hostname**, not on Origo's. Origo's git surface
 claims `/{owner}/{slug}/...` for smart HTTP, which is precisely the
