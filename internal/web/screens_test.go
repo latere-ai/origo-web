@@ -636,3 +636,64 @@ func brand(t *testing.T, page *html.Node) *html.Node {
 	t.Fatal("the page has no masthead brand")
 	return nil
 }
+
+// TestTheMarkBelongsToTheInstallationNotTheSoftware asserts the other half of
+// the branding rule. A logo is its owner's: the software draws none unless an
+// operator asked for one by name, and the one this build carries is Latere's.
+//
+// The mark is inline, in currentColor, so it is ink in both themes, fetches
+// nothing, and is sized in its own attributes so it is right before the
+// stylesheet arrives and if it never does.
+func TestTheMarkBelongsToTheInstallationNotTheSoftware(t *testing.T) {
+	plain := newHarness(t)
+	for name, rec := range plain.everyPage() {
+		if got := elements(doc(t, rec.Body.String()), "svg"); len(got) > 0 {
+			t.Errorf("%s: an installation that asked for no mark was drawn %d", name, len(got))
+		}
+	}
+
+	h := newHarness(t, func(c *config.Config) {
+		c.ProductName = "Latere Code"
+		c.Mark = config.MarkLatere
+	})
+	for name, rec := range h.everyPage() {
+		page := doc(t, rec.Body.String())
+		marks := elements(page, "svg")
+		if len(marks) == 0 {
+			t.Errorf("%s: the installation asked for a mark and got none", name)
+			continue
+		}
+		for _, svg := range marks {
+			if attr(svg, "fill") != "currentColor" {
+				t.Errorf("%s: the mark is filled with %q, so it is one colour in two themes", name, attr(svg, "fill"))
+			}
+			if attr(svg, "width") == "" || attr(svg, "height") == "" {
+				t.Errorf("%s: the mark has no size of its own, so it has none without the stylesheet", name)
+			}
+			if attr(svg, "style") != "" {
+				t.Errorf("%s: the mark carries an inline style, which the policy refuses", name)
+			}
+			if len(elements(svg, "path")) != 6 {
+				t.Errorf("%s: the mark drew %d paths", name, len(elements(svg, "path")))
+			}
+		}
+	}
+
+	// Beside the product name the mark is decorative: the name is the
+	// accessible name, and a second one would be read twice. Standing on
+	// its own, on the page a stranger lands on, it carries the name.
+	head := brand(t, doc(t, h.get("/", h.signedIn("alice")).Body.String()))
+	if got := elements(head, "svg"); len(got) != 1 || attr(got[0], "aria-hidden") != "true" {
+		t.Error("the mark beside the product name is not marked decorative")
+	}
+	gate := doc(t, h.get("/sign-in").Body.String())
+	var named bool
+	for _, svg := range elements(gate, "svg") {
+		if attr(svg, "role") == "img" && attr(svg, "aria-label") == "Latere" {
+			named = true
+		}
+	}
+	if !named {
+		t.Error("the mark on the signed-out page carries no accessible name")
+	}
+}

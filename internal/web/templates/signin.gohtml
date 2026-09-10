@@ -2,6 +2,7 @@
 {{define "main"}}
 <main class="gate stack">
   <div class="panel stack">
+    {{- if .View.Mark}}{{template "mark"}}{{end}}
     <h1>{{.Heading}}</h1>
     <p class="meta">{{.Lead}}</p>
     {{- if .Refused}}

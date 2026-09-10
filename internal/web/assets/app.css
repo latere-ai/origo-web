@@ -177,12 +177,19 @@ p { margin: 0; }
   border-bottom: 1px solid var(--border);
 }
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
   font-family: var(--font-mono);
   font-size: var(--t-15);
   font-weight: 600;
   letter-spacing: -0.02em;
   text-decoration: none;
 }
+
+/* The mark is drawn in currentColor, so it is ink in the light theme and
+ * ink in the dark one, and it needs no second copy and no fetch. */
+.mark { display: block; width: auto; height: 1.35em; }
 .masthead nav { display: flex; gap: var(--s-5); flex-wrap: wrap; align-items: center; }
 .masthead nav a, .masthead nav button {
   color: var(--fg-2);
@@ -440,6 +447,7 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
 
 .gate { max-width: 460px; margin: var(--s-9) auto; }
 .gate h1 { font-family: var(--font-mono); font-size: var(--t-24); }
+.gate .mark { height: 40px; }
 .clone-shape { font-family: var(--font-mono); font-size: var(--t-12); color: var(--fg-2); white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* ---- pager ---- */
