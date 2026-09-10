@@ -10,6 +10,9 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+- A repository with a long identifier no longer makes the choices on the
+  agent tokens screen scroll sideways. The name wraps in place.
+
 ## v0.4.0 - 2026-09-11
 
 - The bar at the top of every screen says which account you are signed
