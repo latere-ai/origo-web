@@ -352,6 +352,12 @@ label, legend { font-size: var(--t-12); color: var(--fg-2); }
 .option-title { font-family: var(--font-mono); font-size: var(--t-12); color: var(--fg-1); }
 .option-note { font-size: var(--t-12); color: var(--fg-2); }
 
+/* An option carries names nobody chose the length of: a repository
+ * identifier is opaque and runs to 128 characters, and a branch name has no
+ * spaces to break at. Both may break anywhere, so a long one wraps inside the
+ * option rather than scrolling the control sideways to be read. */
+.option-title, .option-note { min-width: 0; overflow-wrap: anywhere; }
+
 /* No native menu anywhere. A select's popup is drawn by the operating system
  * and no rule here reaches it, so the interface does not use one: a fixed set
  * of choices is a radio group, and a long set is a radio group in a box that

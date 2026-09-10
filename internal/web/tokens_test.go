@@ -487,3 +487,48 @@ func TestTheDocumentationIsSelfContained(t *testing.T) {
 		t.Error("the read line does not point at the installation")
 	}
 }
+
+// TestALongIdentifierDoesNotScrollAControlSideways asserts the case the
+// fixture repository hides. Its identifier is six characters; a real one is
+// opaque and may run to 128, and a branch name has no spaces to break at
+// either. An option holding one must be able to break it, or the box the
+// choices sit in scrolls sideways to read a single row.
+func TestALongIdentifierDoesNotScrollAControlSideways(t *testing.T) {
+	long := strings.Repeat("a1b2c3d4", 16)
+	h := newHarness(t)
+	h.answering(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/repos" {
+			writeJSON(w, map[string]any{"repos": []origo.Repo{
+				{ID: long, Owner: "infra", Slug: "origo", DefaultBranch: "main"},
+			}})
+			return
+		}
+		h.fake.ServeHTTP(w, r)
+	})
+	page := doc(t, h.get("/tokens", h.signedIn("alice")).Body.String())
+
+	var carried bool
+	find(page, func(e *html.Node) {
+		if attr(e, "class") == "option-note" && text(e) == long {
+			carried = true
+		}
+	})
+	if !carried {
+		t.Fatalf("no option carries the identifier the installation listed")
+	}
+
+	// The two roles that hold a name nobody chose the length of may break
+	// it. Nothing else in the interface can, because the text is one word.
+	css := string(mustAsset(t, "app.css"))
+	var breaks bool
+	for _, rule := range cssRules(css) {
+		if strings.TrimSpace(rule.selector) != ".option-title, .option-note" {
+			continue
+		}
+		breaks = strings.Contains(rule.body, "overflow-wrap: anywhere") &&
+			strings.Contains(rule.body, "min-width: 0")
+	}
+	if !breaks {
+		t.Error("an option cannot break a long identifier, so the choices scroll sideways")
+	}
+}
