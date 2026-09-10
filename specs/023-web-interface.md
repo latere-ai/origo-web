@@ -392,7 +392,7 @@ request and the cookie.
 | `ORIGOWEB_SSH_CLONE_HOST` | unset | the host shown for the SSH clone form; unset means only the HTTPS form is shown, which is what an installation without the SSH surface gets |
 | `ORIGOWEB_KEYS_URL` | unset | a key management surface; the key screen and its navigation entry exist only when it is set |
 | `ORIGOWEB_ISSUER_NAME` | unset | what the sign-in button calls the identity provider |
-| `ORIGOWEB_PRODUCT_NAME` | `Origo` | what the installation calls itself, in the masthead, the tab title and the sign-in heading |
+| `ORIGOWEB_PRODUCT_NAME` | `Origo` | what the installation calls itself, in the masthead and the tab title |
 | `ORIGOWEB_PROJECT_URL` | the Origo repository | where the signed-out page links to the open-source project |
 | `ORIGOWEB_BRAND_MARK` | unset | the brand mark drawn beside the product name; `latere` is the only value this binary carries, and an unknown value is refused at start |
 | `AUTH_URL`, `AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET`, `AUTH_REDIRECT_URL`, `AUTH_COOKIE_KEY`, `AUTH_AUDIENCE`, `AUTH_SCOPES` | the library's | read by `authkit/oidc` with the prefix `ORIGOWEB`; `AUTH_AUDIENCE` must be the audience Origo verifies, and `AUTH_URL` must be an issuer in the installation's `ORIGO_OIDC_ISSUERS` |
