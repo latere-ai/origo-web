@@ -1,6 +1,6 @@
-# origoweb
+# origo-web
 
-A read-only web interface for an [Origo](../README.md) installation:
+A read-only web interface for an [Origo](https://github.com/latere-ai/origo) installation:
 repositories, branches and tags, the commit log, a commit's diff, the file
 tree, a file. In the spirit of cgit and sourcehut.
 
