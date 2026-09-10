@@ -10,6 +10,11 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+- The section list on the documentation screen sits beside the words it
+  indexes instead of at the far right of the window, so there is no
+  longer a wide empty band between the two. The tables and the samples
+  still run the full width.
+
 ## v0.4.1 - 2026-09-11
 
 - A repository with a long identifier no longer makes the choices on the

@@ -624,3 +624,8 @@ repository, so they assert against the real read API and not a mock.
   than scrolling its control sideways: a 128-character repository
   identifier, the longest one there can be (proposed: `internal/web`,
   `TestALongIdentifierDoesNotScrollAControlSideways`).
+- The documentation's section list is the first column of the body, so
+  the words begin one gutter from where the list ends: running text
+  stops at the measure, and the width a column does not use falls after
+  the last piece of content rather than between two of them (proposed:
+  `internal/web`, `TestTheBodyKeepsTheMastheadsEdges`).
