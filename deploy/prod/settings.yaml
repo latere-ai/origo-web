@@ -1,9 +1,13 @@
-# The four addresses this installation runs on.
+# The four addresses this installation runs on, and the name it goes by.
 #
 # ORIGOWEB_ORIGO_URL is the in-cluster Service, so a page is rendered from
 # reads that never leave the cluster. ORIGOWEB_CLONE_HOST is the public
 # hostname, which is the same one this interface answers on: a reader copies
 # the clone line from a page served by the host they clone from.
+#
+# This installation is Latere's, so it carries Latere's name and Latere's
+# mark. Both are settings and neither has a default: an installation nobody
+# names calls itself Origo and draws no mark at all.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,3 +26,7 @@ spec:
               value: https://code.latere.ai
             - name: ORIGOWEB_ISSUER_NAME
               value: Latere
+            - name: ORIGOWEB_PRODUCT_NAME
+              value: Latere Code
+            - name: ORIGOWEB_BRAND_MARK
+              value: latere

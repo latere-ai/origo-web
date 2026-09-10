@@ -52,6 +52,14 @@ spec:
             # is what an installation without the SSH surface gets.
             # - name: ORIGOWEB_SSH_CLONE_HOST
             #   value: git.example.com
+            # The name this installation goes by, and the mark beside it.
+            # Unset is the neutral default: the interface calls itself
+            # Origo, links to the project, and draws nobody's logo. A
+            # target that has a name of its own sets both in its overlay.
+            # - name: ORIGOWEB_PRODUCT_NAME
+            #   value: Example Code
+            # - name: ORIGOWEB_BRAND_MARK
+            #   value: latere
             - name: ORIGOWEB_AUTH_URL
               valueFrom:
                 secretKeyRef: {name: origoweb, key: auth-url}
