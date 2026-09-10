@@ -579,3 +579,44 @@ repository, so they assert against the real read API and not a mock.
   home page is the
   name form and the recently-opened list, and the rest of the interface
   is unaffected (proposed: `test/e2e`, `TestListDegradesWithoutDirectory`).
+- The masthead names the signed-in person on every screen, once, beside
+  the sign-out control, and names nobody when nobody is signed in. The
+  claim shown is the most human one the session already holds, in the
+  order display name, name, address, subject, and it costs no call to
+  the issuer and no scope the client does not already request
+  (proposed: `internal/session`, `TestWhoIsTheMostHumanClaimPresent`,
+  `TestReadCarriesTheTokenAndWhoHoldsIt`; `internal/web`,
+  `TestTheSignedInAccountIsNamed`,
+  `TestTheAccountShownIsTheMostHumanClaimTheTokenCarries`).
+- A screen with nothing on it says which account it is empty for: the
+  repositories screen without a directory, and with an empty one
+  (proposed: `internal/web`,
+  `TestAPageWithNothingOnItSaysWhichAccountItIsEmptyFor`).
+- The front door has three states and answers a status for each. A
+  visitor who presented no credential reads the way in and no claim
+  about a credential, at 200. A session whose credential Origo turned
+  away reads the refusal, at 401, with the dead credential cleared. A
+  session Origo answers reads the repositories screen (proposed:
+  `internal/web`, `TestTheFrontDoorClaimsNothingItCannotKnow`).
+- The body of a screen keeps the masthead's left and right edges: the
+  measure binds a block of text and never a container, no box between
+  the masthead and the content narrows or centres itself, and the
+  documentation holds its far edge with the section list beside the
+  words (proposed: `internal/web`, `TestTheBodyKeepsTheMastheadsEdges`).
+- No screen carries a native menu: no `select`, `option`, `optgroup` or
+  `datalist` on any page, and the long choices are radio groups in a box
+  that scrolls (proposed: `internal/web`,
+  `TestNoScreenCarriesANativeMenu`).
+- Text that does the same job carries the same role class, each role
+  defined by one rule: an option is a title and a note as two elements,
+  no choice marks its title by hand, no field hint is styled by hand,
+  and no element on any screen carries an inline style (proposed:
+  `internal/web`, `TestTextThatDoesTheSameJobLooksTheSame`).
+- One left edge holds on a screen: no notice sits inside a surface that
+  pads its own content, so a heading and the first line below it start
+  together (proposed: `internal/web`,
+  `TestOneLeftEdgeHoldsOnEveryScreen`).
+- No text a reader meets carries an em dash, over every rendered screen
+  and over the three surfaces the sentences come from: the templates,
+  this package's Go strings, and the release notes (proposed:
+  `internal/web`, `TestNoScreenCarriesAnEmDash`).
