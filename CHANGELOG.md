@@ -10,6 +10,8 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+## v0.4.1 - 2026-09-11
+
 - A repository with a long identifier no longer makes the choices on the
   agent tokens screen scroll sideways. The name wraps in place.
 
