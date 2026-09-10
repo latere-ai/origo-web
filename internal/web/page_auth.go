@@ -42,7 +42,6 @@ func (s *Server) begin(w http.ResponseWriter, r *http.Request, section string) r
 // signInData is the front door, and the one page written for a stranger.
 type signInData struct {
 	View        view
-	Heading     string
 	ButtonLabel string
 	CloneHTTPS  string
 	CloneSSH    string
@@ -66,7 +65,6 @@ func (s *Server) signInPage(v view, returnTo string, refused bool) signInData {
 	}
 	return signInData{
 		View:        v,
-		Heading:     s.cfg.Name(),
 		ButtonLabel: label,
 		CloneHTTPS:  s.cfg.CloneHTTPS("<owner>", "<name>"),
 		CloneSSH:    s.cfg.CloneSSH("<owner>", "<name>"),

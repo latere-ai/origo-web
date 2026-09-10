@@ -79,3 +79,36 @@ func text(n *html.Node) string {
 	walk(n)
 	return strings.Join(strings.Fields(b.String()), " ")
 }
+
+// within reports whether an element sits inside one carrying the given
+// class, which is how a test tells the interface's own markup from the
+// repository content it renders.
+func within(n *html.Node, class string) bool {
+	for p := n.Parent; p != nil; p = p.Parent {
+		if strings.Contains(attr(p, "class"), class) {
+			return true
+		}
+	}
+	return false
+}
+
+// textOutside is the page's text with every subtree carrying the given class
+// left out. A readme says whatever the repository says, and that is not the
+// interface speaking.
+func textOutside(n *html.Node, class string) string {
+	var b strings.Builder
+	var walk func(*html.Node)
+	walk = func(x *html.Node) {
+		if x.Type == html.ElementNode && strings.Contains(attr(x, "class"), class) {
+			return
+		}
+		if x.Type == html.TextNode {
+			b.WriteString(x.Data)
+		}
+		for c := x.FirstChild; c != nil; c = c.NextSibling {
+			walk(c)
+		}
+	}
+	walk(n)
+	return strings.Join(strings.Fields(b.String()), " ")
+}

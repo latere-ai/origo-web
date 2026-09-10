@@ -367,8 +367,7 @@ func TestTheSignedOutPageCarriesTheOpenSourceStory(t *testing.T) {
 	body := text(elements(page, "main")[0])
 
 	for _, want := range []string{
-		"Latere Code",                  // which installation this is
-		"hosted installation of Origo", // and that it is an instance
+		"hosted installation of Origo", // which installation this is
 		"open-source git server",       // what the software is
 		"Anyone can read the code, and anyone can run their own.",
 		"Continue with Latere", // the way in
@@ -377,6 +376,16 @@ func TestTheSignedOutPageCarriesTheOpenSourceStory(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Errorf("the signed-out page does not say %q:\n%s", want, body)
 		}
+	}
+
+	// It leads with what a reader can do here. Which installation this is
+	// comes from the masthead above, which is on every screen, so the card
+	// does not restate the name.
+	if got := text(elements(page, "h1")[0]); got != "Sign in to read git repositories" {
+		t.Errorf("the signed-out page leads with %q", got)
+	}
+	if strings.Contains(body, "Latere Code") {
+		t.Errorf("the card repeats the name the masthead already carries:\n%s", body)
 	}
 
 	// The link to the project is a real link to the configured address.

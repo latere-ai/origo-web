@@ -663,6 +663,9 @@ func TestTheMarkBelongsToTheInstallationNotTheSoftware(t *testing.T) {
 			t.Errorf("%s: the installation asked for a mark and got none", name)
 			continue
 		}
+		if len(elements(brand(t, page), "svg")) != 1 {
+			t.Errorf("%s: the mark is drawn somewhere other than the masthead", name)
+		}
 		for _, svg := range marks {
 			if attr(svg, "fill") != "currentColor" {
 				t.Errorf("%s: the mark is filled with %q, so it is one colour in two themes", name, attr(svg, "fill"))
@@ -676,24 +679,67 @@ func TestTheMarkBelongsToTheInstallationNotTheSoftware(t *testing.T) {
 			if len(elements(svg, "path")) != 6 {
 				t.Errorf("%s: the mark drew %d paths", name, len(elements(svg, "path")))
 			}
+			// Beside the product name the mark is decorative: the
+			// name is the accessible name, and a second one would
+			// be read twice.
+			if attr(svg, "aria-hidden") != "true" {
+				t.Errorf("%s: the mark beside the name is not marked decorative", name)
+			}
+		}
+	}
+}
+
+// TestTheIdentityAppearsOnceOnAScreen asserts the rule that keeps the
+// interface from introducing itself twice in one view: the masthead is where
+// this installation says which one it is, because it is on every page, and
+// nothing below it repeats the name or the mark. The screen a stranger lands
+// on leads with what they can do here instead.
+func TestTheIdentityAppearsOnceOnAScreen(t *testing.T) {
+	named := newHarness(t, func(c *config.Config) {
+		c.ProductName = "Latere Code"
+		c.Mark = config.MarkLatere
+	})
+	for name, rec := range named.everyPage() {
+		page := doc(t, rec.Body.String())
+		body := textOutside(elements(page, "body")[0], "readme")
+		if got := strings.Count(body, "Latere Code"); got != 1 {
+			t.Errorf("%s: the screen names the installation %d times, want once", name, got)
+		}
+		if got := text(brand(t, page)); got != "Latere Code" {
+			t.Errorf("%s: the one naming is not the masthead's, which says %q", name, got)
+		}
+		if got := len(elements(page, "svg")); got != 1 {
+			t.Errorf("%s: the mark is drawn %d times, want once, in the masthead", name, got)
 		}
 	}
 
-	// Beside the product name the mark is decorative: the name is the
-	// accessible name, and a second one would be read twice. Standing on
-	// its own, on the page a stranger lands on, it carries the name.
-	head := brand(t, doc(t, h.get("/", h.signedIn("alice")).Body.String()))
-	if got := elements(head, "svg"); len(got) != 1 || attr(got[0], "aria-hidden") != "true" {
-		t.Error("the mark beside the product name is not marked decorative")
-	}
-	gate := doc(t, h.get("/sign-in").Body.String())
-	var named bool
-	for _, svg := range elements(gate, "svg") {
-		if attr(svg, "role") == "img" && attr(svg, "aria-label") == "Latere" {
-			named = true
+	// An installation nobody named and nobody gave a mark: the masthead
+	// carries the project's own name, alone, and no screen restates it as a
+	// heading of its own.
+	plain := newHarness(t)
+	for name, rec := range plain.everyPage() {
+		page := doc(t, rec.Body.String())
+		if got := len(elements(page, "svg")); got != 0 {
+			t.Errorf("%s: an installation that asked for no mark was drawn %d", name, got)
+		}
+		if got := text(brand(t, page)); got != config.ProjectName {
+			t.Errorf("%s: the masthead says %q", name, got)
+		}
+		for _, tag := range []string{"h1", "h2", "h3"} {
+			for _, h := range elements(page, tag) {
+				if text(h) == config.ProjectName && !within(h, "readme") {
+					t.Errorf("%s: a %s repeats the name the masthead carries", name, tag)
+				}
+			}
 		}
 	}
-	if !named {
-		t.Error("the mark on the signed-out page carries no accessible name")
+
+	// And the page a stranger lands on leads with what they can do, which
+	// reads the same whether or not the installation has a name.
+	for _, h := range []*harness{named, plain} {
+		gate := doc(t, h.get("/sign-in").Body.String())
+		if got := text(elements(gate, "h1")[0]); got != "Sign in to read git repositories" {
+			t.Errorf("the signed-out page leads with %q", got)
+		}
 	}
 }

@@ -354,6 +354,7 @@ may make it navigate on change.
 | theme | light and dark from `prefers-color-scheme`, both defined; no theme switch, no cookie, no flash of the wrong theme because there is no script to cause one |
 | code and hashes | one monospace stack, used for paths, object ids, diffs, and file content, nowhere else |
 | narrow width | usable from 320 CSS pixels: the body never scrolls sideways; the tree, log, and diff tables scroll inside their own container |
+| identity | the masthead is where the installation names itself, once a screen: the name, and a mark beside it when one is configured. Nothing below it restates either |
 | focus and contrast | every interactive element has a visible focus ring that is not the colour alone; text and its background meet WCAG AA in both themes |
 | links | every navigation is an `<a href>` to a real URL, so a page can be bookmarked, opened in a new tab, and read by a crawler that runs nothing |
 | identifiers | line anchors on the file view (`#L42`) and per-file anchors on the diff |
@@ -410,9 +411,11 @@ template.
   for one by name; the only mark the binary carries is Latere's, and an
   operator who names their own installation gets their name and not
   Latere's logo.
-- The signed-out page, the one screen a stranger reads, says which
-  installation this is, that the software is open source, and links to
-  `ORIGOWEB_PROJECT_URL`. Every other screen is for a person who is
+- The signed-out page, the one screen a stranger reads, leads with what
+  a reader can do here, says that the software is open source, and links
+  to `ORIGOWEB_PROJECT_URL`. Which installation it is comes from the
+  masthead above it, which is on every screen, so the card does not
+  repeat the name or the mark. Every other screen is for a person who is
   already inside and says none of it.
 
 **It runs on its own hostname**, not on Origo's. Origo's git surface
