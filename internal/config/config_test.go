@@ -13,6 +13,7 @@ func setEnv(t *testing.T, kv map[string]string) {
 	for _, k := range []string{
 		"ORIGOWEB_ADDR", "ORIGOWEB_ORIGO_URL", "ORIGOWEB_PUBLIC_URL", "ORIGOWEB_CLONE_HOST",
 		"ORIGOWEB_SSH_CLONE_HOST", "ORIGOWEB_KEYS_URL", "ORIGOWEB_ISSUER_NAME",
+		"ORIGOWEB_PRODUCT_NAME", "ORIGOWEB_PROJECT_URL", "ORIGOWEB_BRAND_MARK",
 		"ORIGOWEB_AUTH_CLIENT_ID", "ORIGOWEB_AUTH_REDIRECT_URL", "ORIGOWEB_AUTH_URL",
 		"AUTH_CLIENT_ID", "AUTH_URL", "AUTH_REDIRECT_URL",
 	} {
@@ -50,6 +51,59 @@ func TestLoadTakesItsDefaults(t *testing.T) {
 	}
 	if c.OIDC.AuthURL != "https://issuer.example" || c.OIDC.ClientID != "origoweb" {
 		t.Errorf("the identity provider reads as %+v", c.OIDC)
+	}
+
+	// An installation nobody named is the project itself, under the
+	// project's own name, with nobody else's mark on it.
+	if c.Name() != ProjectName || c.Hosted() {
+		t.Errorf("an unnamed installation calls itself %q, hosted=%v", c.Name(), c.Hosted())
+	}
+	if c.Mark != "" {
+		t.Errorf("an unnamed installation drew the mark %q", c.Mark)
+	}
+	if c.Project() != DefaultProjectURL {
+		t.Errorf("the project link defaults to %q", c.Project())
+	}
+}
+
+// TestTheProductNameAndTheMarkAreSettings asserts the rule that keeps one
+// operator's branding off another's installation: the name the interface
+// calls itself, the project it links to, and the mark it draws are all
+// settings, and the defaults name the open-source project and nobody's
+// product.
+func TestTheProductNameAndTheMarkAreSettings(t *testing.T) {
+	setEnv(t, map[string]string{
+		"ORIGOWEB_ORIGO_URL":      "https://git.example",
+		"ORIGOWEB_PUBLIC_URL":     "https://code.example",
+		"ORIGOWEB_AUTH_CLIENT_ID": "origoweb",
+		"ORIGOWEB_PRODUCT_NAME":   " Latere Code ",
+		"ORIGOWEB_PROJECT_URL":    " https://example.org/origo ",
+		"ORIGOWEB_BRAND_MARK":     MarkLatere,
+	})
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Name() != "Latere Code" || !c.Hosted() {
+		t.Errorf("a named installation calls itself %q, hosted=%v", c.Name(), c.Hosted())
+	}
+	if c.Project() != "https://example.org/origo" {
+		t.Errorf("the project link is %q", c.Project())
+	}
+	if c.Mark != MarkLatere {
+		t.Errorf("the mark is %q", c.Mark)
+	}
+
+	// An operator who names their installation but asks for a mark this
+	// build does not carry is told so, rather than served a blank space.
+	setEnv(t, map[string]string{
+		"ORIGOWEB_ORIGO_URL":      "https://git.example",
+		"ORIGOWEB_PUBLIC_URL":     "https://code.example",
+		"ORIGOWEB_AUTH_CLIENT_ID": "origoweb",
+		"ORIGOWEB_BRAND_MARK":     "acme",
+	})
+	if _, err := Load(); err == nil {
+		t.Error("a mark this build does not carry started anyway")
 	}
 }
 

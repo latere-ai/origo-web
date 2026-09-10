@@ -23,6 +23,23 @@ import (
 // the ones authkit/oidc reads on its behalf.
 const EnvPrefix = "ORIGOWEB"
 
+// The open-source project this binary is a build of. A running installation
+// is an instance of it and may carry its operator's own name, but the
+// project itself is the same everywhere, so it is a constant and not a
+// setting.
+const (
+	// ProjectName is the software.
+	ProjectName = "Origo"
+
+	// DefaultProjectURL is where the software lives.
+	DefaultProjectURL = "https://github.com/latere-ai/origo"
+)
+
+// MarkLatere is the one brand mark this binary carries. The mark is Latere's
+// and belongs to Latere's own installation, so an operator asks for it by
+// name and no default hands it to anyone else.
+const MarkLatere = "latere"
+
 // Config is the whole configuration of one process.
 type Config struct {
 	// Addr is the listener address.
@@ -54,6 +71,22 @@ type Config struct {
 	// whose people know their identity provider by name.
 	IssuerName string
 
+	// ProductName is what this installation calls itself. It is empty on
+	// an installation that has not been named, and Name() then answers
+	// with the project's own name, so a self-hoster's interface says what
+	// the software is and never someone else's product.
+	ProductName string
+
+	// ProjectURL is where the open-source project lives. Every
+	// installation links to it, because every installation is an instance
+	// of it.
+	ProjectURL string
+
+	// Mark names the brand mark the interface draws beside the product
+	// name, empty when there is none. A mark belongs to whoever owns it,
+	// so this is opt-in and MarkLatere is the only value the binary knows.
+	Mark string
+
 	// OIDC is the relying-party configuration authkit reads.
 	OIDC oidc.Config
 }
@@ -65,7 +98,15 @@ func Load() (Config, error) {
 		SSHCloneHost: strings.TrimSpace(os.Getenv(EnvPrefix + "_SSH_CLONE_HOST")),
 		KeysURL:      strings.TrimSpace(os.Getenv(EnvPrefix + "_KEYS_URL")),
 		IssuerName:   strings.TrimSpace(os.Getenv(EnvPrefix + "_ISSUER_NAME")),
+		ProductName:  strings.TrimSpace(os.Getenv(EnvPrefix + "_PRODUCT_NAME")),
+		ProjectURL:   cmp.Or(strings.TrimSpace(os.Getenv(EnvPrefix+"_PROJECT_URL")), DefaultProjectURL),
+		Mark:         strings.TrimSpace(os.Getenv(EnvPrefix + "_BRAND_MARK")),
 		OIDC:         oidc.LoadConfigWithPrefix(EnvPrefix),
+	}
+
+	if c.Mark != "" && c.Mark != MarkLatere {
+		return Config{}, fmt.Errorf("%s_BRAND_MARK: this build carries no mark named %q; the only one is %q",
+			EnvPrefix, c.Mark, MarkLatere)
 	}
 
 	var err error
@@ -88,6 +129,19 @@ func Load() (Config, error) {
 	}
 	return c, nil
 }
+
+// Name is what the interface calls itself, which is the project's own name
+// until an operator names the installation something else.
+func (c Config) Name() string { return cmp.Or(c.ProductName, ProjectName) }
+
+// Hosted reports whether this installation carries a name of its own, rather
+// than being the software under the software's name. A hosted installation
+// says which project it is an instance of; an unnamed one is that project.
+func (c Config) Hosted() bool { return c.Name() != ProjectName }
+
+// Project is where the open-source project lives, the default when an
+// operator set nothing.
+func (c Config) Project() string { return cmp.Or(c.ProjectURL, DefaultProjectURL) }
 
 func requiredURL(name string) (*url.URL, error) {
 	raw := strings.TrimSpace(os.Getenv(name))

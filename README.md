@@ -86,6 +86,9 @@ of this and `git.example.com` in front of Origo.
 | `ORIGOWEB_CLONE_HOST` | `ORIGOWEB_ORIGO_URL` | what the clone lines say, when your git host differs from your API address |
 | `ORIGOWEB_SSH_CLONE_HOST` | unset | the host in the SSH clone line; unset shows the HTTPS line alone |
 | `ORIGOWEB_ISSUER_NAME` | unset | what the sign-in button calls your identity provider |
+| `ORIGOWEB_PRODUCT_NAME` | `Origo` | what your installation calls itself, if you have named it |
+| `ORIGOWEB_PROJECT_URL` | the Origo repository | where you link people to the open-source project |
+| `ORIGOWEB_BRAND_MARK` | unset | a logo beside the name; the only one this build carries is `latere`, and it is Latere's |
 | `ORIGOWEB_KEYS_URL` | unset | a key management surface, if you have one; see [Limits](#limits) |
 | `ORIGOWEB_AUTH_URL` | `https://auth.latere.ai` | your OIDC issuer, which must be one of Origo's `ORIGO_OIDC_ISSUERS` |
 | `ORIGOWEB_AUTH_CLIENT_ID` | required | the client registered for the browser flow |
@@ -95,6 +98,17 @@ of this and `git.example.com` in front of Origo.
 
 `deploy/` holds a Kubernetes base: a Deployment of two stateless replicas, a
 Service, an Ingress, and the three secrets above.
+
+## Naming your installation
+
+Origo is the software. An installation of it can carry your own name: set
+`ORIGOWEB_PRODUCT_NAME` and every page says that instead, while the
+signed-out page still says it runs Origo and links to the project. Leave it
+unset and your installation calls itself Origo, which is what it is.
+
+The logo is separate, because a logo belongs to whoever owns it. Nothing is
+drawn unless `ORIGOWEB_BRAND_MARK` names one, and the only mark this build
+carries is Latere's. Your name is yours to set; Latere's mark is not.
 
 ## Signing in
 
