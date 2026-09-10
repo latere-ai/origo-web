@@ -80,13 +80,23 @@ jobs:
 
       # The release body is the tag's section of CHANGELOG.md, which the
       # pre-push hook already refused to push without.
+      #
+      # It is read by the same tool that writes it. A second reader here
+      # would have to agree with `lateregate release` on the shape of a
+      # section heading by hand, and the first time they disagreed a
+      # release would fail after the image was already pushed.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
       - name: Read the release note for this tag
         id: note
         env:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          awk -v tag="## $TAG" '$0 == tag {inside=1; next} /^## / {inside=0} inside' CHANGELOG.md > note.md
+          go tool lateregate release-notes "$TAG" > note.md
           test -s note.md || { echo "::error::CHANGELOG.md has no section for ${TAG}"; exit 1; }
 
       - name: Create the release
