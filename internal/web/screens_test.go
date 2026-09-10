@@ -423,27 +423,26 @@ func TestReferenceSelector(t *testing.T) {
 	c := h.signedIn("alice")
 	page := doc(t, h.get(h.repoPath(""), c).Body.String())
 
-	selects := elements(page, "select")
-	if len(selects) != 1 {
-		t.Fatalf("want one reference control, got %d", len(selects))
-	}
-	if attr(selects[0], "name") != "ref" {
-		t.Errorf("the control submits %q", attr(selects[0], "name"))
-	}
 	var options []string
-	for _, o := range elements(selects[0], "option") {
-		options = append(options, attr(o, "value"))
+	var form *html.Node
+	for _, in := range elements(page, "input") {
+		if attr(in, "name") != "ref" {
+			continue
+		}
+		if attr(in, "type") != "radio" {
+			t.Errorf("the reference control is a %q", attr(in, "type"))
+		}
+		options = append(options, attr(in, "value"))
+		for p := in.Parent; p != nil; p = p.Parent {
+			if p.Data == "form" {
+				form = p
+				break
+			}
+		}
 	}
 	want := []string{"main", "next", "v1.4.2"}
 	if strings.Join(options, ",") != strings.Join(want, ",") {
 		t.Errorf("the control offers %v, the installation returned %v", options, want)
-	}
-
-	// The control is a form that submits with a GET, so a chosen reference
-	// is a URL that can be shared.
-	form := selects[0].Parent
-	for form != nil && form.Data != "form" {
-		form = form.Parent
 	}
 	if form == nil {
 		t.Fatal("the control is not inside a form")

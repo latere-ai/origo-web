@@ -18,6 +18,13 @@ import (
 type lifetime struct {
 	Seconds int
 	Label   string
+
+	// Note is what the choice means, kept apart from the label because an
+	// option on any screen is a title and a note as two elements: the two
+	// lay out the same when a note is missing, and neither is glued to the
+	// other with punctuation.
+	Note string
+
 	Default bool
 }
 
@@ -26,9 +33,9 @@ type lifetime struct {
 // server refuses, and there is no unbounded entry because there is no
 // unbounded token.
 var lifetimes = []lifetime{
-	{Seconds: 300, Label: "5 minutes"},
-	{Seconds: 900, Label: "15 minutes"},
-	{Seconds: int(origo.MaxTokenTTL.Seconds()), Label: "1 hour — the longest this installation signs", Default: true},
+	{Seconds: 300, Label: "5 minutes", Note: "one command"},
+	{Seconds: 900, Label: "15 minutes", Note: "a clone and a few reads"},
+	{Seconds: int(origo.MaxTokenTTL.Seconds()), Label: "1 hour", Note: "the longest this installation signs", Default: true},
 }
 
 // tokensData is the token screen: the form that works, and the plain account
@@ -282,7 +289,7 @@ func offered(secs int) bool {
 func lifetimeLabel(secs int) string {
 	for _, l := range lifetimes {
 		if l.Seconds == secs {
-			return strings.TrimSuffix(strings.Split(l.Label, " — ")[0], " ")
+			return l.Label
 		}
 	}
 	return plural(secs, "second")

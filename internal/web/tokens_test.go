@@ -94,8 +94,8 @@ func TestTheLifetimeControlOffersNothingTheInstallationRefuses(t *testing.T) {
 	if time.Duration(longest.Seconds)*time.Second != origo.MaxTokenTTL {
 		t.Errorf("the longest lifetime offered is %s, not the cap", longest.Label)
 	}
-	if !strings.Contains(longest.Label, "longest") {
-		t.Errorf("the longest lifetime does not say it is the longest: %q", longest.Label)
+	if !strings.Contains(longest.Note, "longest") {
+		t.Errorf("the longest lifetime does not say it is the longest: %q", longest.Note)
 	}
 
 	// And the page says so where a person reads it, rather than only in a
@@ -121,10 +121,10 @@ func TestTheTokenScreenSaysThereIsNoRegistry(t *testing.T) {
 		t.Fatalf("the screen answered %d", rec.Code)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "keeps no list of tokens") {
+	if !strings.Contains(body, "No list of tokens") {
 		t.Errorf("the screen does not say it keeps no list:\n%s", body)
 	}
-	if !strings.Contains(body, "cannot be withdrawn") {
+	if !strings.Contains(body, "no way to withdraw one") {
 		t.Error("the screen does not say a token cannot be withdrawn")
 	}
 
@@ -183,17 +183,43 @@ func TestTheRepositoryControlDegradesLikeTheHomeScreen(t *testing.T) {
 	c := h.signedIn("alice")
 
 	page := doc(t, h.get("/tokens", c).Body.String())
-	if len(elements(page, "select")) != 1 { // the lifetime alone
-		t.Error("the screen offers a repository selector on an installation with no list")
-	}
-	var named bool
+	var named, chosen bool
 	for _, in := range elements(page, "input") {
-		if attr(in, "name") == "repo" {
+		if attr(in, "name") != "repo" {
+			continue
+		}
+		if attr(in, "type") == "radio" {
+			chosen = true
+		} else {
 			named = true
 		}
 	}
+	if chosen {
+		t.Error("the screen offers a repository to choose on an installation with no list")
+	}
 	if !named {
 		t.Error("the screen offers no way to name a repository")
+	}
+
+	// And the day there is a list, the same field is a choice.
+	h.answering(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/repos" {
+			writeJSON(w, map[string]any{"repos": []origo.Repo{
+				{ID: "r1", Owner: "infra", Slug: "origo", DefaultBranch: "main"},
+			}})
+			return
+		}
+		h.fake.ServeHTTP(w, r)
+	})
+	listed := doc(t, h.get("/tokens", c).Body.String())
+	var options int
+	for _, in := range elements(listed, "input") {
+		if attr(in, "name") == "repo" && attr(in, "type") == "radio" {
+			options++
+		}
+	}
+	if options != 1 {
+		t.Errorf("the screen offers %d repositories to choose, want the one the installation listed", options)
 	}
 }
 

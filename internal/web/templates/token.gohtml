@@ -5,7 +5,7 @@
 
   <div class="secret stack prose">
     <h1>Copy this token now. You will not see it again.</h1>
-    <p>Nothing here keeps a copy, and neither does the git server: the token is signed, not stored. Nobody can recover this string once you leave this page — not you, not an administrator.</p>
+    <p>Nothing here keeps a copy, and neither does the git server: the token is signed, not stored. Nobody can recover this string once you leave this page: not you, not an administrator.</p>
     <div class="field">
       <label for="token">Token value</label>
       <input id="token" class="mono" readonly value="{{.Token}}" size="48">
@@ -17,7 +17,7 @@
     <dl class="facts">
       <dt>Repository</dt><dd class="path">{{.Repo.Owner}}/{{.Repo.Slug}}</dd>
       <dt>Scope</dt><dd class="refname">{{.Scope}}</dd>
-      <dt>Expires</dt><dd class="when">{{.Expires}} — {{.ExpiresIn}} from now</dd>
+      <dt>Expires</dt><dd class="when">{{.Expires}}, {{.ExpiresIn}} from now</dd>
     </dl>
     <h2>Use it</h2>
     <p class="meta">Put it in the agent's environment as <code>ORIGO_TOKEN</code>. Never in a repository, never in a prompt.</p>

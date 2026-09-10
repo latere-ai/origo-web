@@ -142,7 +142,6 @@ a:hover { text-decoration-color: var(--fg-1); }
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
-select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible {
   outline: var(--focus-outline);
@@ -314,7 +313,7 @@ button:hover, .button:hover { background: var(--bg-raised); }
 }
 .button-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 
-input, select, textarea {
+input, textarea {
   font: inherit;
   font-size: var(--t-12);
   color: var(--fg-1);
@@ -326,10 +325,51 @@ input, select, textarea {
   max-width: 100%;
 }
 input.mono, textarea.mono { font-family: var(--font-mono); }
-label { font-size: var(--t-12); color: var(--fg-2); }
 form { margin: 0; }
 .field { display: flex; flex-direction: column; gap: var(--s-2); }
 .inline-form { display: flex; gap: var(--s-3); align-items: flex-end; flex-wrap: wrap; }
+
+/* ---- text roles ----
+ *
+ * Text that does the same job looks the same and is spaced the same on every
+ * screen. These are the roles the interface has, each with one rule and one
+ * class, and no screen invents a variant of one: a field label is a field
+ * label on the token screen and on the home screen, and an option title looks
+ * the same whether it names a scope, a lifetime, a repository or a branch.
+ *
+ *   label          the name of a control            label, legend
+ *   option title   the name of one choice           .option-title
+ *   option note    what that choice means           .option-note
+ *   hint           what a field needs a reader to know   .hint
+ *   heading        the name of a panel              h2
+ *   lead           the sentence a screen opens with .lead
+ *   notice         something that interrupts        .notice
+ *
+ * An option is a title and a note as two elements, never one string joined by
+ * punctuation, so the pair lays out the same when a note is missing. */
+label, legend { font-size: var(--t-12); color: var(--fg-2); }
+.hint { font-size: var(--t-12); color: var(--fg-2); }
+.option-title { font-family: var(--font-mono); font-size: var(--t-12); color: var(--fg-1); }
+.option-note { font-size: var(--t-12); color: var(--fg-2); }
+
+/* No native menu anywhere. A select's popup is drawn by the operating system
+ * and no rule here reaches it, so the interface does not use one: a fixed set
+ * of choices is a radio group, and a long set is a radio group in a box that
+ * scrolls. The browser gives both arrow-key movement with no script, which
+ * this interface has none of; Home and End are the browser's to give and it
+ * does not. */
+.choices { display: flex; flex-direction: column; gap: var(--s-3); }
+.choices.scrolling {
+  max-height: 16rem;
+  overflow-y: auto;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.choice { display: grid; grid-template-columns: auto 1fr; gap: var(--s-3); align-items: start; }
+.choice input { min-height: 0; margin: 3px 0 0; }
+.choice label { display: grid; gap: 1px; cursor: pointer; }
 
 /* ---- tables ---- */
 
@@ -518,10 +558,7 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
 }
 .fields .field input, .fields .field textarea { width: 100%; }
 fieldset.field { border: none; margin: 0; padding: 0; min-width: 0; }
-fieldset.field legend { padding: 0; font-size: var(--t-12); color: var(--fg-2); }
-.choice { display: flex; gap: var(--s-3); align-items: baseline; }
-.choice input { min-height: 0; }
-.choice label strong { color: var(--fg-1); font-family: var(--font-mono); font-size: var(--t-12); }
+fieldset.field legend { padding: 0; }
 
 /* The one inverted block in the interface. A secret on a screen must not
  * read as an ornament, and inverted ink is the strongest mark available

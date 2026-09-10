@@ -5,7 +5,7 @@
     <h1>Sign in to read git repositories</h1>
     <p class="meta">Branches and tags, the commit log, what a commit changed, and any file.</p>
     {{- if .Refused}}
-    <p class="notice"><strong>You are signed out.</strong> The installation did not accept the credential this session held. Sign in again to carry on.</p>
+    <p class="prose"><strong>You are signed out.</strong> The installation did not accept the credential this session held. Sign in again to carry on.</p>
     {{- end}}
     <p><a class="button button-primary" href="/auth/start?return_to={{.ReturnTo}}">{{.ButtonLabel}}</a></p>
     <p class="meta prose">There is no password and no sign-up here. Access follows the account your organisation already gave you, and what you may read is decided by the installation, not by this page.</p>

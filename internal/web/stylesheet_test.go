@@ -166,18 +166,26 @@ func TestNoBlockIsMarkedByALeftRule(t *testing.T) {
 		Config: h.cfg, Sessions: mustSessions(t, h.cfg), API: origo.New(mustURL(t, refuse.URL), refuse.Client()),
 	})
 	page := doc(t, h.get("/", h.signedIn("alice")).Body.String())
-	var notices int
+	if !strings.Contains(text(elements(page, "body")[0]), "did not accept the credential") {
+		t.Error("a refused reader is not told their credential was refused")
+	}
 	find(page, func(e *html.Node) {
-		if !strings.Contains(attr(e, "class"), "notice") {
-			return
-		}
-		notices++
 		if style := attr(e, "style"); style != "" {
-			t.Errorf("a notice carries an inline style: %q", style)
+			t.Errorf("<%s> carries an inline style: %q", e.Data, style)
 		}
 	})
-	if notices != 1 {
-		t.Errorf("the signed-out page rendered %d notice blocks, want the one that says so", notices)
+
+	// A notice is set apart by its surface and its border on all four
+	// edges, which is the treatment a left rule was standing in for.
+	for _, rule := range cssRules(css) {
+		if strings.TrimSpace(rule.selector) != ".notice" {
+			continue
+		}
+		for _, want := range []string{"border:", "background:", "border-radius:"} {
+			if !strings.Contains(rule.body, want) {
+				t.Errorf("a notice has no %s, so nothing but a rule sets it apart", strings.TrimSuffix(want, ":"))
+			}
+		}
 	}
 }
 
@@ -314,15 +322,183 @@ func TestTheBodyKeepsTheMastheadsEdges(t *testing.T) {
 // cssRule is one declaration block: what it selects and what it declares.
 type cssRule struct{ selector, body string }
 
-// cssRules splits the stylesheet into blocks. A block inside a media query is
-// returned like any other; the query itself holds no declarations, so it does
-// not match.
+// cssRules splits the stylesheet into blocks. Comments go first, because a
+// comment sits between a rule and the one above it and would otherwise be
+// read as part of the selector. A block inside a media query is returned like
+// any other; the query itself holds no declarations, so it does not match.
 func cssRules(css string) []cssRule {
 	var out []cssRule
-	for _, m := range ruleBlock.FindAllStringSubmatch(css, -1) {
+	for _, m := range ruleBlock.FindAllStringSubmatch(cssComment.ReplaceAllString(css, ""), -1) {
 		out = append(out, cssRule{selector: strings.TrimSpace(m[1]), body: m[2]})
 	}
 	return out
 }
 
-var ruleBlock = regexp.MustCompile(`([^{}]+)\{([^{}]*)\}`)
+var (
+	ruleBlock  = regexp.MustCompile(`([^{}]+)\{([^{}]*)\}`)
+	cssComment = regexp.MustCompile(`(?s)/\*.*?\*/`)
+)
+
+// TestNoScreenCarriesANativeMenu asserts the rule the stylesheet writes down:
+// the interface uses no select anywhere.
+//
+// A select's popup is drawn by the operating system, in the system's own
+// highlight colour, and no rule in this stylesheet reaches it, so a screen
+// with one is a screen the interface does not control. A fixed set of choices
+// is a radio group; a long set is a radio group in a box that scrolls. The
+// browser gives both arrow-key movement with no script.
+func TestNoScreenCarriesANativeMenu(t *testing.T) {
+	h := newHarness(t)
+	for name, rec := range h.everyPage() {
+		page := doc(t, rec.Body.String())
+		for _, tag := range []string{"select", "option", "optgroup", "datalist"} {
+			if got := len(elements(page, tag)); got != 0 {
+				t.Errorf("%s carries %d <%s> elements, which the operating system draws", name, got, tag)
+			}
+		}
+	}
+	// The repository choice is the long set, so it is the group that
+	// scrolls rather than one that runs down the page.
+	page := doc(t, h.get(h.repoPath(""), h.signedIn("alice")).Body.String())
+	var scrolling bool
+	find(page, func(e *html.Node) {
+		if strings.Contains(attr(e, "class"), "choices") && strings.Contains(attr(e, "class"), "scrolling") {
+			scrolling = true
+		}
+	})
+	if !scrolling {
+		t.Error("the reference choice is not in a box that scrolls, so a repository with many branches runs off the page")
+	}
+	css := string(mustAsset(t, "app.css"))
+	if strings.Contains(css, "appearance:") {
+		t.Error("the stylesheet tries to skin a native control instead of not using one")
+	}
+}
+
+// TestTextThatDoesTheSameJobLooksTheSame asserts the role system: the
+// interface has a small set of roles for text, each with one class, and no
+// screen invents a variant of one.
+//
+// An option is the case that kept drifting. A title glued to its description
+// with a dash lays out differently from one without a description, and the
+// same choice read differently on two screens. Title and note are two
+// elements the stylesheet lays out, so the pattern holds when a note is
+// missing and reads the same wherever a choice is offered.
+func TestTextThatDoesTheSameJobLooksTheSame(t *testing.T) {
+	css := string(mustAsset(t, "app.css"))
+	// One rule gives a role its treatment. The shared width rule names
+	// several selectors and gives none of them a look, so it is not one.
+	for _, role := range []string{".hint", ".option-title", ".option-note", ".lead", ".notice"} {
+		var defined int
+		for _, rule := range cssRules(css) {
+			if strings.TrimSpace(rule.selector) == role {
+				defined++
+			}
+		}
+		if defined != 1 {
+			t.Errorf("%s is styled by %d rules of its own, want the one rule the role has", role, defined)
+		}
+	}
+
+	h := newHarness(t)
+	for name, rec := range h.everyPage() {
+		page := doc(t, rec.Body.String())
+		find(page, func(e *html.Node) {
+			if !strings.Contains(attr(e, "class"), "choice") || strings.Contains(attr(e, "class"), "choices") {
+				return
+			}
+			var titles, notes int
+			find(e, func(c *html.Node) {
+				switch attr(c, "class") {
+				case "option-title":
+					titles++
+				case "option-note":
+					notes++
+				}
+			})
+			if titles != 1 {
+				t.Errorf("%s: a choice carries %d titles, want one", name, titles)
+			}
+			if notes > 1 {
+				t.Errorf("%s: a choice carries %d notes, want at most one", name, notes)
+			}
+			if len(elements(e, "strong")) > 0 {
+				t.Errorf("%s: a choice marks its title by hand instead of by role", name)
+			}
+		})
+		// A hint under a field is the hint role, never the class the
+		// interface uses for incidental detail elsewhere.
+		find(page, func(e *html.Node) {
+			if attr(e, "class") == "meta" && (within(e, "field") || within(e, "fields")) {
+				t.Errorf("%s: a field hint is styled by hand instead of by role: %q", name, text(e))
+			}
+		})
+		// Nothing on any screen carries a style of its own.
+		find(page, func(e *html.Node) {
+			if attr(e, "style") != "" {
+				t.Errorf("%s: <%s> carries an inline style", name, e.Data)
+			}
+		})
+	}
+}
+
+// paddedSurface names the enclosing surface that sets padding of its own,
+// empty when there is none. A flush panel sets none: its content starts at its
+// edge, so a block inside it is the panel's content and not a box within a
+// box.
+func paddedSurface(n *html.Node) string {
+	for p := n.Parent; p != nil; p = p.Parent {
+		class := attr(p, "class")
+		if strings.Contains(class, "panel") && !strings.Contains(class, "flush") {
+			return "panel"
+		}
+		if strings.Contains(class, "doc") && !strings.Contains(class, "doc-body") {
+			return "document"
+		}
+	}
+	return ""
+}
+
+// TestOneLeftEdgeHoldsOnEveryScreen asserts the alignment rule: every heading
+// and every first line of text on a screen starts at the same left edge.
+//
+// The rule that broke it was a box inside a box. A notice carries its own
+// surface and its own padding, so a notice used as the body of a panel or of
+// a document started its text about 35px right of the heading in the panel
+// above it. A notice stands on its own in the page; inside a panel or a
+// document, what it would say is said in that surface's own voice.
+//
+// The diff is the one exception, and it is not one: a file over the render
+// budget replaces its table with an explanation, and there is no heading
+// beside it to share an edge with.
+func TestOneLeftEdgeHoldsOnEveryScreen(t *testing.T) {
+	h := newHarness(t)
+	for name, rec := range h.everyPage() {
+		page := doc(t, rec.Body.String())
+		find(page, func(e *html.Node) {
+			if !strings.Contains(attr(e, "class"), "notice") {
+				return
+			}
+			if box := paddedSurface(e); box != "" {
+				t.Errorf("%s: a notice sits inside a %s that pads its own content, so the notice starts right of the heading above it: %q",
+					name, box, text(e))
+			}
+		})
+	}
+
+	// The surfaces that do carry padding pad every child alike, so the
+	// heading and the first line of a panel start together.
+	css := string(mustAsset(t, "app.css"))
+	for _, rule := range cssRules(css) {
+		sel := strings.TrimSpace(rule.selector)
+		if sel != ".panel" && sel != ".doc" {
+			continue
+		}
+		for decl := range strings.SplitSeq(rule.body, ";") {
+			name, _, _ := strings.Cut(strings.TrimSpace(decl), ":")
+			if strings.TrimSpace(name) == "text-indent" {
+				t.Errorf("%s indents its text, so its children do not share an edge", sel)
+			}
+		}
+	}
+}

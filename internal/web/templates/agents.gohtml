@@ -113,7 +113,7 @@ curl -H "Authorization: Bearer $ORIGO_TOKEN" \
 
     <section id="mcp" class="stack">
       <h2>6 · A tool server for agents</h2>
-      <p class="notice"><strong>Planned, not built.</strong> There is nothing to install and nothing to configure yet. This section says what is intended so you can tell it apart from what works today, which is everything above it.</p>
+      <p><strong>Planned, not built.</strong> There is nothing to install and nothing to configure yet. This section says what is intended so you can tell it apart from what works today, which is everything above it.</p>
       <p>The intention is a small separate program you run beside an agent, which speaks the Model Context Protocol over standard input and output and turns the reads above into tools an agent can call by name. It would take a token of exactly the kind you mint on this site, hold to the same rate limit, and return the same refusals, so it can do nothing a plain HTTP agent cannot. It is a shape, not a capability.</p>
       <p>One thing about it is settled: there is no tool for minting a token, and there will not be one. Creating a credential stays a decision a person makes.</p>
       <p>Until it exists, an agent uses git and the reads in section 3, which are the same thing without the wrapper.</p>

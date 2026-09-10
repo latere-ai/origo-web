@@ -45,16 +45,28 @@
     {{- if .Selector.Empty}}
     <p class="meta">This repository has no branches or tags.</p>
     {{- else}}
-    <form class="inline-form" action="{{.Selector.Action}}" method="get">
-      <div class="field">
-        <label for="ref">Branch or tag</label>
-        <select id="ref" name="ref">
-          {{- range .Selector.Branches}}<option value="{{.Short}}"{{if eq .Short $.Selector.Ref}} selected{{end}}>{{.Short}}</option>{{end}}
-          {{- range .Selector.Tags}}<option value="{{.Short}}"{{if eq .Short $.Selector.Ref}} selected{{end}}>{{.Short}} (tag)</option>{{end}}
-        </select>
+    <form class="stack" action="{{.Selector.Action}}" method="get">
+      <fieldset class="field">
+        <legend>Branch or tag</legend>
+        <div class="choices scrolling">
+          {{- range .Selector.Branches}}
+          <div class="choice">
+            <input id="ref-branch-{{.Short}}" type="radio" name="ref" value="{{.Short}}"{{if eq .Short $.Selector.Ref}} checked{{end}}>
+            <label for="ref-branch-{{.Short}}"><span class="option-title">{{.Short}}</span><span class="option-note">branch</span></label>
+          </div>
+          {{- end}}
+          {{- range .Selector.Tags}}
+          <div class="choice">
+            <input id="ref-tag-{{.Short}}" type="radio" name="ref" value="{{.Short}}"{{if eq .Short $.Selector.Ref}} checked{{end}}>
+            <label for="ref-tag-{{.Short}}"><span class="option-title">{{.Short}}</span><span class="option-note">tag</span></label>
+          </div>
+          {{- end}}
+        </div>
+      </fieldset>
+      <div class="row">
+        <button type="submit">Go</button>
+        <a href="{{.Repo.URL}}/refs">all references</a>
       </div>
-      <button type="submit">Go</button>
-      <a href="{{.Repo.URL}}/refs">all references</a>
     </form>
     {{- end}}
   </div>
