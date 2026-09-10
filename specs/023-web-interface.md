@@ -620,3 +620,7 @@ repository, so they assert against the real read API and not a mock.
   and over the three surfaces the sentences come from: the templates,
   this package's Go strings, and the release notes (proposed:
   `internal/web`, `TestNoScreenCarriesAnEmDash`).
+- An option holding a name nobody chose the length of breaks it rather
+  than scrolling its control sideways: a 128-character repository
+  identifier, the longest one there can be (proposed: `internal/web`,
+  `TestALongIdentifierDoesNotScrollAControlSideways`).
