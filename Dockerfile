@@ -17,6 +17,9 @@ RUN CGO_ENABLED=0 go build -trimpath \
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/origoweb /usr/local/bin/origoweb
-USER nonroot:nonroot
+# 65532 is the nonroot user of the distroless images, written numerically
+# because a Kubernetes runAsNonRoot check cannot resolve a name: a pod that
+# asks for it never starts against an image whose USER is "nonroot".
+USER 65532:65532
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/origoweb"]

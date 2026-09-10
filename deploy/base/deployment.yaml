@@ -19,6 +19,10 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
+        # The same id the image's USER carries, numerically: the kubelet
+        # verifies the id, not the name.
+        runAsUser: 65532
+        runAsGroup: 65532
         seccompProfile:
           type: RuntimeDefault
       containers:
