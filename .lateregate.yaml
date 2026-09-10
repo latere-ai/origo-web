@@ -46,7 +46,13 @@ depcheck:
         golang.org/x/net: the HTML parser the readme's headings are nested with, and HTTP/2
         go.opentelemetry.io: the OpenTelemetry SDK the traced HTTP client exports through
         google.golang.org: protobuf and gRPC, the wire format of the OTLP exporters
-        golang.org/x: net, sys, text and time, reached by the OTLP exporters
+        # Named one module at a time, and never as the golang.org/x prefix
+        # they share: an allowance that is a prefix of another can absorb
+        # what the narrower one admits, and which of the two matches first
+        # is not a thing to leave to chance.
+        golang.org/x/sys: reached by the OTLP exporters
+        golang.org/x/text: reached by the OTLP exporters
+        golang.org/x/time: reached by the OTLP exporters
         github.com/cenkalti/backoff: the OTLP exporters' retry schedule
         github.com/cespare/xxhash: the metric SDK's aggregation keys
         github.com/felixge/httpsnoop: otelhttp's response recorder
