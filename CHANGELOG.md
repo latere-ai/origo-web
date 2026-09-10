@@ -10,6 +10,8 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+## v0.2.0 - 2026-09-10
+
 - An installation can carry a name of its own. `ORIGOWEB_PRODUCT_NAME` is
   what the interface calls itself in the masthead, the tab title and the
   sign-in heading; `ORIGOWEB_BRAND_MARK` draws a logo beside it, and
