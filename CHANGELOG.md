@@ -10,6 +10,26 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+- The bar at the top of every screen says which account you are signed
+  in as. What you can see here is exactly what your account can read, so
+  when a page is empty the account is the first thing that explains it.
+  A screen with nothing on it says so in words too.
+- A first visit no longer says a credential of yours was rejected. It
+  says what this is and offers the way in. The refusal is kept for what
+  it describes: a session that held a credential and was turned away.
+- Every screen uses the width of the window. The documentation reads at
+  a comfortable line length with its section list down the right side
+  instead of wrapping across the top, the sign-in page is three panels
+  across the width, and the token form fills its panel.
+- No screen opens a menu drawn by your operating system. Choices are
+  lists you can move through with the arrow keys, and a long list of
+  repositories or branches scrolls in place.
+- Text that does the same job now looks the same everywhere: a choice
+  reads the same whether it names a scope, a lifetime, a repository or a
+  branch, and headings line up with the text under them.
+- The agent tokens screen says each thing once, where you need it. What
+  a token cannot do, and why, is on the documentation screen.
+
 ## v0.3.0 - 2026-09-10
 
 - The interface uses the whole window. Screens were laid out in a narrow
