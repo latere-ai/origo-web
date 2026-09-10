@@ -10,6 +10,12 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+## v0.1.1
+
+- The image names its user by id, so a pod that asks to run as non-root
+  starts. Before this the kubelet refused the container: it cannot resolve
+  a user name, and the image carried one.
+
 ## v0.1.0
 
 - First release of the interface. It reads an Origo installation and
