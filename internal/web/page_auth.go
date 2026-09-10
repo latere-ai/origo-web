@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/latere-ai/origo-web/internal/config"
 	"github.com/latere-ai/origo-web/internal/origo"
 )
 
@@ -31,22 +32,48 @@ func (s *Server) begin(w http.ResponseWriter, r *http.Request, section string) r
 			KeysEnabled: s.cfg.KeysURL != "",
 			CSRF:        s.sessions.CSRFToken(w, r),
 			Product:     s.cfg.Name(),
-			Project:     s.cfg.Project(),
+			ProjectName: config.ProjectName,
+			ProjectURL:  s.cfg.Project(),
 			Mark:        s.cfg.Mark,
 		},
 	}
 }
 
-// signInData is the front door.
+// signInData is the front door, and the one page written for a stranger.
 type signInData struct {
 	View        view
 	Heading     string
-	Lead        string
 	ButtonLabel string
 	CloneHTTPS  string
 	CloneSSH    string
 	ReturnTo    string
 	Refused     bool
+
+	// Hosted says this installation carries a name of its own, so the page
+	// says which project it is an instance of rather than claiming to be
+	// the project.
+	Hosted bool
+}
+
+// signInPage is the whole page, built the same way for the visitor who asked
+// for the front door and the one whose credential was refused on a repository.
+func (s *Server) signInPage(v view, returnTo string, refused bool) signInData {
+	v.Title = "Sign in"
+	v.SignedIn = false
+	label := "Continue to sign in"
+	if s.cfg.IssuerName != "" {
+		label = "Continue with " + s.cfg.IssuerName
+	}
+	return signInData{
+		View:        v,
+		Heading:     s.cfg.Name(),
+		ButtonLabel: label,
+		CloneHTTPS:  s.cfg.CloneHTTPS("<owner>", "<name>"),
+		CloneSSH:    s.cfg.CloneSSH("<owner>", "<name>"),
+		ReturnTo:    returnTo,
+		Refused:     refused,
+		Hosted:      s.cfg.Hosted(),
+	}
 }
 
 // signIn renders the sign-in screen. It is what a signed-out visitor sees on
@@ -54,33 +81,11 @@ type signInData struct {
 // read (spec 007) and has no anonymous path yet. The page keeps the address
 // the person asked for, so signing in lands there and not on the home page.
 func (s *Server) signIn(w http.ResponseWriter, r *http.Request, v view, refused bool) {
-	v.Title = "Sign in"
-	v.SignedIn = false
-	label := "Continue to sign in"
-	if s.cfg.IssuerName != "" {
-		label = "Continue with " + s.cfg.IssuerName
-	}
 	status := http.StatusOK
 	if refused {
 		status = http.StatusUnauthorized
 	}
-	s.render(w, r, status, "signin", signInData{
-		View:        v,
-		Heading:     s.cfg.Name(),
-		Lead:        "This is a git server. It holds this organisation's repositories and serves them over HTTPS" + sshClause(s.cfg.SSHCloneHost) + ".",
-		ButtonLabel: label,
-		CloneHTTPS:  s.cfg.CloneHTTPS("<owner>", "<name>"),
-		CloneSSH:    s.cfg.CloneSSH("<owner>", "<name>"),
-		ReturnTo:    returnTo(r),
-		Refused:     refused,
-	})
-}
-
-func sshClause(host string) string {
-	if host == "" {
-		return ""
-	}
-	return " and SSH"
+	s.render(w, r, status, "signin", s.signInPage(v, returnTo(r), refused))
 }
 
 // returnTo is the path to come back to after signing in: this request's own
@@ -102,21 +107,8 @@ func (s *Server) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, safeReturn(r.URL.Query().Get("return_to")), http.StatusFound)
 		return
 	}
-	v := rq.v
-	v.Title = "Sign in"
-	label := "Continue to sign in"
-	if s.cfg.IssuerName != "" {
-		label = "Continue with " + s.cfg.IssuerName
-	}
-	s.render(w, r, http.StatusOK, "signin", signInData{
-		View:        v,
-		Heading:     s.cfg.Name(),
-		Lead:        "This is a git server. It holds this organisation's repositories and serves them over HTTPS" + sshClause(s.cfg.SSHCloneHost) + ".",
-		ButtonLabel: label,
-		CloneHTTPS:  s.cfg.CloneHTTPS("<owner>", "<name>"),
-		CloneSSH:    s.cfg.CloneSSH("<owner>", "<name>"),
-		ReturnTo:    safeReturn(r.URL.Query().Get("return_to")),
-	})
+	s.render(w, r, http.StatusOK, "signin",
+		s.signInPage(rq.v, safeReturn(r.URL.Query().Get("return_to")), false))
 }
 
 // handleAuthStart hands the browser to the issuer. It is a GET because it

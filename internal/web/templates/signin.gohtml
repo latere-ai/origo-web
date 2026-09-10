@@ -4,7 +4,7 @@
   <div class="panel stack">
     {{- if .View.Mark}}{{template "mark"}}{{end}}
     <h1>{{.Heading}}</h1>
-    <p class="meta">{{.Lead}}</p>
+    <p class="meta">Read git repositories here: branches and tags, the commit log, what a commit changed, and any file.</p>
     {{- if .Refused}}
     <p class="notice"><strong>You are signed out.</strong> The installation did not accept the credential this session held. Sign in again to carry on.</p>
     {{- end}}
@@ -16,6 +16,11 @@
     <p class="clone-shape">{{.CloneHTTPS}}{{if .CloneSSH}}
 {{.CloneSSH}}{{end}}</p>
     <p class="meta">Cloning needs the same account. Replace the two names with the repository you want.</p>
+  </div>
+  <div class="panel stack">
+    <h2>Open source</h2>
+    <p class="meta">{{if .Hosted}}{{.View.Product}} is a hosted installation of {{.View.ProjectName}}, an open-source git server.{{else}}This is {{.View.ProjectName}}, an open-source git server.{{end}} Anyone can read the code, and anyone can run their own.</p>
+    <p><a href="{{.View.ProjectURL}}">The {{.View.ProjectName}} project</a></p>
   </div>
 </main>
 {{end}}

@@ -267,14 +267,16 @@ func TestSignInScreenNamesTheIssuerWhenItIsConfigured(t *testing.T) {
 	if !strings.Contains(body, "Continue with Okta") {
 		t.Errorf("the button reads:\n%s", body)
 	}
-	if !strings.Contains(body, "HTTPS and SSH") {
-		t.Error("an installation with an SSH surface does not say so")
+	// An installation with an SSH surface shows the SSH clone line beside
+	// the HTTPS one, which is the fact rather than a sentence about it.
+	if !strings.Contains(body, "git@git.example:&lt;owner&gt;/&lt;name&gt;.git") {
+		t.Errorf("an installation with an SSH surface offers no SSH clone line:\n%s", body)
 	}
 	plain := newHarness(t).get("/sign-in").Body.String()
 	if !strings.Contains(plain, "Continue to sign in") {
 		t.Error("an installation that does not name its issuer has no button")
 	}
-	if strings.Contains(plain, "and SSH") {
+	if strings.Contains(plain, "git@") {
 		t.Error("an installation with no SSH surface offered SSH")
 	}
 }
@@ -345,4 +347,66 @@ func mustSessions(t *testing.T, cfg config.Config) *session.Manager {
 		t.Fatal(err)
 	}
 	return m
+}
+
+// TestTheSignedOutPageCarriesTheOpenSourceStory asserts what the one page a
+// stranger sees has to say. Signing in is where a person stops reading, so
+// this page, and only this page, says what the software is: an open-source
+// git server, with a link to it, and the name of the installation they have
+// landed on.
+//
+// It stays a door and not a brochure: the way in and the clone address are
+// both above the story, and the whole page is short.
+func TestTheSignedOutPageCarriesTheOpenSourceStory(t *testing.T) {
+	h := newHarness(t, func(c *config.Config) {
+		c.ProductName = "Latere Code"
+		c.Mark = config.MarkLatere
+		c.IssuerName = "Latere"
+	})
+	page := doc(t, h.get("/sign-in").Body.String())
+	body := text(elements(page, "main")[0])
+
+	for _, want := range []string{
+		"Latere Code",                  // which installation this is
+		"hosted installation of Origo", // and that it is an instance
+		"open-source git server",       // what the software is
+		"Anyone can read the code, and anyone can run their own.",
+		"Continue with Latere", // the way in
+		"Clone address",        // and the other way in
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the signed-out page does not say %q:\n%s", want, body)
+		}
+	}
+
+	// The link to the project is a real link to the configured address.
+	var linked bool
+	for _, a := range elements(page, "a") {
+		if attr(a, "href") == config.DefaultProjectURL && strings.Contains(text(a), "Origo") {
+			linked = true
+		}
+	}
+	if !linked {
+		t.Error("the signed-out page does not link to the project")
+	}
+
+	// This is user text. No spec number, no internal name, no setting.
+	for _, banned := range []string{"spec ", "origod", "ORIGOWEB_", "origoweb", "authorizer", "OIDC"} {
+		if strings.Contains(body, banned) {
+			t.Errorf("the signed-out page says %q, which is not the reader's word", banned)
+		}
+	}
+	if n := len(strings.Fields(body)); n > 140 {
+		t.Errorf("the signed-out page is %d words; it is a door, not a brochure", n)
+	}
+
+	// An installation nobody named is the project itself, and says so
+	// without claiming to be somebody's hosted product.
+	plain := text(elements(doc(t, newHarness(t).get("/sign-in").Body.String()), "main")[0])
+	if !strings.Contains(plain, "This is Origo, an open-source git server.") {
+		t.Errorf("an unnamed installation says:\n%s", plain)
+	}
+	if strings.Contains(plain, "hosted installation") {
+		t.Error("an unnamed installation claims to be a hosted one")
+	}
 }

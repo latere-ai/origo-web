@@ -32,8 +32,12 @@ type view struct {
 	// name until an operator names it something else.
 	Product string
 
-	// Project is where the open-source project lives.
-	Project string
+	// ProjectName is the open-source project this binary is a build of,
+	// which is the same everywhere.
+	ProjectName string
+
+	// ProjectURL is where that project lives.
+	ProjectURL string
 
 	// Mark names the brand mark the masthead draws, empty when the
 	// installation has none, which is the default everywhere.
