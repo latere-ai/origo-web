@@ -10,6 +10,8 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+## v0.4.2 - 2026-09-11
+
 - The section list on the documentation screen sits beside the words it
   indexes instead of at the far right of the window, so there is no
   longer a wide empty band between the two. The tables and the samples
