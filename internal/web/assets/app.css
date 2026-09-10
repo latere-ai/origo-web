@@ -611,12 +611,17 @@ fieldset.field legend { padding: 0; }
   padding: 1px var(--s-1);
   border-radius: var(--radius-xs);
 }
-/* The document holds its measure on the left; the section list holds the
- * right edge and follows the reader down the page. Two columns, so the words
- * read at a sane line length and the window is still used to its edges. */
+/* The section list sits beside the words it indexes, and the document takes
+ * the rest. Two columns, in that order, for one reason: running text stops at
+ * the measure, so a column sized by anything else leaves the difference
+ * empty, and empty space between two pieces of content reads as a mistake
+ * where the same space after the last one reads as a margin. With the list
+ * first, every column touches its neighbour across one gutter, the words
+ * begin where the list ends, and the document's tables and samples run on to
+ * the right edge and hold it. */
 .doc-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(9rem, 13rem);
+  grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr);
   gap: var(--s-7);
   align-items: start;
 }
@@ -639,7 +644,7 @@ fieldset.field legend { padding: 0; }
   h1 { font-size: var(--t-19); }
   .fields { gap: var(--s-5); }
   .doc-body { grid-template-columns: 1fr; gap: var(--s-5); }
-  .toc { position: static; order: -1; }
+  .toc { position: static; }
   .facts { grid-template-columns: 1fr; gap: var(--s-1); }
   .facts dd { margin-bottom: var(--s-3); }
 

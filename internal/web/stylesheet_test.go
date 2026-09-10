@@ -315,7 +315,33 @@ func TestTheBodyKeepsTheMastheadsEdges(t *testing.T) {
 		t.Fatal("the documentation has no section list")
 	}
 	if !within(sectionList, "doc-body") {
-		t.Error("the section list is not beside the document, so nothing holds the far edge")
+		t.Error("the section list is not beside the document")
+	}
+
+	// It is the first column, and it is first because running text stops
+	// at the measure: a column sized by anything else leaves the
+	// difference empty, and that emptiness must fall after the last piece
+	// of content rather than between two of them. With the list first,
+	// the words begin one gutter from where it ends.
+	var body *html.Node
+	find(docs, func(e *html.Node) {
+		if strings.Contains(attr(e, "class"), "doc-body") {
+			body = e
+		}
+	})
+	if body == nil {
+		t.Fatal("the documentation has no two-column body")
+	}
+	var firstColumn *html.Node
+	for c := body.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type == html.ElementNode {
+			firstColumn = c
+			break
+		}
+	}
+	if firstColumn != sectionList {
+		t.Errorf("the first column of the document is <%s>, so the words are separated from the list by whatever the column does not use",
+			firstColumn.Data)
 	}
 }
 

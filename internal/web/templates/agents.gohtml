@@ -4,6 +4,15 @@
   <p class="crumbs"><a href="/">repositories</a> / <span class="here">docs / agents</span></p>
 
   <div class="doc-body">
+  <nav class="toc" aria-label="On this page">
+    <span class="label">On this page</span>
+    <a href="#token">1 · Get a token</a>
+    <a href="#base">2 · Address and credential</a>
+    <a href="#read">3 · What an agent can read</a>
+    <a href="#limits">4 · Rate limits</a>
+    <a href="#errors">5 · Errors</a>
+    <a href="#mcp">6 · A tool server for agents</a>
+  </nav>
   <div class="stack">
     <h1>Driving this git server from an agent</h1>
     <p class="lead">There is no SDK. An agent talks to this server with git and HTTP, using a token you mint by hand. Everything it needs fits on this page.</p>
@@ -120,15 +129,6 @@ curl -H "Authorization: Bearer $ORIGO_TOKEN" \
     </section>
   </div>
 
-  <nav class="toc" aria-label="On this page">
-    <span class="label">On this page</span>
-    <a href="#token">1 · Get a token</a>
-    <a href="#base">2 · Address and credential</a>
-    <a href="#read">3 · What an agent can read</a>
-    <a href="#limits">4 · Rate limits</a>
-    <a href="#errors">5 · Errors</a>
-    <a href="#mcp">6 · A tool server for agents</a>
-  </nav>
   </div>
 </main>
 {{end}}
