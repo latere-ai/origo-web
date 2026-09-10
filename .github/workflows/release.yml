@@ -1,0 +1,100 @@
+# A tag publishes the image and the GitHub release, and nothing else. The
+# interface holds no state and reaches no cluster from here: what a target
+# runs is a tag pinned in its own overlay, applied by whoever owns that
+# cluster.
+#
+# The image is built from the tag's tree by the Dockerfile in this
+# repository, so the bytes a target pulls come from a commit anyone can
+# check out. Nothing is built by hand and pushed.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/latere-ai/origoweb
+
+jobs:
+  image:
+    name: image and release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      # docker/metadata-action sanitizes an image tag to [a-zA-Z0-9._-], so
+      # a SemVer build-metadata tag would push under a name that is not the
+      # git tag. An overlay pins the git tag, so the two must be equal.
+      - name: Reject build-metadata tags
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          case "$TAG" in
+            *+*) echo "::error::${TAG} carries SemVer build metadata; an image tag cannot contain '+'. Cut a tag without it."; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The build stage cross-compiles and the runtime stage is a static
+      # distroless base with no package step, so linux/arm64 needs no
+      # emulator; buildx alone is enough.
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push origoweb
+        id: build
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          docker buildx build --push --provenance=false --sbom=false \
+            --platform linux/amd64,linux/arm64 \
+            --build-arg VERSION="$TAG" \
+            --build-arg COMMIT="$(git rev-parse --short HEAD)" \
+            --build-arg BUILD_DATE="$(git show -s --format=%cI HEAD)" \
+            -t "${IMAGE}:${TAG}" \
+            --metadata-file image.json .
+          digest=$(jq -r '."containerimage.digest"' image.json)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "${IMAGE}:${TAG} is ${digest}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Assert both architectures are published
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools inspect "${IMAGE}:${TAG}" --raw > manifest.json
+          for arch in amd64 arm64; do
+            grep -q "\"architecture\": *\"$arch\"" manifest.json \
+              || { echo "::error::${IMAGE}:${TAG} has no linux/$arch entry"; exit 1; }
+          done
+
+      # The release body is the tag's section of CHANGELOG.md, which the
+      # pre-push hook already refused to push without.
+      - name: Read the release note for this tag
+        id: note
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          awk -v tag="## $TAG" '$0 == tag {inside=1; next} /^## / {inside=0} inside' CHANGELOG.md > note.md
+          test -s note.md || { echo "::error::CHANGELOG.md has no section for ${TAG}"; exit 1; }
+
+      - name: Create the release
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          printf '\n`%s:%s`\n' "$IMAGE" "$TAG" >> note.md
+          printf '\nDigest: `%s`\n' "${{ steps.build.outputs.digest }}" >> note.md
+          gh release create "$TAG" --title "$TAG" --notes-file note.md
