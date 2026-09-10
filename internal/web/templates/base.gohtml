@@ -18,6 +18,7 @@
       <a href="/tokens"{{if eq .View.Section "tokens"}} aria-current="page"{{end}}>agent tokens</a>
       <a href="/docs/agents"{{if eq .View.Section "docs"}} aria-current="page"{{end}}>docs</a>
       {{- if .View.SignedIn}}
+      {{if .View.Who}}<span class="who">{{.View.Who}}</span>{{end}}
       <form method="post" action="/sign-out">
         <input type="hidden" name="{{.View.CSRFField}}" value="{{.View.CSRF}}">
         <button type="submit">sign out</button>

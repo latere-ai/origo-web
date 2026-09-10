@@ -12,6 +12,8 @@ import (
 
 	"golang.org/x/net/html"
 
+	"latere.ai/x/pkg/authkit/oidc"
+
 	"github.com/latere-ai/origo-web/internal/config"
 	"github.com/latere-ai/origo-web/internal/origo"
 )
@@ -743,3 +745,93 @@ func TestTheIdentityAppearsOnceOnAScreen(t *testing.T) {
 		}
 	}
 }
+
+// TestTheSignedInAccountIsNamed asserts what a person needs before they can
+// read an empty page: which account they are using. What a reader may see is
+// exactly what their credential may fetch, so the account is the first thing
+// that explains nothing being there.
+//
+// The masthead carries it on every screen, once, beside the way out. The page
+// a signed-out visitor sees carries no account at all, because there is none.
+func TestTheSignedInAccountIsNamed(t *testing.T) {
+	h := newHarness(t)
+	c := h.signedInAs(oidc.User{Sub: "01HQ8Z", Email: "aki@example.com"})
+	for name, path := range h.screens() {
+		page := doc(t, h.get(path, c).Body.String())
+		labels := accountLabels(page)
+		if len(labels) != 1 {
+			t.Errorf("%s names the account %d times, want once", name, len(labels))
+			continue
+		}
+		if got := text(labels[0]); got != "aki@example.com" {
+			t.Errorf("%s: the masthead says %q", name, got)
+		}
+		if !within(labels[0], "masthead") {
+			t.Errorf("%s: the account is named outside the masthead", name)
+		}
+		// Beside the way out, so the two controls that are about the
+		// session sit together.
+		forms := elements(elements(page, "header")[0], "form")
+		if len(forms) != 1 || attr(forms[0], "action") != "/sign-out" {
+			t.Errorf("%s: the masthead has no sign-out form beside the account", name)
+		}
+		// The subject is not a name, and is not shown while a claim
+		// that reads as one is there.
+		if strings.Contains(rendered(page), "01HQ8Z") {
+			t.Errorf("%s: the account identifier is shown while an address is known", name)
+		}
+	}
+
+	// A signed-out visitor is nobody, and the front door says so by
+	// carrying no account and offering the way in instead.
+	gate := doc(t, h.get("/sign-in").Body.String())
+	if got := len(accountLabels(gate)); got != 0 {
+		t.Errorf("the signed-out page names an account %d times", got)
+	}
+	if strings.Contains(rendered(gate), "aki@example.com") {
+		t.Error("the signed-out page carries an address")
+	}
+}
+
+// TestTheAccountShownIsTheMostHumanClaimTheTokenCarries asserts the fallback
+// through a rendered page, so the chain the session package chooses is the
+// chain a reader sees.
+func TestTheAccountShownIsTheMostHumanClaimTheTokenCarries(t *testing.T) {
+	h := newHarness(t)
+	for _, tc := range []struct {
+		name string
+		user oidc.User
+		want string
+	}{
+		{"a name and an address", oidc.User{Sub: "01HQ8Z", Email: "aki@example.com", Name: "Aki Hoshino"}, "Aki Hoshino"},
+		{"an address alone", oidc.User{Sub: "01HQ8Z", Email: "aki@example.com"}, "aki@example.com"},
+		{"a subject alone", oidc.User{Sub: "01HQ8Z"}, "01HQ8Z"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			page := doc(t, h.get("/", h.signedInAs(tc.user)).Body.String())
+			labels := accountLabels(page)
+			if len(labels) != 1 {
+				t.Fatalf("the account is named %d times", len(labels))
+			}
+			if got := text(labels[0]); got != tc.want {
+				t.Errorf("the masthead says %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// accountLabels are the masthead's account labels on a page, which must be
+// one when somebody is signed in and none when nobody is.
+func accountLabels(page *html.Node) []*html.Node {
+	var out []*html.Node
+	find(page, func(e *html.Node) {
+		if attr(e, "class") == "who" {
+			out = append(out, e)
+		}
+	})
+	return out
+}
+
+// rendered is the page's text, the readme included, which is where a value
+// that must appear nowhere is looked for.
+func rendered(page *html.Node) string { return text(elements(page, "body")[0]) }

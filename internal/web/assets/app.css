@@ -205,6 +205,22 @@ p { margin: 0; }
 }
 .masthead nav a:hover { color: var(--fg-1); text-decoration: underline; }
 
+/* Who is signed in, beside the way out. It is not a control, so it is
+ * quieter than the links around it.
+ *
+ * min-width lets it shrink below the width of the address it holds, which a
+ * flex item otherwise refuses to do, and overflow-wrap breaks the address
+ * itself. Together they are why a long one wraps onto another line of the
+ * masthead at 320px instead of pushing the navigation off the screen. Nothing
+ * is shortened: an address a person must read to a support request is shown
+ * whole. */
+.masthead nav .who {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--fg-3);
+  font-size: var(--t-12);
+}
+
 .crumbs {
   font-family: var(--font-mono);
   font-size: var(--t-12);

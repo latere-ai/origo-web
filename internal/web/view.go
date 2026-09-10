@@ -28,6 +28,13 @@ type view struct {
 	KeysEnabled bool
 	CSRF        string
 
+	// Who names the signed-in person, empty when nobody is. It is the most
+	// human claim the session already holds, and the masthead carries it on
+	// every screen because what a reader can see is decided by the account
+	// they are using, so an empty page is only explained by knowing which
+	// account that is.
+	Who string
+
 	// Product is what this installation calls itself, the project's own
 	// name until an operator names it something else.
 	Product string

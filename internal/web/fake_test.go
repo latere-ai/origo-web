@@ -340,14 +340,23 @@ func mustURL(t *testing.T, s string) *url.URL {
 	return u
 }
 
-// signedIn returns the cookie a request carries to be somebody.
+// signedIn returns the cookie a request carries to be somebody. The session
+// holds a subject and nothing else, which is the least an issuer can say.
 func (h *harness) signedIn(subject string) *http.Cookie {
+	h.t.Helper()
+	return h.signedInAs(oidc.User{Sub: subject})
+}
+
+// signedInAs is the same cookie for a session whose claims a test chooses,
+// so what one issuer says about a person and what another says are both
+// renderable.
+func (h *harness) signedInAs(u oidc.User) *http.Cookie {
 	h.t.Helper()
 	rec := httptest.NewRecorder()
 	if err := h.oidc.SetSession(rec, &oidc.Session{
-		AccessToken: "token-for-" + subject,
+		AccessToken: "token-for-" + u.Sub,
 		Expiry:      time.Now().Add(time.Hour),
-		User:        oidc.User{Sub: subject},
+		User:        u,
 	}); err != nil {
 		h.t.Fatal(err)
 	}

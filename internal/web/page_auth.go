@@ -21,14 +21,17 @@ type req struct {
 
 // begin reads the session once per request. A refreshed session is written
 // back to the cookie here, before any call to Origo, so a call never races
-// the expiry boundary.
+// the expiry boundary. The token and the name of whoever holds it come from
+// that one read, so the page and the call it makes cannot disagree about who
+// is signed in.
 func (s *Server) begin(w http.ResponseWriter, r *http.Request, section string) req {
-	tok := s.sessions.Token(w, r)
+	reader := s.sessions.Read(w, r)
 	return req{
-		tok: tok,
+		tok: reader.Token,
 		v: view{
 			Section:     section,
-			SignedIn:    tok != "",
+			SignedIn:    reader.Token != "",
+			Who:         reader.Who,
 			KeysEnabled: s.cfg.KeysURL != "",
 			CSRF:        s.sessions.CSRFToken(w, r),
 			Product:     s.cfg.Name(),
