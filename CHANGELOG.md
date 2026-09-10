@@ -10,6 +10,8 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+## v0.3.0 - 2026-09-10
+
 - The interface uses the whole window. Screens were laid out in a narrow
   column with empty space either side of it; now a diff, a file tree, a
   commit log and a file get the width the window has. Running text is
