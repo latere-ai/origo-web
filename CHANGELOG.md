@@ -10,6 +10,8 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+## v0.4.0 - 2026-09-11
+
 - The bar at the top of every screen says which account you are signed
   in as. What you can see here is exactly what your account can read, so
   when a page is empty the account is the first thing that explains it.
