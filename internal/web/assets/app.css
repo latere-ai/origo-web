@@ -161,12 +161,19 @@ p { margin: 0; }
 
 /* ---- page frame ---- */
 
-/* Width, one rule for the whole interface: the shell is the viewport less a
- * gutter, and the measure is a property of running text rather than of the
- * page. So no screen is centred in a column, and the only thing that is
- * bounded is a block of prose. A table, a tree, a commit log, a diff and a
- * file are data, not prose: they take the width the shell gives them and
- * scroll inside their own box when they still need more. */
+/* Width, one rule for the whole interface: the body of a screen has the same
+ * left and right edges as the masthead above it. Nothing below the masthead
+ * stops short of them, and no screen is a column with the window left empty
+ * beside it.
+ *
+ * A reading measure is still right for running text, and it is never bought
+ * with an empty half-screen. It binds the text and never the box around it,
+ * and a screen of prose puts something at the far edge to hold that edge: the
+ * documentation keeps its section list there, beside the words.
+ *
+ * A screen of fields or of data has no measure to protect and takes the whole
+ * width. A form fills its panel. A table, a tree, a commit log, a diff and a
+ * file take the shell and scroll inside their own box when they need more. */
 .page {
   padding: var(--s-6) var(--s-6) var(--s-9);
   display: flex;
@@ -266,7 +273,7 @@ p { margin: 0; }
   border-bottom: 1px solid var(--border);
   background: var(--bg-raised);
 }
-.prose, .lead, .notice { max-width: var(--measure); }
+.prose, .lead, .notice, .doc p { max-width: var(--measure); }
 .stack { display: flex; flex-direction: column; gap: var(--s-4); }
 .row { display: flex; gap: var(--s-4); align-items: center; flex-wrap: wrap; }
 .spread { display: flex; gap: var(--s-5); align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
@@ -469,7 +476,15 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
 
 /* ---- sign in ---- */
 
-.gate { margin: var(--s-9) auto; }
+/* The door is three panels, not a card centred in an empty window: the way
+ * in, the clone address, and what this is. They sit side by side on a wide
+ * screen and stack on a narrow one, and the row keeps the masthead's edges. */
+.gate {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: var(--s-6);
+  align-items: start;
+}
 .gate h1 { font-family: var(--font-mono); font-size: var(--t-24); }
 .clone-shape { font-family: var(--font-mono); font-size: var(--t-12); color: var(--fg-2); white-space: pre-wrap; overflow-wrap: anywhere; }
 
@@ -491,8 +506,17 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
 
 .lead { margin: 0; color: var(--fg-2); font-size: var(--t-13); line-height: 1.6; }
 
-.fields { display: flex; gap: var(--s-6); flex-wrap: wrap; align-items: flex-start; }
-.fields > .field { width: 300px; max-width: 100%; }
+/* A row of fields is a grid that fills its panel: a field takes the width the
+ * row gives it, so nothing is cut off inside a control that was pinned to a
+ * width somebody guessed. Fields in one row start on one line, whatever
+ * their hints run to. */
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--s-6);
+  align-items: start;
+}
+.fields .field input, .fields .field textarea { width: 100%; }
 fieldset.field { border: none; margin: 0; padding: 0; min-width: 0; }
 fieldset.field legend { padding: 0; font-size: var(--t-12); color: var(--fg-2); }
 .choice { display: flex; gap: var(--s-3); align-items: baseline; }
@@ -544,7 +568,23 @@ fieldset.field legend { padding: 0; font-size: var(--t-12); color: var(--fg-2); 
   padding: 1px var(--s-1);
   border-radius: var(--radius-xs);
 }
-.toc { display: flex; gap: var(--s-4); flex-wrap: wrap; align-items: baseline; font-size: var(--t-12); }
+/* The document holds its measure on the left; the section list holds the
+ * right edge and follows the reader down the page. Two columns, so the words
+ * read at a sane line length and the window is still used to its edges. */
+.doc-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(9rem, 13rem);
+  gap: var(--s-7);
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-size: var(--t-12);
+}
 .toc a { color: var(--fg-2); text-decoration: none; border-bottom: 1px solid var(--border-strong); }
 .toc a:hover { color: var(--fg-1); border-bottom-color: var(--accent); }
 
@@ -555,7 +595,8 @@ fieldset.field legend { padding: 0; font-size: var(--t-12); color: var(--fg-2); 
   .panel { padding: var(--s-5); border-radius: var(--radius-md); }
   h1 { font-size: var(--t-19); }
   .fields { gap: var(--s-5); }
-  .fields > .field { width: 100%; }
+  .doc-body { grid-template-columns: 1fr; gap: var(--s-5); }
+  .toc { position: static; order: -1; }
   .facts { grid-template-columns: 1fr; gap: var(--s-1); }
   .facts dd { margin-bottom: var(--s-3); }
 

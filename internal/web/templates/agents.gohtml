@@ -1,18 +1,9 @@
 {{define "title"}}Driving this git server from an agent{{end}}
 {{define "main"}}
-<main class="doc stack prose">
+<main class="doc stack">
   <p class="crumbs"><a href="/">repositories</a> / <span class="here">docs / agents</span></p>
 
-  <nav class="toc" aria-label="On this page">
-    <span class="label">On this page</span>
-    <a href="#token">1 · Get a token</a>
-    <a href="#base">2 · Address and credential</a>
-    <a href="#read">3 · What an agent can read</a>
-    <a href="#limits">4 · Rate limits</a>
-    <a href="#errors">5 · Errors</a>
-    <a href="#mcp">6 · A tool server for agents</a>
-  </nav>
-
+  <div class="doc-body">
   <div class="stack">
     <h1>Driving this git server from an agent</h1>
     <p class="lead">There is no SDK. An agent talks to this server with git and HTTP, using a token you mint by hand. Everything it needs fits on this page.</p>
@@ -127,6 +118,17 @@ curl -H "Authorization: Bearer $ORIGO_TOKEN" \
       <p>One thing about it is settled: there is no tool for minting a token, and there will not be one. Creating a credential stays a decision a person makes.</p>
       <p>Until it exists, an agent uses git and the reads in section 3, which are the same thing without the wrapper.</p>
     </section>
+  </div>
+
+  <nav class="toc" aria-label="On this page">
+    <span class="label">On this page</span>
+    <a href="#token">1 · Get a token</a>
+    <a href="#base">2 · Address and credential</a>
+    <a href="#read">3 · What an agent can read</a>
+    <a href="#limits">4 · Rate limits</a>
+    <a href="#errors">5 · Errors</a>
+    <a href="#mcp">6 · A tool server for agents</a>
+  </nav>
   </div>
 </main>
 {{end}}

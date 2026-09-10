@@ -181,15 +181,17 @@ func TestNoBlockIsMarkedByALeftRule(t *testing.T) {
 	}
 }
 
-// TestTheShellIsTheViewportAndTheMeasureBoundsProse asserts the interface's
-// one rule about width, so it cannot be traded away a screen at a time.
+// TestTheBodyKeepsTheMastheadsEdges asserts the width rule of the interface:
+// the body of a screen has the same left and right edges as the masthead, and
+// nothing below the masthead stops short of them.
 //
-// The shell takes the viewport less a gutter: no screen is a column with
-// empty space either side of it. The measure is a property of running text,
-// not of the page, so it is set once, in characters, on the blocks that hold
-// prose. A table, a tree, a commit log, a diff and a file are data rather
-// than prose, and they get the whole shell.
-func TestTheShellIsTheViewportAndTheMeasureBoundsProse(t *testing.T) {
+// A Go test cannot measure a rendered box, so it holds the stylesheet to the
+// rules that would narrow one. The shell is the viewport less a gutter. No
+// container between the masthead and the content sets a width of its own or
+// centres itself. The measure binds text and never the box around it, which
+// is the rule the two screens made of prose were breaking: a document capped
+// at the measure took a little over half the window and left the rest empty.
+func TestTheBodyKeepsTheMastheadsEdges(t *testing.T) {
 	css := string(mustAsset(t, "app.css"))
 
 	frame := pageBlock.FindStringSubmatch(css)
@@ -206,21 +208,58 @@ func TestTheShellIsTheViewportAndTheMeasureBoundsProse(t *testing.T) {
 	}
 
 	// The measure is a count of characters, so it holds at any zoom and in
-	// any typeface, and exactly one rule reads it.
+	// any typeface, exactly one rule reads it, and everything that rule
+	// names is a block of text rather than a box that holds one.
 	if !strings.Contains(css, "--measure: 78ch;") {
 		t.Error("the measure is not a count of characters")
 	}
-	if got := strings.Count(css, "var(--measure)"); got != 1 {
-		t.Errorf("%d rules bind something to the measure, want the one that binds prose", got)
+	text := map[string]bool{".prose": true, ".lead": true, ".notice": true, ".doc p": true}
+	var bound int
+	for _, rule := range cssRules(css) {
+		if !strings.Contains(rule.body, "var(--measure)") {
+			continue
+		}
+		bound++
+		for sel := range strings.SplitSeq(rule.selector, ",") {
+			if sel = strings.TrimSpace(sel); !text[sel] {
+				t.Errorf("the measure binds %q, which is not a block of text", sel)
+			}
+		}
 	}
-	if !strings.Contains(css, ".prose, .lead, .notice { max-width: var(--measure); }") {
-		t.Error("the measure is bound to something other than prose")
+	if bound != 1 {
+		t.Errorf("%d rules bind something to the measure, want the one that binds text", bound)
+	}
+
+	// No box between the masthead and the content narrows itself or
+	// centres itself. Either one is how half a window goes empty.
+	boxes := map[string]bool{
+		"main": true, ".page": true, ".gate": true, ".doc": true,
+		".doc-body": true, ".panel": true, ".stack": true, ".fields": true,
+	}
+	for _, rule := range cssRules(css) {
+		for sel := range strings.SplitSeq(rule.selector, ",") {
+			if !boxes[strings.TrimSpace(sel)] {
+				continue
+			}
+			for decl := range strings.SplitSeq(rule.body, ";") {
+				decl = strings.TrimSpace(decl)
+				name, value, _ := strings.Cut(decl, ":")
+				switch strings.TrimSpace(name) {
+				case "max-width":
+					if strings.TrimSpace(value) != "100%" {
+						t.Errorf("%s is capped at %s, so the body is narrower than the masthead", sel, value)
+					}
+				case "margin":
+					if strings.Contains(value, "auto") {
+						t.Errorf("%s centres itself, which empties the window on both sides", sel)
+					}
+				}
+			}
+		}
 	}
 
 	// The screens made of data are never bounded: the tables that carry a
 	// repository's tree, log, diff, files and tokens take the whole shell.
-	// The two screens made of prose always are. A readme and a reference
-	// table are prose that holds a table, and go with the words around it.
 	data := map[string]bool{
 		"home": true, "overview": true, "refs": true, "log": true, "commit": true,
 		"compare": true, "tree": true, "file": true, "tokens": true,
@@ -235,20 +274,55 @@ func TestTheShellIsTheViewportAndTheMeasureBoundsProse(t *testing.T) {
 				continue
 			}
 			if within(table, "prose") {
-				t.Errorf("%s: a table is bounded by the measure written for prose", name)
+				t.Errorf("%s: a table is bounded by the measure written for text", name)
 			}
 		}
 	}
+
+	// The two screens made of prose still hold a reading line, and the
+	// documentation holds the far edge with the section list rather than
+	// leaving it empty.
 	for _, path := range []string{"/sign-in", "/docs/agents"} {
 		page := doc(t, h.get(path).Body.String())
-		var prose int
+		var bounded int
 		find(page, func(e *html.Node) {
-			if strings.Contains(attr(e, "class"), "prose") {
-				prose++
+			class := attr(e, "class")
+			if strings.Contains(class, "prose") || strings.Contains(class, "lead") ||
+				(e.Data == "p" && within(e, "doc")) {
+				bounded++
 			}
 		})
-		if prose == 0 {
-			t.Errorf("%s is a page of prose and nothing on it is bounded by the measure", path)
+		if bounded == 0 {
+			t.Errorf("%s is a page of prose and no line on it is bounded", path)
 		}
 	}
+	docs := doc(t, h.get("/docs/agents").Body.String())
+	var sectionList *html.Node
+	find(docs, func(e *html.Node) {
+		if e.Data == "nav" && strings.Contains(attr(e, "class"), "toc") {
+			sectionList = e
+		}
+	})
+	if sectionList == nil {
+		t.Fatal("the documentation has no section list")
+	}
+	if !within(sectionList, "doc-body") {
+		t.Error("the section list is not beside the document, so nothing holds the far edge")
+	}
 }
+
+// cssRule is one declaration block: what it selects and what it declares.
+type cssRule struct{ selector, body string }
+
+// cssRules splits the stylesheet into blocks. A block inside a media query is
+// returned like any other; the query itself holds no declarations, so it does
+// not match.
+func cssRules(css string) []cssRule {
+	var out []cssRule
+	for _, m := range ruleBlock.FindAllStringSubmatch(css, -1) {
+		out = append(out, cssRule{selector: strings.TrimSpace(m[1]), body: m[2]})
+	}
+	return out
+}
+
+var ruleBlock = regexp.MustCompile(`([^{}]+)\{([^{}]*)\}`)
