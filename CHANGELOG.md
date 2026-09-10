@@ -10,6 +10,8 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+## v0.1.0
+
 - First release of the interface. It reads an Origo installation and
   renders repositories, branches and tags, the commit log, a commit's
   diff, a file with line links, and a raw file. It signs you in through
