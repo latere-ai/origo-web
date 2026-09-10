@@ -6,6 +6,8 @@ package web
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -864,3 +866,74 @@ func accountLabels(page *html.Node) []*html.Node {
 // rendered is the page's text, the readme included, which is where a value
 // that must appear nowhere is looked for.
 func rendered(page *html.Node) string { return text(elements(page, "body")[0]) }
+
+// TestNoScreenCarriesAnEmDash asserts the punctuation rule of every text
+// surface this repository owns: no em dash, anywhere a reader can meet one.
+//
+// A dash stands in for a decision the sentence should have made. A colon, a
+// full stop, or two sentences say the same thing and read plainly, and a pair
+// of things joined by a dash is usually two elements the stylesheet should be
+// laying out. The three surfaces here are the templates, the sentences this
+// package holds in Go, and the release notes.
+func TestNoScreenCarriesAnEmDash(t *testing.T) {
+	const emDash = "—"
+
+	// Every screen, as a reader receives it.
+	h := newHarness(t)
+	for name, rec := range h.everyPage() {
+		if strings.Contains(rec.Body.String(), emDash) {
+			t.Errorf("%s carries an em dash", name)
+		}
+	}
+
+	// And the sources, so a sentence no fixture reaches is held to the
+	// same rule: the templates, this package's Go strings, and the notes
+	// every release is read from.
+	roots := []string{"templates", ".", "../../CHANGELOG.md", "../../README.md"}
+	for _, root := range roots {
+		for _, path := range filesUnder(t, root) {
+			body, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for i, line := range strings.Split(string(body), "\n") {
+				if !strings.Contains(line, emDash) {
+					continue
+				}
+				if strings.HasPrefix(strings.TrimSpace(line), "//") {
+					continue // a comment is written for a developer
+				}
+				t.Errorf("%s:%d carries an em dash: %s", path, i+1, strings.TrimSpace(line))
+			}
+		}
+	}
+}
+
+// filesUnder is the text this repository owns at one place: a directory of
+// templates, the Go of this package, or one named file.
+func filesUnder(t *testing.T, root string) []string {
+	t.Helper()
+	info, err := os.Stat(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.IsDir() {
+		return []string{root}
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		if !strings.HasSuffix(name, ".gohtml") && !strings.HasSuffix(name, ".go") {
+			continue
+		}
+		out = append(out, filepath.Join(root, name))
+	}
+	return out
+}
