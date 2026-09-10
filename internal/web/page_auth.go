@@ -59,9 +59,19 @@ type signInData struct {
 
 // signInPage is the whole page, built the same way for the visitor who asked
 // for the front door and the one whose credential was refused on a repository.
-func (s *Server) signInPage(v view, returnTo string, refused bool) signInData {
+//
+// The notice is the one claim this page can get wrong, so it is not the call
+// site's to make: it follows the credential the request actually carried. A
+// session that presented nothing was not refused, it was never asked.
+//
+// Nobody is signed in on this page, so it names no account: the session
+// behind a refusal has just been cleared, and there was never one behind the
+// front door.
+func (s *Server) signInPage(rq req, returnTo string) signInData {
+	v := rq.v
 	v.Title = "Sign in"
 	v.SignedIn = false
+	v.Who = ""
 	label := "Continue to sign in"
 	if s.cfg.IssuerName != "" {
 		label = "Continue with " + s.cfg.IssuerName
@@ -72,7 +82,7 @@ func (s *Server) signInPage(v view, returnTo string, refused bool) signInData {
 		CloneHTTPS:  s.cfg.CloneHTTPS("<owner>", "<name>"),
 		CloneSSH:    s.cfg.CloneSSH("<owner>", "<name>"),
 		ReturnTo:    returnTo,
-		Refused:     refused,
+		Refused:     rq.tok != "",
 		Hosted:      s.cfg.Hosted(),
 	}
 }
@@ -81,12 +91,27 @@ func (s *Server) signInPage(v view, returnTo string, refused bool) signInData {
 // every repository URL today, because Origo requires a credential on every
 // read (spec 007) and has no anonymous path yet. The page keeps the address
 // the person asked for, so signing in lands there and not on the home page.
-func (s *Server) signIn(w http.ResponseWriter, r *http.Request, v view, refused bool) {
-	status := http.StatusOK
-	if refused {
-		status = http.StatusUnauthorized
+//
+// The status is the caller's, because it belongs to the address and not to
+// the page: a repository is served to a credential and to nothing else, so a
+// request without one is a 401 there, while the front door asks for nothing
+// and answers 200.
+func (s *Server) signIn(w http.ResponseWriter, r *http.Request, rq req, status int) {
+	s.render(w, r, status, "signin", s.signInPage(rq, returnTo(r)))
+}
+
+// frontDoorStatus is what the front door answers when it cannot list.
+//
+// A visitor who has presented nothing is not being refused anything: they
+// have landed on a page that asks them to sign in, and it is a document, so
+// it answers 200. A session that did present a credential and was turned away
+// is a refusal, and that is a 401. A browser renders the body either way; a
+// link checker, a crawler and an agent read the code.
+func frontDoorStatus(rq req) int {
+	if rq.tok != "" {
+		return http.StatusUnauthorized
 	}
-	s.render(w, r, status, "signin", s.signInPage(v, returnTo(r), refused))
+	return http.StatusOK
 }
 
 // returnTo is the path to come back to after signing in: this request's own
@@ -109,7 +134,7 @@ func (s *Server) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, r, http.StatusOK, "signin",
-		s.signInPage(rq.v, safeReturn(r.URL.Query().Get("return_to")), false))
+		s.signInPage(rq, safeReturn(r.URL.Query().Get("return_to"))))
 }
 
 // handleAuthStart hands the browser to the issuer. It is a GET because it
@@ -186,8 +211,13 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 			data.Repos = append(data.Repos, s.listRow(repo))
 		}
 	case origo.Unauthenticated(err):
-		s.sessions.Clear(w)
-		s.signIn(w, r, rq.v, true)
+		// A credential the installation turned away is a dead one, so
+		// it goes. A visitor who presented none has nothing to clear
+		// and is told nothing about a credential.
+		if rq.tok != "" {
+			s.sessions.Clear(w)
+		}
+		s.signIn(w, r, rq, frontDoorStatus(rq))
 		return
 	default:
 		// ErrNoDirectory, and every other refusal of a route this
@@ -232,7 +262,7 @@ type keysData struct {
 func (s *Server) handleKeys(w http.ResponseWriter, r *http.Request) {
 	rq := s.begin(w, r, "")
 	if rq.tok == "" {
-		s.signIn(w, r, rq.v, false)
+		s.signIn(w, r, rq, http.StatusOK)
 		return
 	}
 	rq.v.Title = "SSH keys"

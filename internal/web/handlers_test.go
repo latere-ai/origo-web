@@ -419,3 +419,70 @@ func TestTheSignedOutPageCarriesTheOpenSourceStory(t *testing.T) {
 		t.Error("an unnamed installation claims to be a hosted one")
 	}
 }
+
+// TestTheFrontDoorClaimsNothingItCannotKnow asserts the three states of the
+// repositories screen and the code each answers with.
+//
+// A visitor who has presented nothing has not been refused: they have landed
+// on a page that asks them to sign in. Telling them a credential of theirs was
+// rejected is false, and answering 401 tells a link checker, a crawler and an
+// agent that the front door is closed when it is a document anyone may read.
+// Only a session that actually held a credential and was turned away reads the
+// refusal, and that one is the 401.
+func TestTheFrontDoorClaimsNothingItCannotKnow(t *testing.T) {
+	const refusal = "did not accept the credential"
+
+	// One: nobody has signed in, and the installation refuses a read that
+	// carries no credential, which is what every installation does today.
+	h := newHarness(t)
+	h.answering(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"error":{"code":"unauthenticated"}}`))
+	})
+	rec := h.get("/")
+	if rec.Code != http.StatusOK {
+		t.Errorf("a first visit answered %d, want 200: the front door asks for nothing", rec.Code)
+	}
+	if body := rec.Body.String(); strings.Contains(body, refusal) {
+		t.Error("a visitor who presented no credential was told one of theirs was rejected")
+	}
+	if !strings.Contains(rec.Body.String(), "/auth/start") {
+		t.Error("the front door offers no way in")
+	}
+
+	// Two: a session the installation answers. The screen is the
+	// repositories screen, not the door.
+	answered := newHarness(t)
+	rec = answered.get("/", answered.signedIn("alice"))
+	if rec.Code != http.StatusOK {
+		t.Errorf("a signed-in reader answered %d", rec.Code)
+	}
+	if strings.Contains(rec.Body.String(), "/auth/start") {
+		t.Error("a signed-in reader was shown the door")
+	}
+
+	// Three: a session that did hold a credential, and the installation
+	// turned it away. That is a refusal: it says so, it answers 401, and
+	// the dead credential is cleared.
+	refused := newHarness(t)
+	refused.answering(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"error":{"code":"unauthenticated"}}`))
+	})
+	rec = refused.get("/", refused.signedIn("alice"))
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("a refused session answered %d, want 401", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), refusal) {
+		t.Error("a refused session is not told its credential was refused")
+	}
+	var cleared bool
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == session.CookieName && c.MaxAge < 0 {
+			cleared = true
+		}
+	}
+	if !cleared {
+		t.Error("the refused credential was left in the browser")
+	}
+}

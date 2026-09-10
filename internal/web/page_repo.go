@@ -56,8 +56,10 @@ func (s *Server) readFailed(w http.ResponseWriter, r *http.Request, rq req, err 
 	case origo.Unauthenticated(err):
 		// The token was refused. Clear the session and send the person
 		// to sign in once; a repeat is an error page, not a loop.
-		s.sessions.Clear(w)
-		s.signIn(w, r, rq.v, true)
+		if rq.tok != "" {
+			s.sessions.Clear(w)
+		}
+		s.signIn(w, r, rq, http.StatusUnauthorized)
 	case origo.Absent(err):
 		s.notFound(w, r, rq.v)
 	case origo.Unavailable(err):

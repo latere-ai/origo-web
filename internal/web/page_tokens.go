@@ -104,7 +104,7 @@ const (
 func (s *Server) handleTokens(w http.ResponseWriter, r *http.Request) {
 	rq := s.begin(w, r, "tokens")
 	if rq.tok == "" {
-		s.signIn(w, r, rq.v, false)
+		s.signIn(w, r, rq, http.StatusOK)
 		return
 	}
 	rq.v.Title = "Agent tokens"
@@ -133,8 +133,10 @@ func (s *Server) renderTokens(w http.ResponseWriter, r *http.Request, rq req, st
 			data.Repos = append(data.Repos, s.listRow(repo))
 		}
 	case origo.Unauthenticated(err):
-		s.sessions.Clear(w)
-		s.signIn(w, r, rq.v, true)
+		if rq.tok != "" {
+			s.sessions.Clear(w)
+		}
+		s.signIn(w, r, rq, http.StatusUnauthorized)
 		return
 	}
 	for _, id := range s.sessions.Recent(r) {
@@ -189,7 +191,7 @@ func (s *Server) handleTokensPost(w http.ResponseWriter, r *http.Request) {
 	}
 	rq := s.begin(w, r, "tokens")
 	if rq.tok == "" {
-		s.signIn(w, r, rq.v, false)
+		s.signIn(w, r, rq, http.StatusOK)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
@@ -246,8 +248,10 @@ func (s *Server) handleTokensPost(w http.ResponseWriter, r *http.Request) {
 func (s *Server) mintRefused(w http.ResponseWriter, r *http.Request, rq req, form tokenForm, err error) {
 	switch {
 	case origo.Unauthenticated(err):
-		s.sessions.Clear(w)
-		s.signIn(w, r, rq.v, true)
+		if rq.tok != "" {
+			s.sessions.Clear(w)
+		}
+		s.signIn(w, r, rq, http.StatusUnauthorized)
 	case origo.Absent(err):
 		s.renderTokens(w, r, rq, http.StatusNotFound, form, tokenRefusedSentence)
 	case origo.Unavailable(err):
