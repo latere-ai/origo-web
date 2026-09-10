@@ -303,11 +303,13 @@ func TestAssetsComeOutOfTheBinary(t *testing.T) {
 // TestNoPageFetchesFromAnotherHost asserts what makes this service
 // self-hostable: every stylesheet, font, and image a page names is served by
 // this binary, and the policy on every response refuses the rest.
+//
+// A fetch is not a navigation. The signed-out page links to the open-source
+// project, which is somewhere else by definition and is a place the reader
+// chooses to go; nothing on any screen loads bytes from another host.
 func TestNoPageFetchesFromAnotherHost(t *testing.T) {
 	h := newHarness(t)
-	c := h.signedIn("alice")
-	for name, path := range h.screens() {
-		rec := h.get(path, c)
+	for name, rec := range h.everyPage() {
 		page := doc(t, rec.Body.String())
 		for _, tag := range []string{"link", "img", "script", "iframe"} {
 			for _, e := range elements(page, tag) {

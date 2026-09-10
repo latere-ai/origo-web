@@ -207,9 +207,8 @@ func TestPagingIsExact(t *testing.T) {
 // names what a table holds.
 func TestAccessibleStructure(t *testing.T) {
 	h := newHarness(t)
-	c := h.signedIn("alice")
-	for name, path := range h.screens() {
-		page := doc(t, h.get(path, c).Body.String())
+	for name, rec := range h.everyPage() {
+		page := doc(t, rec.Body.String())
 
 		if n := len(elements(page, "h1")); n != 1 {
 			t.Errorf("%s has %d h1 elements, want one", name, n)

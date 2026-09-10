@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/html"
+
 	"github.com/latere-ai/origo-web/internal/config"
 	"github.com/latere-ai/origo-web/internal/origo"
 )
@@ -29,6 +31,20 @@ func (h *harness) screens() map[string]string {
 		"tokens":   "/tokens",
 		"docs":     "/docs/agents",
 	}
+}
+
+// everyPage renders every screen a page-wide property must hold on: the ten
+// a signed-in reader reaches, and the front door a signed-out one does. The
+// signed-out page is the one a stranger sees, so no property may skip it.
+func (h *harness) everyPage() map[string]*httptest.ResponseRecorder {
+	h.t.Helper()
+	c := h.signedIn("alice")
+	out := make(map[string]*httptest.ResponseRecorder, len(h.screens())+1)
+	for name, path := range h.screens() {
+		out[name] = h.get(path, c)
+	}
+	out["sign in"] = h.get("/sign-in")
+	return out
 }
 
 // TestScreenCallsAreExact holds each screen to the calls spec 023's screen
@@ -169,9 +185,7 @@ func TestAnonymousRendersWhateverOrigoAnswers(t *testing.T) {
 // link to a real URL or a form that submits.
 func TestEveryScreenWorksWithoutScript(t *testing.T) {
 	h := newHarness(t)
-	c := h.signedIn("alice")
-	for name, path := range h.screens() {
-		rec := h.get(path, c)
+	for name, rec := range h.everyPage() {
 		page := doc(t, rec.Body.String())
 
 		if got := elements(page, "script"); len(got) > 0 {
@@ -571,4 +585,54 @@ func withoutCSRF(body string) string {
 		return body
 	}
 	return body[:start] + body[start+k:]
+}
+
+// TestTheInterfaceNamesTheProductItIs asserts the rule that keeps one
+// operator's branding out of another's installation: every place the
+// interface names itself reads the name from configuration, and an
+// installation nobody named is the open-source project under the project's
+// own name.
+func TestTheInterfaceNamesTheProductItIs(t *testing.T) {
+	// The default. Nothing here was configured, so nothing here is
+	// anybody's product.
+	h := newHarness(t)
+	for name, rec := range h.everyPage() {
+		body := rec.Body.String()
+		page := doc(t, body)
+		title := text(elements(page, "title")[0])
+		if !strings.HasSuffix(title, "· "+config.ProjectName) {
+			t.Errorf("%s: the title is %q", name, title)
+		}
+		if got := text(brand(t, page)); got != config.ProjectName {
+			t.Errorf("%s: the masthead says %q", name, got)
+		}
+		if strings.Contains(body, "Latere Code") {
+			t.Errorf("%s: an installation nobody named carries somebody's product name", name)
+		}
+	}
+
+	// And an operator who named theirs is named on every screen, in the
+	// masthead and in the tab.
+	h = newHarness(t, func(c *config.Config) { c.ProductName = "Latere Code" })
+	for name, rec := range h.everyPage() {
+		page := doc(t, rec.Body.String())
+		if got := text(brand(t, page)); got != "Latere Code" {
+			t.Errorf("%s: the masthead says %q", name, got)
+		}
+		if title := text(elements(page, "title")[0]); !strings.HasSuffix(title, "· Latere Code") {
+			t.Errorf("%s: the title is %q", name, title)
+		}
+	}
+}
+
+// brand is the masthead's own link, the one that names the installation.
+func brand(t *testing.T, page *html.Node) *html.Node {
+	t.Helper()
+	for _, a := range elements(page, "a") {
+		if attr(a, "class") == "brand" {
+			return a
+		}
+	}
+	t.Fatal("the page has no masthead brand")
+	return nil
 }

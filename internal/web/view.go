@@ -16,12 +16,28 @@ import (
 
 // view is what every screen shares: its title, which section of a repository
 // it is, and what the masthead offers.
+//
+// Product, Project and Mark are how one installation differs from another.
+// The software is the same everywhere; the name over the door, the mark
+// beside it and the link back to the project are the operator's, so every
+// screen reads them from configuration and no template writes one down.
 type view struct {
 	Title       string
 	Section     string
 	SignedIn    bool
 	KeysEnabled bool
 	CSRF        string
+
+	// Product is what this installation calls itself, the project's own
+	// name until an operator names it something else.
+	Product string
+
+	// Project is where the open-source project lives.
+	Project string
+
+	// Mark names the brand mark the masthead draws, empty when the
+	// installation has none, which is the default everywhere.
+	Mark string
 }
 
 // CSRFField is the form field the two POST routes read their token from.

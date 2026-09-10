@@ -30,6 +30,9 @@ func (s *Server) begin(w http.ResponseWriter, r *http.Request, section string) r
 			SignedIn:    tok != "",
 			KeysEnabled: s.cfg.KeysURL != "",
 			CSRF:        s.sessions.CSRFToken(w, r),
+			Product:     s.cfg.Name(),
+			Project:     s.cfg.Project(),
+			Mark:        s.cfg.Mark,
 		},
 	}
 }
@@ -63,7 +66,7 @@ func (s *Server) signIn(w http.ResponseWriter, r *http.Request, v view, refused 
 	}
 	s.render(w, r, status, "signin", signInData{
 		View:        v,
-		Heading:     "origo",
+		Heading:     s.cfg.Name(),
 		Lead:        "This is a git server. It holds this organisation's repositories and serves them over HTTPS" + sshClause(s.cfg.SSHCloneHost) + ".",
 		ButtonLabel: label,
 		CloneHTTPS:  s.cfg.CloneHTTPS("<owner>", "<name>"),
@@ -107,7 +110,7 @@ func (s *Server) handleSignIn(w http.ResponseWriter, r *http.Request) {
 	}
 	s.render(w, r, http.StatusOK, "signin", signInData{
 		View:        v,
-		Heading:     "origo",
+		Heading:     s.cfg.Name(),
 		Lead:        "This is a git server. It holds this organisation's repositories and serves them over HTTPS" + sshClause(s.cfg.SSHCloneHost) + ".",
 		ButtonLabel: label,
 		CloneHTTPS:  s.cfg.CloneHTTPS("<owner>", "<name>"),

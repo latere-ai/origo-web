@@ -107,9 +107,8 @@ func TestTheNarrowRulesAreThere(t *testing.T) {
 	// Every wide table on every screen is inside a scrolling container, so
 	// the document itself never scrolls sideways.
 	h := newHarness(t)
-	c := h.signedIn("alice")
-	for name, path := range h.screens() {
-		page := doc(t, h.get(path, c).Body.String())
+	for name, rec := range h.everyPage() {
+		page := doc(t, rec.Body.String())
 		for _, table := range elements(page, "table") {
 			var boxed bool
 			for p := table.Parent; p != nil; p = p.Parent {
