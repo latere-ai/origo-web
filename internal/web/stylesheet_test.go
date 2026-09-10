@@ -4,9 +4,15 @@
 package web
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
+
+	"golang.org/x/net/html"
+
+	"github.com/latere-ai/origo-web/internal/origo"
 )
 
 var (
@@ -117,5 +123,60 @@ func TestTheNarrowRulesAreThere(t *testing.T) {
 				t.Errorf("%s: a table that can push the document sideways", name)
 			}
 		}
+	}
+}
+
+// TestNoBlockIsMarkedByALeftRule asserts that nothing on any screen is set
+// apart by a bar down its left edge. A notice, a callout, a quotation and a
+// status block are distinguishable by their surface and their border, which
+// read the same in both themes and at any zoom; a rule on one edge is an
+// accent the interface does not have.
+//
+// The diff's own sign column is not a block and keeps its inset mark: it
+// sits under a literal + or -, and it is the one place the interface tints.
+func TestNoBlockIsMarkedByALeftRule(t *testing.T) {
+	css := string(mustAsset(t, "app.css"))
+	for _, banned := range []string{"border-left", "border-inline-start"} {
+		if strings.Contains(css, banned) {
+			t.Errorf("the stylesheet still sets %s on something", banned)
+		}
+	}
+
+	// Every block that reads as a notice keeps a surface and a full border,
+	// so removing the rule did not leave it undistinguishable.
+	for _, rule := range []string{
+		".notice {\n  border: 1px solid var(--border-strong);\n  border-radius: var(--radius-sm);\n  background: var(--bg-raised);",
+		".readme blockquote {\n  padding: var(--s-3) var(--s-4);\n  background: var(--bg-raised);\n  border: 1px solid var(--border);",
+	} {
+		if !strings.Contains(css, rule) {
+			t.Errorf("a block lost the surface and border that distinguish it:\n%s", rule)
+		}
+	}
+
+	// And the notice is still a block on a real page, so the assertion
+	// above is about something a reader sees, and it carries no rule of its
+	// own inline either.
+	refuse := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"error":{"code":"unauthenticated"}}`))
+	}))
+	defer refuse.Close()
+	h := newHarness(t)
+	h.server = New(Options{
+		Config: h.cfg, Sessions: mustSessions(t, h.cfg), API: origo.New(mustURL(t, refuse.URL), refuse.Client()),
+	})
+	page := doc(t, h.get("/", h.signedIn("alice")).Body.String())
+	var notices int
+	find(page, func(e *html.Node) {
+		if !strings.Contains(attr(e, "class"), "notice") {
+			return
+		}
+		notices++
+		if style := attr(e, "style"); style != "" {
+			t.Errorf("a notice carries an inline style: %q", style)
+		}
+	})
+	if notices != 1 {
+		t.Errorf("the signed-out page rendered %d notice blocks, want the one that says so", notices)
 	}
 }

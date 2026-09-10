@@ -325,9 +325,11 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 
 /* ---- notices ---- */
 
+/* A notice, a callout and a quotation are set apart by their surface and
+ * their border, and never by a bar down one edge. */
+
 .notice {
   border: 1px solid var(--border-strong);
-  border-left-width: 3px;
   border-radius: var(--radius-sm);
   background: var(--bg-raised);
   padding: var(--s-4) var(--s-5);
@@ -418,7 +420,13 @@ table.source tr:target td.gutter { color: var(--fg-1); font-weight: 600; }
 .readme pre code { background: none; padding: 0; }
 .readme img { max-width: 100%; }
 .readme table { margin-bottom: var(--s-4); }
-.readme blockquote { border-left: 3px solid var(--border-strong); padding-left: var(--s-4); color: var(--fg-2); }
+.readme blockquote {
+  padding: var(--s-3) var(--s-4);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--fg-2);
+}
 
 /* ---- commit header ---- */
 
