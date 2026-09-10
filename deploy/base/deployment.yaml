@@ -61,6 +61,12 @@ spec:
             # sends on is one the installation accepts (spec 007).
             - name: ORIGOWEB_AUTH_AUDIENCE
               value: origo
+            # offline_access is what the issuer needs to hand back a
+            # refresh token. Without it the session dies with the first
+            # access token rather than lasting its twelve hours, because
+            # there is nothing to refresh with.
+            - name: ORIGOWEB_AUTH_SCOPES
+              value: openid,email,profile,offline_access
             - name: ORIGOWEB_AUTH_COOKIE_KEY
               valueFrom:
                 secretKeyRef: {name: origoweb, key: cookie-key}
