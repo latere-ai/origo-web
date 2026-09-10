@@ -1,0 +1,36 @@
+# code.latere.ai is one hostname in front of two services, and this half is
+# the default: everything that is not on Origo's closed list arrives here,
+# including `/`.
+#
+# The other half is the `origod` Ingress of latere-ai/origo, deploy/prod/
+# ingress.yaml. It carries the certificate order and the closed list; this
+# one names the same Secret and orders nothing, so the hostname has one
+# certificate and one issuer relationship.
+#
+# nginx tries every regular expression location before it falls back to the
+# longest matching prefix, so Origo's rules win over this `/` whatever their
+# length. The prefix rules of the other half (/v1/) win over this one on
+# length. Neither depends on which Ingress the controller read first.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: origoweb
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 1m
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: code.latere.ai
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: origoweb
+                port:
+                  name: http
+  tls:
+    - hosts:
+        - code.latere.ai
+      secretName: origod-tls

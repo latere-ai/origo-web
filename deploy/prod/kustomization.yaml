@@ -1,0 +1,24 @@
+# Latere's own target: the interface beside Origo in the namespace `latere`,
+# on the hostname Origo already answers on.
+#
+# Everything here is safe to re-apply. The Secret the Deployment reads is not
+# here: it holds a cookie key and belongs in deploy/bootstrap, which nothing
+# automated reads.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: latere
+
+resources:
+  - ../base
+
+# The release the target runs. The base carries `latest`, which says nothing
+# about what is running; a target pins the tag the release workflow built.
+images:
+  - name: ghcr.io/latere-ai/origoweb
+    newTag: v0.1.0
+
+patches:
+  - path: settings.yaml
+  - path: ingress.yaml
+  - path: pull-secret.yaml

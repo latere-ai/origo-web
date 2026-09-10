@@ -1,0 +1,24 @@
+# The four addresses this installation runs on.
+#
+# ORIGOWEB_ORIGO_URL is the in-cluster Service, so a page is rendered from
+# reads that never leave the cluster. ORIGOWEB_CLONE_HOST is the public
+# hostname, which is the same one this interface answers on: a reader copies
+# the clone line from a page served by the host they clone from.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: origoweb
+spec:
+  template:
+    spec:
+      containers:
+        - name: origoweb
+          env:
+            - name: ORIGOWEB_ORIGO_URL
+              value: http://origod.latere.svc.cluster.local
+            - name: ORIGOWEB_PUBLIC_URL
+              value: https://code.latere.ai
+            - name: ORIGOWEB_CLONE_HOST
+              value: https://code.latere.ai
+            - name: ORIGOWEB_ISSUER_NAME
+              value: Latere
