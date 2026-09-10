@@ -820,6 +820,36 @@ func TestTheAccountShownIsTheMostHumanClaimTheTokenCarries(t *testing.T) {
 	}
 }
 
+// TestAPageWithNothingOnItSaysWhichAccountItIsEmptyFor asserts the second
+// place the account belongs. A reader on a screen with no repositories on it
+// is looking at the answer their credential produced, and the screen says so
+// rather than leaving them to guess whether they are signed in at all.
+func TestAPageWithNothingOnItSaysWhichAccountItIsEmptyFor(t *testing.T) {
+	h := newHarness(t)
+	c := h.signedInAs(oidc.User{Sub: "01HQ8Z", Email: "aki@example.com"})
+
+	// The installation that serves no directory at all, which is every
+	// installation today.
+	body := textOutside(elements(doc(t, h.get("/", c).Body.String()), "body")[0], "readme")
+	if !strings.Contains(body, "signed in as aki@example.com") {
+		t.Errorf("the screen without a directory does not say whose it is: %q", body)
+	}
+
+	// And the one that serves an empty one.
+	h.answering(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{"repos": []origo.Repo{}, "next_cursor": ""})
+	})
+	empty := textOutside(elements(doc(t, h.get("/", c).Body.String()), "body")[0], "readme")
+	if !strings.Contains(empty, "signed in as aki@example.com") {
+		t.Errorf("the empty directory does not say whose it is: %q", empty)
+	}
+
+	// A signed-out visitor is told nothing about an account.
+	if got := h.get("/sign-in").Body.String(); strings.Contains(got, "signed in as") {
+		t.Error("the signed-out page claims somebody is signed in")
+	}
+}
+
 // accountLabels are the masthead's account labels on a page, which must be
 // one when somebody is signed in and none when nobody is.
 func accountLabels(page *html.Node) []*html.Node {

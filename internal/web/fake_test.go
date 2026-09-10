@@ -414,6 +414,20 @@ func (h *harness) csrf(path string, c *http.Cookie) string {
 
 var csrfValue = regexp.MustCompile(`name="` + regexp.QuoteMeta(authkit.CSRFFieldName()) + `" value="([^"]+)"`)
 
+// answering points the interface at an installation that answers the way the
+// handler given answers, which is how a test reaches a state the fixture
+// installation does not produce: a directory, an empty one, a refusal.
+func (h *harness) answering(handler http.HandlerFunc) {
+	h.t.Helper()
+	srv := httptest.NewServer(handler)
+	h.t.Cleanup(srv.Close)
+	h.server = New(Options{
+		Config:   h.cfg,
+		Sessions: mustSessions(h.t, h.cfg),
+		API:      origo.New(mustURL(h.t, srv.URL), srv.Client()),
+	})
+}
+
 // repoPath is the address of the fixture repository in this interface.
 func (h *harness) repoPath(suffix string) string {
 	return "/r/" + h.fake.repo.ID + suffix
