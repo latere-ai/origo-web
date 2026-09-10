@@ -17,6 +17,7 @@
 package session
 
 import (
+	"cmp"
 	"errors"
 	"net/http"
 	"net/url"
@@ -135,15 +136,44 @@ func (m *Manager) Load(w http.ResponseWriter, r *http.Request) (*oidc.Session, e
 	return sess, nil
 }
 
-// Token is the access token of the session on the request, or the empty
-// string when there is none. A caller sends it to Origo unchanged, and sends
-// no Authorization header at all when it is empty.
-func (m *Manager) Token(w http.ResponseWriter, r *http.Request) string {
+// Reader is the signed-in person as a screen needs them: the token their
+// requests to Origo carry, and the one line that says who they are. Both are
+// empty when the request carries no session.
+type Reader struct {
+	Token string
+	Who   string
+}
+
+// Read is the reader on the request.
+//
+// It reads the session once, and every caller takes both fields from that one
+// read. Two reads in one request can each cross the refresh boundary: the
+// second presents a refresh token the first already rotated, the issuer
+// refuses it, and Load then clears a session that was alive.
+func (m *Manager) Read(w http.ResponseWriter, r *http.Request) Reader {
 	sess, err := m.Load(w, r)
 	if err != nil {
-		return ""
+		return Reader{}
 	}
-	return sess.AccessToken
+	return Reader{Token: sess.AccessToken, Who: who(sess.User)}
+}
+
+// who is the line that names the signed-in person, drawn from the claims the
+// session already holds and from no further call to the issuer.
+//
+// The order is how human each claim is. A display name and a name are what a
+// person calls themselves, so either wins. An address is next: it is a name a
+// person recognises as theirs, and on an installation whose issuer mints no
+// name claim it is the only one there is. The subject is last, because it
+// identifies an account without naming anybody, and it is shown only when the
+// alternative is showing nothing.
+func who(u oidc.User) string {
+	return cmp.Or(
+		strings.TrimSpace(u.DisplayName),
+		strings.TrimSpace(u.Name),
+		strings.TrimSpace(u.Email),
+		strings.TrimSpace(u.Sub),
+	)
 }
 
 // Clear removes the session and the recent list.

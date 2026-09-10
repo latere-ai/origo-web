@@ -264,8 +264,8 @@ func TestRefreshAndSessionLifetime(t *testing.T) {
 		if _, err := m.Load(httptest.NewRecorder(), req); !errors.Is(err, ErrNoSession) {
 			t.Errorf("a request with no cookie answered %v", err)
 		}
-		if got := m.Token(httptest.NewRecorder(), req); got != "" {
-			t.Errorf("a request with no cookie carried the token %q", got)
+		if got := m.Read(httptest.NewRecorder(), req); got != (Reader{}) {
+			t.Errorf("a request with no cookie carried %+v", got)
 		}
 	})
 }
@@ -511,5 +511,59 @@ func TestCookiesOverPlainHTTPDropTheHostPrefix(t *testing.T) {
 	back.AddCookie(rc)
 	if got := m.Recent(back); len(got) != 1 || got[0] != "r1" {
 		t.Errorf("the recent list read back as %v", got)
+	}
+}
+
+// TestWhoIsTheMostHumanClaimPresent asserts the order the masthead reads a
+// person's name in, and that a missing claim falls to the next one rather
+// than to nothing.
+//
+// The order matters because issuers differ. The one this installation runs
+// against mints an access token carrying an address and a subject and no name
+// at all, so the address is what it lands on; an issuer that mints a display
+// name is shown that instead, without any change here.
+func TestWhoIsTheMostHumanClaimPresent(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		user oidc.User
+		want string
+	}{
+		{"a display name wins", oidc.User{
+			Sub: "01HQ8Z", Email: "aki@example.com", Name: "aki.h", DisplayName: "Aki Hoshino",
+		}, "Aki Hoshino"},
+		{"a name is next", oidc.User{Sub: "01HQ8Z", Email: "aki@example.com", Name: "aki.h"}, "aki.h"},
+		{"then an address", oidc.User{Sub: "01HQ8Z", Email: "aki@example.com"}, "aki@example.com"},
+		{"and a subject last", oidc.User{Sub: "01HQ8Z"}, "01HQ8Z"},
+		{"blank claims are not claims", oidc.User{
+			Sub: "01HQ8Z", Email: "  ", Name: " ", DisplayName: "\t",
+		}, "01HQ8Z"},
+		{"a session that names nobody names nobody", oidc.User{}, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := who(tc.user); got != tc.want {
+				t.Errorf("who is %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestReadCarriesTheTokenAndWhoHoldsIt asserts that one read of the cookie
+// answers both questions a screen asks of a session. Reading it twice can
+// refresh twice, and the second refresh presents a token the first rotated.
+func TestReadCarriesTheTokenAndWhoHoldsIt(t *testing.T) {
+	is := newIssuer(t)
+	m, err := New(testConfig(t, is))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := requestWith(t, m, &oidc.Session{
+		AccessToken:   "an-access-token",
+		Expiry:        time.Now().Add(time.Hour),
+		SessionExpiry: time.Now().Add(Lifetime),
+		User:          oidc.User{Sub: "01HQ8Z", Email: "aki@example.com"},
+	})
+	got := m.Read(httptest.NewRecorder(), req)
+	if got.Token != "an-access-token" || got.Who != "aki@example.com" {
+		t.Errorf("the reader is %+v", got)
 	}
 }
