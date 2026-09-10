@@ -353,6 +353,7 @@ may make it navigate on change.
 | structure | one `<h1>` per page, sections under `<h2>`; the tree and the log are `<table>` with `<th scope="col">`; the diff is a table with a row per line |
 | theme | light and dark from `prefers-color-scheme`, both defined; no theme switch, no cookie, no flash of the wrong theme because there is no script to cause one |
 | code and hashes | one monospace stack, used for paths, object ids, diffs, and file content, nowhere else |
+| page width | one rule: the shell is the viewport less a gutter, and the measure is a property of running text, set once, in `ch`, on the blocks that hold prose. A table, a tree, a commit log, a diff and a file are data rather than prose and take the whole shell |
 | narrow width | usable from 320 CSS pixels: the body never scrolls sideways; the tree, log, and diff tables scroll inside their own container |
 | identity | the masthead is where the installation names itself, once a screen: the name, and a mark beside it when one is configured. Nothing below it restates either |
 | focus and contrast | every interactive element has a visible focus ring that is not the colour alone; text and its background meet WCAG AA in both themes |
@@ -458,6 +459,9 @@ slots rather than qualities:
   the focus ring, and the monospace and text stacks with real fallbacks.
 - The narrow-width behaviour of the three tables, and what the header
   and the reference selector become at 320 pixels.
+- A prose block and a data screen side by side at a desktop width, which
+  is where the one width rule is legible: the same shell, bounded text,
+  unbounded tables.
 
 ## Not in this spec
 

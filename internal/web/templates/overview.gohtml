@@ -103,11 +103,11 @@
       <a href="{{.URL}}">view file</a>
     </div>
     {{- if .HTML}}
-    <div class="readme">{{.HTML}}</div>
+    <div class="readme prose">{{.HTML}}</div>
     {{- else if .Text}}
-    <div class="readme"><pre>{{.Text}}</pre></div>
+    <div class="readme prose"><pre>{{.Text}}</pre></div>
     {{- else}}
-    <div class="readme"><p class="meta">This readme is too large to show here. <a href="{{.URL}}">Open it as a file</a>.</p></div>
+    <div class="readme prose"><p class="meta">This readme is too large to show here. <a href="{{.URL}}">Open it as a file</a>.</p></div>
     {{- end}}
   </div>
   {{- end}}

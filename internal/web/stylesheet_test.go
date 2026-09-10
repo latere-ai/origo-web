@@ -20,6 +20,7 @@ var (
 	tokenDefine = regexp.MustCompile(`(?m)^\s*(--[a-z0-9-]+)\s*:`)
 	lightBlock  = regexp.MustCompile(`(?s):root \{(.*?)\n\}`)
 	darkBlock   = regexp.MustCompile(`(?s)@media \(prefers-color-scheme: dark\) \{\s*:root \{(.*?)\n  \}`)
+	pageBlock   = regexp.MustCompile(`(?s)\n\.page \{(.*?)\n\}`)
 )
 
 // TestBothThemesAreComplete asserts the property a page cannot be eyeballed
@@ -177,5 +178,77 @@ func TestNoBlockIsMarkedByALeftRule(t *testing.T) {
 	})
 	if notices != 1 {
 		t.Errorf("the signed-out page rendered %d notice blocks, want the one that says so", notices)
+	}
+}
+
+// TestTheShellIsTheViewportAndTheMeasureBoundsProse asserts the interface's
+// one rule about width, so it cannot be traded away a screen at a time.
+//
+// The shell takes the viewport less a gutter: no screen is a column with
+// empty space either side of it. The measure is a property of running text,
+// not of the page, so it is set once, in characters, on the blocks that hold
+// prose. A table, a tree, a commit log, a diff and a file are data rather
+// than prose, and they get the whole shell.
+func TestTheShellIsTheViewportAndTheMeasureBoundsProse(t *testing.T) {
+	css := string(mustAsset(t, "app.css"))
+
+	frame := pageBlock.FindStringSubmatch(css)
+	if frame == nil {
+		t.Fatal("the stylesheet has no page frame")
+	}
+	for _, banned := range []string{"max-width", "margin"} {
+		if strings.Contains(frame[1], banned) {
+			t.Errorf("the shell sets %s, so it is a column and not the viewport:\n%s", banned, frame[1])
+		}
+	}
+	if !strings.Contains(frame[1], "padding:") {
+		t.Errorf("the shell has no gutter:\n%s", frame[1])
+	}
+
+	// The measure is a count of characters, so it holds at any zoom and in
+	// any typeface, and exactly one rule reads it.
+	if !strings.Contains(css, "--measure: 78ch;") {
+		t.Error("the measure is not a count of characters")
+	}
+	if got := strings.Count(css, "var(--measure)"); got != 1 {
+		t.Errorf("%d rules bind something to the measure, want the one that binds prose", got)
+	}
+	if !strings.Contains(css, ".prose, .lead, .notice { max-width: var(--measure); }") {
+		t.Error("the measure is bound to something other than prose")
+	}
+
+	// The screens made of data are never bounded: the tables that carry a
+	// repository's tree, log, diff, files and tokens take the whole shell.
+	// The two screens made of prose always are. A readme and a reference
+	// table are prose that holds a table, and go with the words around it.
+	data := map[string]bool{
+		"home": true, "overview": true, "refs": true, "log": true, "commit": true,
+		"compare": true, "tree": true, "file": true, "tokens": true,
+	}
+	h := newHarness(t)
+	for name, rec := range h.everyPage() {
+		if !data[name] {
+			continue
+		}
+		for _, table := range elements(doc(t, rec.Body.String()), "table") {
+			if within(table, "readme") {
+				continue
+			}
+			if within(table, "prose") {
+				t.Errorf("%s: a table is bounded by the measure written for prose", name)
+			}
+		}
+	}
+	for _, path := range []string{"/sign-in", "/docs/agents"} {
+		page := doc(t, h.get(path).Body.String())
+		var prose int
+		find(page, func(e *html.Node) {
+			if strings.Contains(attr(e, "class"), "prose") {
+				prose++
+			}
+		})
+		if prose == 0 {
+			t.Errorf("%s is a page of prose and nothing on it is bounded by the measure", path)
+		}
 	}
 }

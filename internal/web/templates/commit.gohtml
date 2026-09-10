@@ -4,7 +4,7 @@
 <main class="stack">
   <h1>{{.Commit.Subject}}</h1>
   {{template "stale" .Stale}}
-  {{- if .Commit.Body}}<pre class="commit-message">{{.Commit.Body}}</pre>{{end}}
+  {{- if .Commit.Body}}<pre class="commit-message prose">{{.Commit.Body}}</pre>{{end}}
   <div class="panel stack">
     <dl class="facts">
       <dt>Author</dt><dd>{{.Commit.Author}} &lt;{{.Commit.Email}}&gt; · <span title="{{.Commit.WhenExact}}">{{.Commit.WhenExact}}</span></dd>
