@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/latere-ai/origo-web/internal/origo"
+	"github.com/latere-ai/origo-web/internal/session"
 )
 
 // lifetime is one entry of the lifetime control: the seconds the request
@@ -145,8 +146,8 @@ func (s *Server) renderTokens(w http.ResponseWriter, r *http.Request, rq req, st
 		s.signIn(w, r, rq, http.StatusUnauthorized)
 		return
 	}
-	for _, id := range s.sessions.Recent(r) {
-		data.Recent = append(data.Recent, listRow{ID: id, Name: id, URL: "/tokens?repo=" + url.QueryEscape(id)})
+	if !data.Directory {
+		data.Recent = s.recentRows(r, func(o session.Opened) string { return "/tokens?repo=" + url.QueryEscape(o.ID) })
 	}
 
 	// A named repository is resolved so the screen can say its name, and

@@ -217,19 +217,28 @@ func (m *Manager) SessionCookie() string { return m.sessionName }
 // CSRFField is the form field name a template writes the token into.
 func CSRFField() string { return authkit.CSRFFieldName() }
 
+// Opened is one repository this session has opened: the identifier, which
+// is its address in this interface, and its owner and name, which are what
+// a person recognises it by. Name is "owner/slug", and empty when the entry
+// was written by a release that kept identifiers alone.
+type Opened struct {
+	ID   string
+	Name string
+}
+
 // Recent reads the repositories this session has opened, newest first.
-func (m *Manager) Recent(r *http.Request) []string {
+func (m *Manager) Recent(r *http.Request) []Opened {
 	c, err := r.Cookie(m.recentName)
 	if err != nil || c.Value == "" {
 		return nil
 	}
-	var out []string
+	var out []Opened
 	for part := range strings.SplitSeq(c.Value, " ") {
-		id, err := url.QueryUnescape(part)
-		if err != nil || id == "" || !plausibleID(id) {
+		o, ok := parseOpened(part)
+		if !ok {
 			continue
 		}
-		out = append(out, id)
+		out = append(out, o)
 		if len(out) == recentLimit {
 			break
 		}
@@ -237,14 +246,19 @@ func (m *Manager) Recent(r *http.Request) []string {
 	return out
 }
 
-// Remember moves one repository to the front of the recent list.
-func (m *Manager) Remember(w http.ResponseWriter, r *http.Request, id string) {
+// Remember moves one repository to the front of the recent list. The name
+// is "owner/slug"; one that is not shaped like that is not kept, and the
+// entry names nothing rather than something a screen cannot trust.
+func (m *Manager) Remember(w http.ResponseWriter, r *http.Request, id, name string) {
 	if !plausibleID(id) {
 		return
 	}
-	next := []string{id}
+	if !plausibleName(name) {
+		name = ""
+	}
+	next := []Opened{{ID: id, Name: name}}
 	for _, old := range m.Recent(r) {
-		if old != id {
+		if old.ID != id {
 			next = append(next, old)
 		}
 		if len(next) == recentLimit {
@@ -252,8 +266,8 @@ func (m *Manager) Remember(w http.ResponseWriter, r *http.Request, id string) {
 		}
 	}
 	parts := make([]string, len(next))
-	for i, id := range next {
-		parts[i] = url.QueryEscape(id)
+	for i, o := range next {
+		parts[i] = formatOpened(o)
 	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     m.recentName,
@@ -264,6 +278,38 @@ func (m *Manager) Remember(w http.ResponseWriter, r *http.Request, id string) {
 		Secure:   m.secure,
 		SameSite: http.SameSiteLaxMode,
 	})
+}
+
+// The cookie is one entry per repository, separated by spaces: the escaped
+// identifier, then "=" and the escaped name. Escaping puts "=" and " " out
+// of both halves, so the two separators are unambiguous, and an entry with
+// no "=" is one an earlier release wrote and reads with no name.
+func formatOpened(o Opened) string {
+	s := url.QueryEscape(o.ID)
+	if o.Name != "" {
+		s += "=" + url.QueryEscape(o.Name)
+	}
+	return s
+}
+
+func parseOpened(part string) (Opened, bool) {
+	rawID, rawName, _ := strings.Cut(part, "=")
+	id, err := url.QueryUnescape(rawID)
+	if err != nil || !plausibleID(id) {
+		return Opened{}, false
+	}
+	name, err := url.QueryUnescape(rawName)
+	if err != nil || !plausibleName(name) {
+		name = ""
+	}
+	return Opened{ID: id, Name: name}, true
+}
+
+// plausibleName keeps an edited cookie from putting arbitrary text on a
+// screen: an owner and a slug, each in the characters a name may carry.
+func plausibleName(name string) bool {
+	owner, slug, ok := strings.Cut(name, "/")
+	return ok && plausibleID(owner) && plausibleID(slug)
 }
 
 // plausibleID keeps a cookie a person edited from reaching a request path.

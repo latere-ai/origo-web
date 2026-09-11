@@ -279,19 +279,19 @@ func TestRecentIsBoundedAndChecked(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
-	m.Remember(rec, req, "r1")
+	m.Remember(rec, req, "r1", "infra/one")
 	c := cookieNamed(t, rec, RecentCookieName)
-	if c == nil || c.Value != "r1" {
-		t.Fatalf("the first repository was remembered as %+v", c)
+	if c == nil {
+		t.Fatal("the first repository was not remembered")
 	}
 
 	// The newest is first and a repeat does not grow the list.
 	req.AddCookie(c)
 	rec2 := httptest.NewRecorder()
-	m.Remember(rec2, req, "r2")
+	m.Remember(rec2, req, "r2", "infra/two")
 	req2 := httptest.NewRequest(http.MethodGet, "/", nil)
 	req2.AddCookie(cookieNamed(t, rec2, RecentCookieName))
-	if got := m.Recent(req2); len(got) != 2 || got[0] != "r2" || got[1] != "r1" {
+	if got := m.Recent(req2); len(got) != 2 || got[0] != (Opened{"r2", "infra/two"}) || got[1] != (Opened{"r1", "infra/one"}) {
 		t.Errorf("the list reads as %v", got)
 	}
 
@@ -299,7 +299,7 @@ func TestRecentIsBoundedAndChecked(t *testing.T) {
 	seed := httptest.NewRequest(http.MethodGet, "/", nil)
 	for i := range 40 {
 		w := httptest.NewRecorder()
-		m.Remember(w, seed, "id"+itoa(i))
+		m.Remember(w, seed, "id"+itoa(i), "infra/repo"+itoa(i))
 		seed = httptest.NewRequest(http.MethodGet, "/", nil)
 		seed.AddCookie(cookieNamed(t, w, RecentCookieName))
 	}
@@ -310,13 +310,13 @@ func TestRecentIsBoundedAndChecked(t *testing.T) {
 	// A cookie somebody edited cannot become a request path.
 	edited := httptest.NewRequest(http.MethodGet, "/", nil)
 	edited.AddCookie(&http.Cookie{Name: RecentCookieName, Value: url.QueryEscape("../../etc/passwd") + " ok1"})
-	if got := m.Recent(edited); len(got) != 1 || got[0] != "ok1" {
+	if got := m.Recent(edited); len(got) != 1 || got[0].ID != "ok1" {
 		t.Errorf("an edited cookie read as %v", got)
 	}
 
 	// A rejected identifier is not remembered at all.
 	w := httptest.NewRecorder()
-	m.Remember(w, httptest.NewRequest(http.MethodGet, "/", nil), "../etc")
+	m.Remember(w, httptest.NewRequest(http.MethodGet, "/", nil), "../etc", "infra/etc")
 	if cookieNamed(t, w, RecentCookieName) != nil {
 		t.Error("an implausible identifier was remembered")
 	}
@@ -326,6 +326,49 @@ func TestRecentIsBoundedAndChecked(t *testing.T) {
 	m.Clear(out)
 	if got := cookieNamed(t, out, RecentCookieName); got == nil || got.MaxAge >= 0 {
 		t.Error("signing out left the recent list behind")
+	}
+}
+
+// TestRecentCarriesTheName asserts that the list names what it remembers,
+// that a name somebody edited into the cookie is dropped while the
+// identifier beside it is kept, and that a cookie an earlier release wrote,
+// identifiers alone, still reads.
+func TestRecentCarriesTheName(t *testing.T) {
+	is := newIssuer(t)
+	m, err := New(testConfig(t, is))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+	m.Remember(rec, httptest.NewRequest(http.MethodGet, "/", nil), "r1", "infra/origo")
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(cookieNamed(t, rec, RecentCookieName))
+	if got := m.Recent(req); len(got) != 1 || got[0] != (Opened{"r1", "infra/origo"}) {
+		t.Errorf("the name did not round-trip: %v", got)
+	}
+
+	// A name that is not an owner and a slug is not written.
+	rec = httptest.NewRecorder()
+	m.Remember(rec, httptest.NewRequest(http.MethodGet, "/", nil), "r1", "<b>hello</b>")
+	req = httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(cookieNamed(t, rec, RecentCookieName))
+	if got := m.Recent(req); len(got) != 1 || got[0] != (Opened{"r1", ""}) {
+		t.Errorf("an implausible name was kept: %v", got)
+	}
+
+	// Nor is one that was edited in.
+	edited := httptest.NewRequest(http.MethodGet, "/", nil)
+	edited.AddCookie(&http.Cookie{Name: RecentCookieName, Value: "r1=" + url.QueryEscape("../../etc/passwd") + " r2=infra%2Forigo"})
+	if got := m.Recent(edited); len(got) != 2 || got[0] != (Opened{"r1", ""}) || got[1] != (Opened{"r2", "infra/origo"}) {
+		t.Errorf("an edited name read as %v", got)
+	}
+
+	// An earlier release wrote identifiers alone.
+	old := httptest.NewRequest(http.MethodGet, "/", nil)
+	old.AddCookie(&http.Cookie{Name: RecentCookieName, Value: "r2 r1"})
+	if got := m.Recent(old); len(got) != 2 || got[0] != (Opened{"r2", ""}) || got[1] != (Opened{"r1", ""}) {
+		t.Errorf("an older cookie read as %v", got)
 	}
 }
 
@@ -502,14 +545,14 @@ func TestCookiesOverPlainHTTPDropTheHostPrefix(t *testing.T) {
 
 	// So does the recent list.
 	out := httptest.NewRecorder()
-	m.Remember(out, req, "r1")
+	m.Remember(out, req, "r1", "infra/one")
 	rc := cookieNamed(t, out, m.RecentCookie())
 	if rc == nil || rc.Secure {
 		t.Fatalf("the recent cookie is %+v", rc)
 	}
 	back := httptest.NewRequest(http.MethodGet, "/", nil)
 	back.AddCookie(rc)
-	if got := m.Recent(back); len(got) != 1 || got[0] != "r1" {
+	if got := m.Recent(back); len(got) != 1 || got[0].ID != "r1" {
 		t.Errorf("the recent list read back as %v", got)
 	}
 }

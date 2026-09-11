@@ -177,7 +177,7 @@ func (s *Server) handleNewPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.sessions.Remember(w, r, repo.ID)
+	s.sessions.Remember(w, r, repo.ID, repo.Owner+"/"+repo.Slug)
 	http.Redirect(w, r, "/r/"+url.PathEscape(repo.ID), http.StatusSeeOther)
 }
 

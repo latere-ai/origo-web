@@ -4,12 +4,14 @@
 package web
 
 import (
+	"cmp"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/latere-ai/origo-web/internal/config"
 	"github.com/latere-ai/origo-web/internal/origo"
+	"github.com/latere-ai/origo-web/internal/session"
 )
 
 // req is what one request carries into a screen: the reader's token, which
@@ -252,10 +254,25 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		data.Directory = false
 	}
 
-	for _, id := range s.sessions.Recent(r) {
-		data.Recent = append(data.Recent, listRow{ID: id, Name: id, URL: "/r/" + url.PathEscape(id)})
+	// What this session opened is the way in on an installation with no
+	// directory, and nothing more: beside a directory it would list some
+	// of the same repositories a second time, so it is not there.
+	if !data.Directory {
+		data.Recent = s.recentRows(r, func(o session.Opened) string { return "/r/" + url.PathEscape(o.ID) })
 	}
 	s.render(w, r, http.StatusOK, "home", data)
+}
+
+// recentRows is the list of what this session opened, each row named by
+// its owner and name where the cookie carries them and by its identifier
+// where an earlier release wrote it without, and addressed by the screen's
+// own link.
+func (s *Server) recentRows(r *http.Request, link func(session.Opened) string) []listRow {
+	var rows []listRow
+	for _, o := range s.sessions.Recent(r) {
+		rows = append(rows, listRow{ID: o.ID, Name: cmp.Or(o.Name, o.ID), URL: link(o)})
+	}
+	return rows
 }
 
 // matches reports whether a row answers the filter a reader typed. The filter

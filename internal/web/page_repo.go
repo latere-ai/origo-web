@@ -48,7 +48,7 @@ func (s *Server) openRepo(w http.ResponseWriter, r *http.Request, section string
 	}
 	rv := newRepoView(repo, ref)
 	rq.v.Title = repo.Owner + "/" + repo.Slug
-	s.sessions.Remember(w, r, repo.ID)
+	s.sessions.Remember(w, r, repo.ID, repo.Owner+"/"+repo.Slug)
 	return repoContext{req: rq, repo: repo, rv: rv, ref: ref, stale: staleSentence(meta)}, true
 }
 
