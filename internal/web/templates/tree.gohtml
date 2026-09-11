@@ -5,6 +5,11 @@
   <h1 class="heading-path">{{if .Path}}{{.Path}}{{else}}Files{{end}}</h1>
   <p class="crumbs"><a href="{{.Repo.URL}}/tree/{{.Repo.RefQuery}}">{{.Repo.Slug}}</a>{{range .Crumbs}} / {{if .URL}}<a href="{{.URL}}">{{.Name}}</a>{{else}}<span class="here">{{.Name}}</span>{{end}}{{end}}</p>
   {{template "stale" .Stale}}
+  {{- if .NoCommits}}
+  <div class="panel">
+    <p class="empty">This repository has no commits yet. Push to the clone address on the <a href="{{.Repo.URL}}">overview</a>.</p>
+  </div>
+  {{- else}}
   <div class="panel flush">
     <div class="scroller">
       <table class="stackable">
@@ -33,5 +38,6 @@
     <span class="meta">{{.Count}} · <a href="{{.History}}">{{if .Path}}History of this directory{{else}}History{{end}}</a></span>
     {{if .NextURL}}<a href="{{.NextURL}}">More entries</a>{{else}}<span class="inert">More entries</span>{{end}}
   </nav>
+  {{- end}}
 </main>
 {{end}}

@@ -37,6 +37,11 @@ type treeData struct {
 	Count string
 	Stale string
 	Empty bool
+
+	// NoCommits says the repository has nothing to list at any path: nobody
+	// has pushed to it. The screen keeps its sections and says what to do
+	// next, in place of a listing.
+	NoCommits bool
 }
 
 // handleTree lists one directory at one revision.
@@ -51,6 +56,37 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path := cleanPath(r.PathValue("path"))
+	data := treeData{
+		View:    rc.v,
+		Repo:    rc.rv,
+		Path:    path,
+		Crumbs:  pathCrumbs(rc.rv.URL(), rc.rv.RefQueryValue(), path),
+		Stale:   rc.stale,
+		History: rc.rv.URL() + "/log?" + logQuery(rc.rv, path),
+	}
+
+	// A repository with no commit has no tree to list. Origo answers its
+	// tree with a missing reference, which is also what it answers for a
+	// branch that was never pushed, so the question is put to the
+	// references first, the way the overview puts it, and the screen says
+	// what to do next in place of a listing. Rendering the missing
+	// reference as "this repository does not exist" under that
+	// repository's own name was a dead end: the reader had just seen it.
+	if rc.repo.Head == "" {
+		branches, _, _, err := s.refsFor(r, rc.tok, rc.repo.ID)
+		if err != nil {
+			s.readFailed(w, r, rc.req, err)
+			return
+		}
+		if len(branches) == 0 {
+			data.NoCommits = true
+			rc.v.Title = rc.repo.Slug + " at " + rc.ref
+			data.View = rc.v
+			s.render(w, r, http.StatusOK, "tree", data)
+			return
+		}
+	}
+
 	page, err := s.api.Tree(r.Context(), rc.tok, rc.repo.ID, rc.ref, origo.TreeOptions{
 		Path: path, Cursor: r.URL.Query().Get("cursor"),
 	})
@@ -58,18 +94,10 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 		s.readFailed(w, r, rc.req, err)
 		return
 	}
-
-	data := treeData{
-		View:    rc.v,
-		Repo:    rc.rv,
-		Path:    path,
-		Crumbs:  pathCrumbs(rc.rv.URL(), rc.rv.RefQueryValue(), path),
-		Entries: s.entryViews(rc.rv, page.Items),
-		Count:   entryCount(len(page.Items)),
-		Stale:   firstNonEmpty(rc.stale, staleSentence(page.Meta)),
-		Empty:   len(page.Items) == 0,
-		History: rc.rv.URL() + "/log?" + logQuery(rc.rv, path),
-	}
+	data.Entries = s.entryViews(rc.rv, page.Items)
+	data.Count = entryCount(len(page.Items))
+	data.Stale = firstNonEmpty(rc.stale, staleSentence(page.Meta))
+	data.Empty = len(page.Items) == 0
 	if path != "" {
 		data.Parent = rc.rv.URL() + "/tree/" + escapePath(parentPath(path)) + rc.rv.RefQuery()
 	}
