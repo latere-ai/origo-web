@@ -10,6 +10,8 @@ already holds what was committed.
 
 ## Unreleased
 
+## v0.5.2 - 2026-09-11
+
 - The repositories page groups repositories by owner, one table an owner,
   and counts what it shows. When the whole list fits one page, a filter
   box narrows it by name or owner.
