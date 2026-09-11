@@ -769,6 +769,13 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
  * sans, and it takes the room the bar has left. */
 .subject { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
 
+/* The strip that says whether the address a reader is on moves. It is a row
+ * of text under the breadcrumb and carries no surface of its own, so the
+ * heading, the strip and the file below it all start at one left edge. What
+ * separates the two states is what they say: a reference name, or the word
+ * pinned and a short id. */
+.pin { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); align-items: baseline; margin: 0; }
+
 /* ---- pager ---- */
 
 .pager { display: flex; gap: var(--s-5); align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: var(--t-12); }

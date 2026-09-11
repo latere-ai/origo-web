@@ -242,6 +242,11 @@ func (f *fakeOrigo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	maps.Copy(w.Header(), f.headers[p])
 	code := f.status[p]
+	// Every read Origo answers names the object it resolved to (spec 009),
+	// which is what a screen builds a pinned address from.
+	if w.Header().Get("Origo-Commit") == "" && f.repo.Head != "" {
+		w.Header().Set("Origo-Commit", f.repo.Head)
+	}
 	f.mu.Unlock()
 	if code != 0 {
 		w.WriteHeader(code)

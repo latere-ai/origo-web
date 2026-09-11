@@ -705,6 +705,13 @@ repository, so they assert against the real read API and not a mock.
   10 MiB text file is requested with a `Range` and shows a truncation
   notice; a 60 MiB file is not fetched at all and shows the size and the
   clone hint (proposed: `internal/web`, `TestFileViewLimits`).
+- The file screen says whether its address moves. A file read at a reference
+  says the next push can change it and offers the pinned address; a file read
+  at a commit says the address holds and offers the way back to the default
+  branch. The pinned address is the commit Origo named in `Origo-Commit`, so
+  it costs no second call, and a read that named none carries no strip at all
+  (proposed: `internal/web`, `TestAFileSaysWhetherItsAddressMoves`,
+  `TestAnObjectIDIsToldFromAName`).
 - A directory listing counts the rows on the screen and offers that
   directory's own history beside the count. It counts the page and never the
   directory, because Origo pages a tree by cursor and returns no total

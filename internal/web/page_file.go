@@ -153,7 +153,66 @@ type blobData struct {
 	RawURL     string
 	HistoryURL string
 	CloneHTTPS string
-	Stale      string
+	// Pin says whether this address moves, and carries the address of the
+	// other state. It is nil where Origo named no commit for the read.
+	Pin   *pinView
+	Stale string
+}
+
+// pinView is the one strip that says whether the address a reader is on
+// shows the same bytes tomorrow.
+//
+// An address naming a branch or a tag shows other bytes after the next push;
+// an address naming a commit shows the same bytes forever. The difference is
+// between a citation that holds and one that drifts, so the screen says which
+// one it is and offers the other. Origo names the object every read resolved
+// to in Origo-Commit, so the pinned address costs no second call.
+type pinView struct {
+	// Ref is what the address names: the reference it follows, or the short
+	// id it is pinned to.
+	Ref string
+	// Pinned reports that the address names one commit.
+	Pinned bool
+	// Note is the one sentence that says what that means.
+	Note string
+	// URL and Link are the way to the other state.
+	URL  string
+	Link string
+}
+
+func newPinView(rv *repoView, base, resolved string) *pinView {
+	if resolved == "" {
+		return nil
+	}
+	resolved = strings.ToLower(resolved)
+	short := origo.Short(resolved)
+	if ref := strings.ToLower(rv.Ref); isObjectID(ref) && strings.HasPrefix(resolved, ref) {
+		return &pinView{
+			Ref: short, Pinned: true,
+			Note: "This address always shows these bytes.",
+			URL:  base, Link: "View current on " + rv.DefaultBranch,
+		}
+	}
+	return &pinView{
+		Ref:  rv.Ref,
+		Note: "The next push can change what this address shows.",
+		URL:  base + "?ref=" + url.QueryEscape(resolved),
+		Link: "Pin to " + short,
+	}
+}
+
+// isObjectID reports whether a reference is written as an object id: hex, and
+// long enough for git to take it as an abbreviation.
+func isObjectID(ref string) bool {
+	if len(ref) < 7 || len(ref) > 64 {
+		return false
+	}
+	for _, r := range ref {
+		if !strings.ContainsRune("0123456789abcdef", r) {
+			return false
+		}
+	}
+	return true
 }
 
 type sourceLine struct {
@@ -182,7 +241,7 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path := cleanPath(r.PathValue("path"))
-	entry, ok := s.findEntry(w, r, rc, path)
+	entry, meta, ok := s.findEntry(w, r, rc, path)
 	if !ok {
 		return
 	}
@@ -199,6 +258,7 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 		RawURL:     rc.rv.URL() + "/raw/" + escapePath(path) + rc.rv.RefQuery(),
 		HistoryURL: rc.rv.URL() + "/log?" + logQuery(rc.rv, path),
 		CloneHTTPS: s.cfg.CloneHTTPS(rc.repo.Owner, rc.repo.Slug),
+		Pin:        newPinView(rc.rv, rc.rv.URL()+"/blob/"+escapePath(path), meta.Commit),
 		Stale:      rc.stale,
 	}
 	rc.v.Title = entry.Name()
@@ -241,24 +301,26 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, http.StatusOK, "blob", data)
 }
 
-// findEntry reads one directory to find one file's object id and size.
-func (s *Server) findEntry(w http.ResponseWriter, r *http.Request, rc repoContext, path string) (origo.Entry, bool) {
+// findEntry reads one directory to find one file's object id and size. It
+// returns the read's own meta as well, because Origo names the commit it
+// resolved to there and that is what a pinned address is built from.
+func (s *Server) findEntry(w http.ResponseWriter, r *http.Request, rc repoContext, path string) (origo.Entry, origo.Meta, bool) {
 	if path == "" {
 		s.notFound(w, r, rc.v)
-		return origo.Entry{}, false
+		return origo.Entry{}, origo.Meta{}, false
 	}
 	page, err := s.api.Tree(r.Context(), rc.tok, rc.repo.ID, rc.ref, origo.TreeOptions{Path: parentPath(path)})
 	if err != nil {
 		s.readFailed(w, r, rc.req, err)
-		return origo.Entry{}, false
+		return origo.Entry{}, origo.Meta{}, false
 	}
 	for _, e := range page.Items {
 		if e.Path == path && !e.IsDir() {
-			return e, true
+			return e, page.Meta, true
 		}
 	}
 	s.notFound(w, r, rc.v)
-	return origo.Entry{}, false
+	return origo.Entry{}, origo.Meta{}, false
 }
 
 // maxLineRunes bounds one rendered line. A minified file is one line of two
@@ -325,7 +387,7 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path := cleanPath(r.PathValue("path"))
-	entry, ok := s.findEntry(w, r, rc, path)
+	entry, _, ok := s.findEntry(w, r, rc, path)
 	if !ok {
 		return
 	}
