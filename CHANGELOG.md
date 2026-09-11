@@ -10,6 +10,26 @@ holds what was committed.
 
 ## Unreleased
 
+- The tree tab of a repository nobody has pushed to says the repository has
+  no commits yet, under the repository's own tabs. It answered "Not found"
+  with nowhere to go.
+- A branch, path or commit that is not there, inside a repository you can
+  see, is said in those words. The repository's tabs stay on the page with
+  a link to its references, instead of a bare "this repository does not
+  exist". The page for a repository you cannot open links back to the list.
+- The "Opened in this session" list names each repository by owner and
+  name instead of its identifier, and is not shown when the page already
+  lists every repository.
+- The new repository form is one column: owner, name, then the button.
+- The clone box says what git asks for at each address: an agent token as
+  the password over HTTPS, with any username, and a key on your account
+  over SSH. Each links to the page where you get one.
+- The agent documentation and the token page give the installation's
+  public address. They printed the address this service talks to, which on
+  a cluster is one only the cluster can reach.
+- The agent documentation describes the `origo` command and its skill, which
+  ship with Origo, in place of a planned MCP server that was never built.
+
 ## v0.7.0 - 2026-09-11
 
 - The file page says whether its address moves. A file opened at a branch
