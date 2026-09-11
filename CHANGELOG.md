@@ -10,6 +10,8 @@ holds what was committed.
 
 ## Unreleased
 
+## v0.8.0 - 2026-09-11
+
 - The tree tab of a repository nobody has pushed to says the repository has
   no commits yet, under the repository's own tabs. It answered "Not found"
   with nowhere to go.
