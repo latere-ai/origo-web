@@ -68,12 +68,37 @@ type Key struct {
 	LastUsed    *time.Time `json:"last_used_at"`
 }
 
+// collection is the address of the reader's keys.
+func (c *Client) collection() *url.URL {
+	u := *c.base
+	u.Path = strings.TrimSuffix(c.base.Path, "/") + "/me/ssh-keys"
+	u.RawPath = ""
+	return &u
+}
+
+// one is the address of a single key.
+//
+// The id is a value the store chose and it is escaped into exactly one path
+// segment, never joined as a path. url.URL.JoinPath resolves "." and ".."
+// and passes a slash through, so an id carrying either would address a
+// different route: "a/../b" would reach the key "b", and an id of ".."
+// would reach the collection and delete nothing under a name nobody has.
+// Setting Path and RawPath together is what makes the escaping survive into
+// the request line.
+func (c *Client) one(id string) *url.URL {
+	u := *c.base
+	base := strings.TrimSuffix(c.base.Path, "/") + "/me/ssh-keys/"
+	u.Path = base + id
+	u.RawPath = base + url.PathEscape(id)
+	return &u
+}
+
 // List returns the reader's own keys, newest first.
 func (c *Client) List(ctx context.Context, token string) ([]Key, error) {
 	var out struct {
 		Keys []Key `json:"keys"`
 	}
-	if err := c.call(ctx, http.MethodGet, "/me/ssh-keys", token, nil, &out); err != nil {
+	if err := c.call(ctx, http.MethodGet, c.collection(), token, nil, &out); err != nil {
 		return nil, err
 	}
 	return out.Keys, nil
@@ -107,7 +132,7 @@ func (c *Client) add(ctx context.Context, token, pasted string, confirm bool) (K
 	var out struct {
 		Key Key `json:"key"`
 	}
-	if err := c.call(ctx, http.MethodPost, "/me/ssh-keys", token, body, &out); err != nil {
+	if err := c.call(ctx, http.MethodPost, c.collection(), token, body, &out); err != nil {
 		return Key{}, err
 	}
 	return out.Key, nil
@@ -116,13 +141,12 @@ func (c *Client) add(ctx context.Context, token, pasted string, confirm bool) (K
 // Remove deletes one of the reader's keys. An id that is not theirs is
 // answered as one that does not exist, so nothing is disclosed by guessing.
 func (c *Client) Remove(ctx context.Context, token, id string) error {
-	return c.call(ctx, http.MethodDelete, "/me/ssh-keys/"+url.PathEscape(id), token, nil, nil)
+	return c.call(ctx, http.MethodDelete, c.one(id), token, nil, nil)
 }
 
 // call sends one request and decodes the answer. A refusal becomes an Error
 // carrying the store's code, which is what a screen renders a sentence from.
-func (c *Client) call(ctx context.Context, method, path, token string, body []byte, out any) error {
-	target := c.base.JoinPath(path)
+func (c *Client) call(ctx context.Context, method string, target *url.URL, token string, body []byte, out any) error {
 	var rdr io.Reader
 	if body != nil {
 		rdr = bytes.NewReader(body)
@@ -230,8 +254,8 @@ func Absent(err error) bool { return statusIs(err, http.StatusNotFound) }
 // Unavailable reports that the store could not answer: it is unreachable or
 // it failed.
 func Unavailable(err error) bool {
-	var e *Error
-	if !errors.As(err, &e) {
+	e, ok := errors.AsType[*Error](err)
+	if !ok {
 		return false
 	}
 	return e.Status == 0 || e.Status >= 500
@@ -240,14 +264,13 @@ func Unavailable(err error) bool {
 // Code returns the store's code for a refusal, empty when the error is not
 // one of the store's.
 func Code(err error) string {
-	var e *Error
-	if errors.As(err, &e) {
+	if e, ok := errors.AsType[*Error](err); ok {
 		return e.Code
 	}
 	return ""
 }
 
 func statusIs(err error, status int) bool {
-	var e *Error
-	return errors.As(err, &e) && e.Status == status
+	e, ok := errors.AsType[*Error](err)
+	return ok && e.Status == status
 }

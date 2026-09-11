@@ -4,6 +4,7 @@
 package config
 
 import (
+	"maps"
 	"strings"
 	"testing"
 )
@@ -43,8 +44,8 @@ func TestLoadTakesItsDefaults(t *testing.T) {
 	if c.CloneHost.String() != "https://git.example" {
 		t.Errorf("the clone host defaults to %q", c.CloneHost)
 	}
-	if c.SSHCloneHost != "" || c.KeysURL != "" {
-		t.Error("an SSH surface or a key surface was assumed")
+	if c.SSHCloneHost != "" || c.KeysURL != nil {
+		t.Error("an SSH surface or a key store was assumed")
 	}
 	if c.OIDC.RedirectURL != "https://code.example/auth/callback" {
 		t.Errorf("the redirect URI is %q", c.OIDC.RedirectURL)
@@ -172,7 +173,36 @@ func TestKeysAndIssuerNameAreRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.KeysURL != "https://keys.example" || c.IssuerName != "Okta" {
-		t.Errorf("the key surface and the issuer name read as %q and %q", c.KeysURL, c.IssuerName)
+	if c.KeysURL == nil || c.KeysURL.String() != "https://keys.example" || c.IssuerName != "Okta" {
+		t.Errorf("the key store and the issuer name read as %v and %q", c.KeysURL, c.IssuerName)
+	}
+}
+
+// TestKeysURLIsOptionalAndChecked asserts the key store's address is a
+// setting an operator either omits or gets right. Unset is the neutral
+// default and turns the screen off; a value that is not an address is a
+// misconfiguration and not a reason to run without the screen, because an
+// operator who set the variable meant to turn it on.
+func TestKeysURLIsOptionalAndChecked(t *testing.T) {
+	base := map[string]string{
+		"ORIGOWEB_ORIGO_URL":      "https://git.example",
+		"ORIGOWEB_PUBLIC_URL":     "https://code.example",
+		"ORIGOWEB_AUTH_CLIENT_ID": "origoweb",
+	}
+
+	setEnv(t, base)
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load with no key store: %v", err)
+	}
+	if c.KeysURL != nil {
+		t.Errorf("KeysURL = %v with the variable unset, want none", c.KeysURL)
+	}
+
+	withBad := map[string]string{"ORIGOWEB_KEYS_URL": "keys.example"}
+	maps.Copy(withBad, base)
+	setEnv(t, withBad)
+	if _, err := Load(); err == nil {
+		t.Error("an address with no scheme was accepted")
 	}
 }
