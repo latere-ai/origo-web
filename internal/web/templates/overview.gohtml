@@ -15,6 +15,7 @@
         {{- if eq .Visibility "private"}}<span class="badge badge-quiet">private</span>{{end}}
         {{- if eq .Visibility "unknown"}}<span class="badge badge-quiet">visibility unavailable</span>{{end}}
         {{- if .VisibilityURL}}<a href="{{.VisibilityURL}}">change visibility</a>{{end}}
+        {{- if .DeleteURL}}<a href="{{.DeleteURL}}">delete</a>{{end}}
         {{- if .Repo.Frozen}}<strong>frozen, read-only</strong>{{end}}
         {{- if .ArchiveURL}}<a href="{{.ArchiveURL}}">download tar.gz</a>{{end}}
       </p>

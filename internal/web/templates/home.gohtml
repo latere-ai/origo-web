@@ -7,6 +7,9 @@
     <a class="button" href="/new">New repository</a>
     {{- end}}
   </div>
+  {{- if .Deleted}}
+  <p class="notice"><strong>{{.Deleted}} was deleted.</strong> The name is free to use again.</p>
+  {{- end}}
   {{template "stale" .Stale}}
   {{- if .Directory}}
     {{- if .Owners}}

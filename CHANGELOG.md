@@ -29,6 +29,10 @@ holds what was committed.
   a cluster is one only the cluster can reach.
 - The agent documentation describes the `origo` command and its skill, which
   ship with Origo, in place of a planned MCP server that was never built.
+- An administrator can delete a repository from its overview. The page
+  says what happens and asks for the name to be typed back. The server
+  keeps the content for seven days, within which an administrator can
+  restore it through the API.
 
 ## v0.7.0 - 2026-09-11
 

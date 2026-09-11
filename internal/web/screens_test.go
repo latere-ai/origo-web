@@ -56,7 +56,23 @@ func (h *harness) everyPage() map[string]*httptest.ResponseRecorder {
 	out["not found"] = h.get("/no-such-page", c)
 	maps.Copy(out, keyScreens(h.t, h.cfg))
 	maps.Copy(out, visibilityScreens(h.t, h.cfg))
+	maps.Copy(out, deleteScreens(h.t, h.cfg))
 	return out
+}
+
+// deleteScreens renders the screen that deletes a repository, as first
+// shown and as re-shown after a name that did not match. It needs a
+// harness of its own for the reason visibilityScreens does: the screen
+// answers only an administrator.
+func deleteScreens(t *testing.T, base config.Config) map[string]*httptest.ResponseRecorder {
+	t.Helper()
+	h := newHarness(t, func(cfg *config.Config) { *cfg = base })
+	h.registry.canChange = true
+	c := h.signedIn("alice")
+	return map[string]*httptest.ResponseRecorder{
+		"delete":          h.get(h.repoPath("/delete"), c),
+		"delete, refused": h.post(h.repoPath("/delete"), url.Values{"name": {"infra/origin"}}, c),
+	}
 }
 
 // visibilityScreens renders the screen that changes who can read a
@@ -367,13 +383,15 @@ func TestStaleNotice(t *testing.T) {
 // TestRoutesAreReadOnly asserts the route table against a checked-in list.
 //
 // This interface has no write path to repository content of any kind. The
-// five routes that are not a GET are sign-out, the mint form, the creation
-// form and the two on the key screen, each of which requires a token issued
-// to this session, and none of which edits a file, moves a reference, or
-// changes a repository that exists. Creating brings an empty repository
-// into being, which is a different thing from writing to one. A key is an
-// account's credential: adding one writes to the installation's key store
-// and touches no repository at all.
+// routes that are not a GET are sign-out, the mint form, the creation form,
+// the visibility form, the deletion form and the two on the key screen,
+// each of which requires a token issued to this session, and none of which
+// edits a file or moves a reference. Creating brings an empty repository
+// into being, which is a different thing from writing to one. Deleting is
+// the one that changes a repository that exists, on the terms spec 023
+// gives: asked about, the name typed back, and a hold at Origo rather than
+// a purge. A key is an account's credential: adding one writes to the
+// installation's key store and touches no repository at all.
 func TestRoutesAreReadOnly(t *testing.T) {
 	want := []string{
 		"GET /{$}", "GET /sign-in", "GET /open", "GET /auth/start", "GET /auth/callback",
@@ -383,6 +401,7 @@ func TestRoutesAreReadOnly(t *testing.T) {
 		"GET /r/{id}/patch/{sha}", "GET /r/{id}/compare", "GET /r/{id}/tree/{path...}",
 		"GET /r/{id}/blob/{path...}", "GET /r/{id}/raw/{path...}",
 		"GET /r/{id}/visibility", "POST /r/{id}/visibility",
+		"GET /r/{id}/delete", "POST /r/{id}/delete",
 		"GET /keys", "POST /keys", "GET /keys/{id}/remove", "POST /keys/{id}/remove",
 	}
 	var got []string

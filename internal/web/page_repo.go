@@ -158,6 +158,11 @@ type overviewData struct {
 	// VisibilityURL is where an administrator changes it, empty for
 	// everybody else.
 	VisibilityURL string
+	// DeleteURL is where an administrator deletes the repository, empty
+	// for everybody else. It is offered to exactly the people the
+	// visibility screen is, because both answers are the registry's one
+	// answer about who administers the repository.
+	DeleteURL string
 
 	ArchiveURL string
 	Branches   int
@@ -197,6 +202,9 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 	data.CloneIsSSH = data.CloneSSH != "" && r.URL.Query().Get("clone") == "ssh"
 	data.CloneSSHURL = rc.rv.URL() + refAndCloneQuery(rc.rv)
 	data.Visibility, data.VisibilityURL = s.visibilityOf(r, rc)
+	if data.VisibilityURL != "" {
+		data.DeleteURL = rc.rv.URL() + "/delete"
+	}
 
 	branches, tags, _, err := s.refsFor(r, rc.tok, rc.repo.ID)
 	if err != nil {

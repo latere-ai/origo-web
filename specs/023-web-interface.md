@@ -317,6 +317,8 @@ serves except the two the section above proposes.
 | tree | `/{owner}/{slug}/tree/{rev}/{path}` | one row per entry: name, type, mode, size, and the entry's last commit is **not** shown, because that is one call per row and Origo offers no batch for it | `/v1/repos/{id}/tree/{rev}?path={path}&cursor=` |
 | file | `/{owner}/{slug}/blob/{rev}/{path}` | the file with line numbers and anchors, its size and mode, links to raw and to history | `/v1/repos/{id}/tree/{rev}?path={dir}` to find the entry's blob sha and size, then `/v1/repos/{id}/blob/{sha}`; spec 009's blob route takes no `path`, which is why the tree call comes first and why the size is known before any bytes are fetched |
 | raw | `/{owner}/{slug}/raw/{rev}/{path}` | the bytes, streamed through with the `Content-Type` Origo detected and `Content-Disposition: attachment` | the same two calls; the blob body is copied, never buffered |
+| visibility | `/{owner}/{slug}/visibility` | whether anyone may read the repository, and the button that changes it; administrators only | the registry's visibility read and write |
+| delete | `/{owner}/{slug}/delete` | what deleting does, and a form that asks for the name to be typed back; administrators only | the registry's visibility read for who administers; `DELETE /v1/repos/{id}`; the registry's row removal |
 | SSH keys | `/keys` | the signed-in person's public keys with their labels, fingerprints, dates and last use; a two-step add; a removal that asks first | the installation's key store: `GET /me/ssh-keys`, `POST /me/ssh-keys`, `DELETE /me/ssh-keys/{id}`; see below |
 
 The archive link on the overview points at
@@ -562,10 +564,11 @@ gets, so nobody learns which it was.
 Written out so a later contributor reads it as a boundary and not as a
 gap. The interface has **no write path to repository content of any
 kind** and never will: no editing a file, no creating a branch or tag,
-no merging, no reverting, no uploading, no rename,
-transfer, freeze, or deletion. Origo's specs 019 and 020 serve those to
-a platform's own API, which is where the audit trail and the workflow
-belong.
+no merging, no reverting, no uploading, no rename, transfer, or freeze.
+Origo's specs 019 and 020 serve those to a platform's own API, which is
+where the audit trail and the workflow belong. Two sections below say
+why creation and deletion, which this list once carried, are admitted
+and on what terms.
 
 It also does not have, and must not grow: comments, code review, pull or
 merge requests, discussions, stars, watches, forks, issues, wikis,
@@ -621,10 +624,40 @@ person who submitted the form and closed the tab, and a call made on the
 request's own context would fail the moment the browser went and leave
 behind exactly the row it was added to remove.
 
-Renaming, transferring, freezing and deleting stay out, and so does
-granting another person access. The line this section draws is between
-bringing a repository into being and changing one that exists, and it is
-the same line Origo's own create route draws.
+Renaming, transferring and freezing stay out, and so does granting
+another person access. The line this section draws is between bringing a
+repository into being and changing one that exists, and it is the same
+line Origo's own create route draws. Deletion crosses it, and the next
+section says on what terms.
+
+### Deleting a repository, which this spec once excluded
+
+The section above kept deletion out with rename, transfer and freeze,
+because the four change a repository that exists and belong with the
+audit trail and the workflow of a platform's own API. Deletion is
+admitted here on narrower terms than creation was, and the terms are
+what keep it from being a step onto the slope.
+
+What forced the question has the same shape as before. An interface that
+can bring a repository into being and cannot take one away leaves a
+person with a repository they made by mistake and no answer but "ask an
+administrator". Nothing in Origo makes that the right answer. Its delete
+(spec 020) is a hold, not a purge: the repository stops answering at
+once, the content is kept for `wal.DeleteHold` and an administrator can
+undelete it through the API within that time. The audit trail is
+Origo's own: an entry in the repository's log carrying the subject and
+the actor, and an event.
+
+| Decision | Value |
+|---|---|
+| the routes | `GET /{owner}/{slug}/delete` renders the screen, `POST /{owner}/{slug}/delete` deletes, with the form token every other form requires |
+| the credential | the person's own token, as everywhere. A bug here can delete nothing a person could not delete with curl at Origo's own address |
+| who decides | the authorizer, twice. The screen is shown to the people the registry says administer the repository, which is the same answer it gives for the visibility screen, and Origo asks its authorizer again on the deletion itself. A reader who is not an administrator gets the one refusal |
+| the confirmation | the screen names the repository, says what happens, and the person types `owner/slug` back. There is no script, so there is no dialog; the typed name is the safeguard, and the server checks it |
+| the order | Origo first, the ownership row second, which is the reverse of creation for the same reason: the authorizer answers from the row, so a row withdrawn first turns the deletion into a refusal and leaves the repository standing under no name. A row that outlives the deletion holds the name and is logged, which is the lesser failure |
+| where a person lands | on the repository list, which says what was deleted; the repository is taken out of the addresses this session has opened |
+| what this interface does not offer | undelete, and everything else in spec 020: rename, transfer, freeze, import, export. The hold is Origo's, and restoring within it is an administrator's call through the API |
+| an installation with no ownership component | no screen, as with creation |
 
 ## What must land first
 
@@ -658,6 +691,15 @@ repository, so they assert against the real read API and not a mock.
   says so in words, so a public repository can never read as private
   because of an outage (`internal/web`,
   `TestAFailedVisibilityCallDoesNotReadAsPrivate`).
+- Deleting is offered to an administrator from the overview, asked about
+  on a screen that names the repository and says what happens, refused
+  until the name is typed back exactly, done at Origo before the
+  ownership row is withdrawn and not at all when Origo refuses, taken
+  out of the addresses this session opened, and said on the list it
+  lands on; a reader gets the one refusal from both the screen and the
+  form (`internal/web`, `TestDeletingARepositoryAsksFirst`,
+  `TestDeletingARepositoryNeedsItsNameTyped`, `TestDeletionIsNotForAReader`,
+  `TestADeletionOrigoRefusesWithdrawsNoRow`).
 - The overview asks the registry once per reader per repository rather
   than once per render, and a flip is visible on the next render without
   waiting out the lifetime (`internal/web`,

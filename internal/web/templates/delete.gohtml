@@ -1,0 +1,30 @@
+{{define "title"}}Delete {{.Name}}{{end}}
+{{define "main"}}
+{{template "repohead" .}}
+<main class="stack">
+  <h1 class="heading-page">Delete {{.Name}}</h1>
+
+  {{- if .Error}}
+  <p class="notice" role="alert">{{.Error}}</p>
+  {{- end}}
+
+  <p class="lead">This deletes the repository for everyone who uses it.</p>
+  <div class="panel stack">
+    <h2 class="heading-section">What happens</h2>
+    <p>Nobody can read, clone, push to or open it from the moment you press the button. Existing clones are not affected.</p>
+    <p>The name <code>{{.Name}}</code> is free to use again.</p>
+    <p>The server keeps the content for seven days, then removes it for good. Within that time an administrator can restore it through the API. This site cannot.</p>
+    <form class="stack" action="{{.Repo.URL}}/delete" method="post">
+      <input type="hidden" name="{{.View.CSRFField}}" value="{{.View.CSRF}}">
+      <div class="field">
+        <label for="name">Type <code>{{.Name}}</code> to confirm</label>
+        <input id="name" name="name" class="mono" value="{{.Typed}}" autocomplete="off" required>
+      </div>
+      <div class="row">
+        <button class="button-primary" type="submit">Delete repository</button>
+        <a href="{{.Repo.URL}}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</main>
+{{end}}

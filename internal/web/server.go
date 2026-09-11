@@ -68,17 +68,20 @@ type Route struct {
 }
 
 // Routes is the whole route table, in one place so it can be asserted
-// against. Everything here is a GET except five forms: sign-out, the mint
-// form, the one that creates a repository, and the two on the key screen.
+// against. Everything here is a GET except the forms: sign-out, the mint
+// form, the one that creates a repository, the one that changes who may
+// read it, the one that deletes it, and the two on the key screen.
 //
 // None of them touches repository content. This interface has no write path
-// to a repository of any kind: nothing here edits a file, moves a reference,
-// renames, transfers, freezes or deletes anything. Minting writes nothing,
+// to the content of a repository: nothing here edits a file, moves a
+// reference, renames, transfers or freezes anything. Minting writes nothing,
 // because the token it asks for is signed and kept nowhere. Creating brings
-// an empty repository into being, which is the one thing a person cannot
-// obtain from any other screen and which changes no repository that exists.
-// The key forms write to the installation's key store, which holds an
-// account's credentials and no repository at all.
+// an empty repository into being. Deleting is the one thing here that
+// changes a repository that exists, and spec 023 says on what terms: asked
+// about on a page that names it, with the name typed back, by the person's
+// own credential, and answered by Origo as a hold and not a purge. The key
+// forms write to the installation's key store, which holds an account's
+// credentials and no repository at all.
 func Routes(keys bool) []Route {
 	rs := []Route{
 		{"GET", "/{$}"},
@@ -104,6 +107,8 @@ func Routes(keys bool) []Route {
 		{"GET", "/r/{id}/raw/{path...}"},
 		{"GET", "/r/{id}/visibility"},
 		{"POST", "/r/{id}/visibility"},
+		{"GET", "/r/{id}/delete"},
+		{"POST", "/r/{id}/delete"},
 	}
 	if keys {
 		rs = append(rs,
@@ -148,6 +153,8 @@ func New(o Options) *Server {
 		"GET /r/{id}/raw/{path...}":  s.handleRaw,
 		"GET /r/{id}/visibility":     s.handleVisibility,
 		"POST /r/{id}/visibility":    s.handleVisibilityPost,
+		"GET /r/{id}/delete":         s.handleDelete,
+		"POST /r/{id}/delete":        s.handleDeletePost,
 		"GET /keys":                  s.handleKeys,
 		"POST /keys":                 s.handleKeysPost,
 		"GET /keys/{id}/remove":      s.handleKeyRemove,

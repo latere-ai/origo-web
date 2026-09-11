@@ -169,7 +169,10 @@ before writing. A refusal from either is shown with your form intact.
 The button appears only when `ORIGOWEB_AUTH_URL` names a registry that
 records repository ownership.
 
-Renaming, transferring and deleting are not offered here.
+Renaming, transferring and freezing are not offered here. An
+administrator can delete a repository from its overview. The server keeps
+the content for seven days, within which an administrator can restore it
+through the API.
 
 ## Visibility
 

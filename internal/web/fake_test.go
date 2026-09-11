@@ -69,6 +69,39 @@ type fakeOrigo struct {
 	// createStatus and createCode override the create route's answer.
 	createStatus int
 	createCode   string
+	// deleted is every repository the delete route marked, in order, and
+	// deleteStatus overrides that route's answer.
+	deleted      []string
+	deleteStatus int
+}
+
+// Deleted is every repository the delete route marked.
+func (f *fakeOrigo) Deleted() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.deleted...)
+}
+
+// deleteRoute is Origo's delete (spec 020): a hold, not a purge. The
+// repository is marked at once and its content kept for a time an
+// administrator can undelete it in.
+func (f *fakeOrigo) deleteRoute(w http.ResponseWriter, p string) {
+	id := strings.TrimPrefix(p, "/v1/repos/")
+	f.mu.Lock()
+	code := f.deleteStatus
+	if code == 0 {
+		f.deleted = append(f.deleted, id)
+	}
+	f.mu.Unlock()
+	if code != 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(code)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "forbidden"}})
+		return
+	}
+	at := time.Now().UTC()
+	w.WriteHeader(http.StatusAccepted)
+	writeJSON(w, map[string]any{"id": id, "deleted_at": at, "purge_after": at.Add(7 * 24 * time.Hour)})
 }
 
 // createRoute is Origo's create: the caller chooses the id, and the
@@ -255,6 +288,8 @@ func (f *fakeOrigo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch {
+	case r.Method == http.MethodDelete && strings.HasPrefix(p, "/v1/repos/"):
+		f.deleteRoute(w, p)
 	case strings.HasSuffix(p, "/tokens"):
 		f.tokenRoute(w, r, p)
 	case p == "/v1/repos" && r.Method == http.MethodPost:

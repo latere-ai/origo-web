@@ -177,6 +177,9 @@ type homeData struct {
 	Recent    []listRow
 	Query     string
 	Stale     string
+	// Deleted names the repository a deletion just landed here from, so
+	// the list says what happened; empty otherwise.
+	Deleted string
 
 	// CanFilter says the whole directory arrived in this one answer, so a
 	// filter over it covers everything the reader may see. Origo has no
@@ -220,7 +223,11 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	rq := s.begin(w, r, "")
 	rq.v.Title = "Repositories"
 
-	data := homeData{View: rq.v, Query: strings.TrimSpace(r.URL.Query().Get("q"))}
+	data := homeData{
+		View:    rq.v,
+		Query:   strings.TrimSpace(r.URL.Query().Get("q")),
+		Deleted: deletedName(r.URL.Query().Get("deleted")),
+	}
 	page, err := s.api.List(r.Context(), rq.tok, r.URL.Query().Get("cursor"), 50)
 	switch {
 	case err == nil:
