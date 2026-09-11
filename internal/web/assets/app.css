@@ -754,6 +754,8 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
   box-shadow: inset 0 -2px 0 var(--accent);
 }
 .clone-row { display: flex; align-items: stretch; }
+/* What git will ask for at the address above, in the box with it. */
+.clone .hint { margin: 0; padding: var(--s-2) var(--s-3); border-top: 1px solid var(--line); }
 .clone-row input {
   flex: 1;
   min-width: 0;

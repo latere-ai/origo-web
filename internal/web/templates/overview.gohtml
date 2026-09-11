@@ -61,6 +61,15 @@
           <label class="visually-hidden" for="clone">Clone address</label>
           <input id="clone" class="mono" readonly value="{{if .CloneIsSSH}}{{.CloneSSH}}{{else}}{{.CloneHTTPS}}{{end}}">
         </div>
+        {{- /* What git will ask for at this address, because git asks
+             without saying why: a password over HTTPS, which is a token,
+             and a key over SSH, which is one registered to the account. */ -}}
+        <p class="hint">
+          {{- if .CloneIsSSH}}SSH uses {{if .View.KeysEnabled}}<a href="/keys">a key on your account</a>{{else}}a key on your account{{end}}.
+          {{- else if eq .Visibility "public"}}Anyone can clone this address. Pushing asks for a password: use an <a href="/tokens?repo={{.Repo.ID}}">agent token</a>, with any username.
+          {{- else}}Git asks for a password: use an <a href="/tokens?repo={{.Repo.ID}}">agent token</a>, with any username.
+          {{- end}}
+        </p>
       </div>
     </div>
   </div>
