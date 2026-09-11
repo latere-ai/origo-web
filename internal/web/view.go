@@ -56,6 +56,27 @@ type view struct {
 	// Mark names the brand mark the masthead draws, empty when the
 	// installation has none, which is the default everywhere.
 	Mark string
+
+	// Alternates are this page's machine views: the same content at this
+	// same address plus a suffix, in a format a program reads. They are
+	// listed once at the foot of the page and once in the head, so a
+	// program that knows the convention never loads the document.
+	//
+	// A screen with no machine view carries none. This interface renders
+	// what Origo publishes and publishes no representation of its own, so
+	// the list holds the formats Origo already serves and nothing else.
+	Alternates []alternate
+}
+
+// alternate is one machine view of a page.
+type alternate struct {
+	// Name is the format, which is what the link says: a reader looking for
+	// a patch looks for the word patch.
+	Name string
+	// Type is the media type the address answers with.
+	Type string
+	// Href is the address.
+	Href string
 }
 
 // CSRFField is the form field the two POST routes read their token from.

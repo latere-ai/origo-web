@@ -705,6 +705,16 @@ repository, so they assert against the real read API and not a mock.
   10 MiB text file is requested with a `Range` and shows a truncation
   notice; a 60 MiB file is not fetched at all and shows the size and the
   clone hint (proposed: `internal/web`, `TestFileViewLimits`).
+- A page's machine views are the last block of it, under a hairline, opened
+  by the word `machine` and named by format. Each address is this same page
+  plus a suffix and answers what the link says; the same addresses are
+  `<link rel="alternate">` in the head. A screen with no machine view carries
+  no line, which is a departure from the interface specification's "on every
+  page": the specification's list is `json`, `raw` and `patch`, and this
+  service publishes no representation of its own, so it offers the two Origo
+  already serves and no `json` at all (proposed: `internal/web`,
+  `TestAMachineViewIsTheSameAddressPlusASuffix`,
+  `TestTheMachineLineIsTheLastBlock`).
 - The file screen says whether its address moves. A file read at a reference
   says the next push can change it and offers the pinned address; a file read
   at a commit says the address holds and offers the way back to the default

@@ -491,7 +491,7 @@ tbody tr:last-child th, tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--accent-subtle); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .nowrap { white-space: nowrap; }
-.path, .sha, .size, .when, .refname { font-family: var(--font-mono); font-size: var(--t-12); }
+.path, .sha, .size, .when, .refname, .format { font-family: var(--font-mono); font-size: var(--t-12); }
 .sha { color: var(--ink-2); }
 
 /* A credential that has never been used, which is the one fact in this
@@ -775,6 +775,19 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
  * separates the two states is what they say: a reference name, or the word
  * pinned and a short id. */
 .pin { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); align-items: baseline; margin: 0; }
+
+/* The machine views of a page: the same content at this same address plus a
+ * suffix, in a format a program reads. It is the last block of every page
+ * that has one, under a hairline, named by format so it is found by shape
+ * rather than by reading. */
+.machine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  align-items: baseline;
+  border-top: 1px solid var(--line);
+  padding-top: var(--s-3);
+}
 
 /* ---- pager ---- */
 

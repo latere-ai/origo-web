@@ -246,6 +246,10 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rawURL := rc.rv.URL() + "/raw/" + escapePath(path) + rc.rv.RefQuery()
+	// The file's own bytes, with the type Origo detected. It is this
+	// screen's one machine view.
+	rc.v.Alternates = []alternate{{Name: "raw", Type: "text/plain", Href: rawURL}}
 	data := blobData{
 		View:       rc.v,
 		Repo:       rc.rv,
@@ -255,7 +259,7 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 		Size:       humanSize(entry.Size),
 		Mode:       entry.Mode,
 		Type:       entryType(entry),
-		RawURL:     rc.rv.URL() + "/raw/" + escapePath(path) + rc.rv.RefQuery(),
+		RawURL:     rawURL,
 		HistoryURL: rc.rv.URL() + "/log?" + logQuery(rc.rv, path),
 		CloneHTTPS: s.cfg.CloneHTTPS(rc.repo.Owner, rc.repo.Slug),
 		Pin:        newPinView(rc.rv, rc.rv.URL()+"/blob/"+escapePath(path), meta.Commit),

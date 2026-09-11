@@ -6,6 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{template "title" .}} · {{.View.Product}}</title>
 <link rel="stylesheet" href="/assets/app.css">
+{{- range .View.Alternates}}
+<link rel="alternate" type="{{.Type}}" title="{{.Name}}" href="{{.Href}}">
+{{- end}}
 <link rel="icon" href="data:,">
 </head>
 <body>
@@ -29,6 +32,14 @@
     </nav>
   </header>
 {{template "main" .}}
+{{- with .View.Alternates}}
+<footer class="machine">
+  <span class="label">machine</span>
+  {{- range .}}
+  <a class="format" href="{{.Href}}">{{.Name}}</a>
+  {{- end}}
+</footer>
+{{- end}}
 </div>
 </body>
 </html>

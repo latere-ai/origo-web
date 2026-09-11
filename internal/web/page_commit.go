@@ -65,13 +65,18 @@ func (s *Server) handleCommit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rc.v.Title = commit.Subject()
+	patchURL := rc.rv.URL() + "/patch/" + url.PathEscape(commit.SHA)
+	// The whole commit as the bytes git wrote. It is the one machine view
+	// this screen has: Origo serves the diff and this service passes it
+	// through, so the link is a format of this page and not a second API.
+	rc.v.Alternates = []alternate{{Name: "patch", Type: "text/x-patch", Href: patchURL}}
 	data := commitData{
 		View:     rc.v,
 		Repo:     rc.rv,
 		Commit:   newCommitView(commit, rc.rv.URL()),
 		Trailers: commit.Trailers,
 		Stats:    commit.Stats,
-		PatchURL: rc.rv.URL() + "/patch/" + url.PathEscape(commit.SHA),
+		PatchURL: patchURL,
 		TreeURL:  rc.rv.URL() + "/tree/?ref=" + url.QueryEscape(commit.SHA),
 		Stale:    firstNonEmpty(rc.stale, staleSentence(meta)),
 		Single:   r.URL.Query().Get("path"),
