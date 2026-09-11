@@ -243,7 +243,6 @@ p { margin: 0; }
  * width. A form fills its panel. A table, a tree, a commit log, a diff and a
  * file take the shell and scroll inside their own box when they need more. */
 .page {
-  min-height: 100vh;
   padding: var(--s-6) var(--s-6) var(--s-9);
   display: flex;
   flex-direction: column;
@@ -610,8 +609,12 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
  * address is for someone who already has access; what the software is, is
  * credibility and not an action. They are stacked in that order and parted by
  * a rule, so the order reads as an order. */
+/* The door fills the window it is opened in, and it is the only screen that
+ * asks for a height. Every other screen is as tall as what is on it: a screen
+ * with two rows on it ends after the two rows, and ground below content is
+ * the same mistake as ground beside it. */
 .gate {
-  flex: 1;
+  min-height: calc(100vh - 12rem);
   display: flex;
   align-items: center;
   justify-content: center;
