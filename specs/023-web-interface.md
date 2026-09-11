@@ -1,6 +1,6 @@
 ---
 title: "Web interface: a separate service that browses an Origo installation"
-status: testing
+status: complete
 track: infra
 depends_on:
   - specs/003-protocol-contract.md
@@ -57,8 +57,9 @@ Origo name.
 Built, released, and running: `origoweb` was first tagged `v0.1.0` on
 2026-09-10 and is at `v0.8.0` since 2026-09-11, the version production
 serves at `https://code.latere.ai`. Every test the acceptance criteria
-name is in the tree, and the Outcome at the end says what was proved
-where and what still is not. The pieces it stands on, as they stood
+name is in the tree and green in the gate, the end-to-end tier runs
+against the pinned `origod` on every push since 2026-09-12, and the
+Outcome at the end says what was proved where; the spec is `complete`. The pieces it stands on, as they stood
 when it was written:
 
 - Spec 009's read API is built and released in `v0.1.0`, at `testing`
@@ -1121,8 +1122,12 @@ reasoning it was written as.
   `footer` after `main` and absent on a screen with no machine view; and
   the measure held at 78ch against the specification's 1020px.
 
-### What remains
+### The run that closed it
 
-One thing, and the spec moves to `complete` on it: the first run of the
-`e2e` job on `main`, cited here by its run id the way the deck's
-stack-proof sentences are.
+The `e2e` job's first run on `main`, run 34657693665 at `230eae1` on
+2026-09-12, job 103453536149, started the bucket, the stubs and the
+pinned `origod`, pushed the history, denied the subject, and reported
+`ok` for `test/e2e` with every case of the tier passing and none
+skipped. With every other criterion green in the gate of the same run,
+the spec is `complete`. The run is the evidence for that criterion on
+that commit and is not refreshed afterwards.
