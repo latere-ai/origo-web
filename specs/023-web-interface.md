@@ -1,6 +1,6 @@
 ---
 title: "Web interface: a separate service that browses an Origo installation"
-status: drafted
+status: testing
 track: infra
 depends_on:
   - specs/003-protocol-contract.md
@@ -10,7 +10,7 @@ depends_on:
 affects: [specs/README.md]
 effort: large
 created: 2026-09-10
-updated: 2026-09-11
+updated: 2026-09-12
 author: changkun
 ---
 
@@ -46,15 +46,20 @@ so they are not relitigated:
 - The split is sourcehut's: the git host and the browsing interface are
   separate programs that speak over a documented surface.
 
-This spec is written in Origo's deck because the repository it belongs
-in does not exist yet. **It moves on the first commit of that
-repository** and leaves Origo's deck in the same change; nothing in
-Origo depends on it, and its removal from this deck breaks no
-cross-reference, because it defines no Origo name.
+This spec was written in Origo's deck before the repository it belongs
+in existed, and moved here on that repository's first commit, on
+2026-09-10, keeping its number: Origo's deck has no 023 and its README
+points at this file. Nothing in Origo depends on it, and it defines no
+Origo name.
 
 ## Current state
 
-Nothing is built. The pieces it stands on:
+Built, released, and running: `origoweb` was first tagged `v0.1.0` on
+2026-09-10 and is at `v0.8.0` since 2026-09-11, the version production
+serves at `https://code.latere.ai`. Every test the acceptance criteria
+name is in the tree, and the Outcome at the end says what was proved
+where and what still is not. The pieces it stands on, as they stood
+when it was written:
 
 - Spec 009's read API is built and released in `v0.1.0`, at `testing`
   on the two items its Outcome names:
@@ -78,10 +83,14 @@ Nothing is built. The pieces it stands on:
   access and refresh tokens, and refresh. `latere.ai/x/pkg/md` renders
   GitHub-flavoured Markdown and `latere.ai/x/pkg/sanitize` cleans HTML.
 
-Three things it needs and cannot have today, each with its own section
-below: a way to list the repositories a person may see, a way to turn
-`<owner>/<slug>` into a repository id, and, for a public installation,
-a read that carries no token at all.
+Three things it needed and could not have when it was written, each
+with its own section below, have since landed in Origo: a way to list
+the repositories a person may see and a way to turn `<owner>/<slug>`
+into a repository id, both Origo's spec 026, `complete` on 2026-09-11;
+and, for a public installation, a read that carries no token at all,
+Origo's `ORIGO_ANONYMOUS_READ`, in its `v0.2.0` of 2026-09-11. The
+sections below are kept as written, because they say why the interface
+was shaped to need nothing of its own when each arrived.
 
 ## Design
 
@@ -154,7 +163,7 @@ sequenceDiagram
 | refresh | when the stored expiry is within 60 seconds, before the call to Origo; the refreshed session is written back to the cookie. A refresh that fails clears the session and redirects to sign-in with the requested path preserved |
 | session lifetime | 12 hours from sign-in, not extended by refresh, so a stolen cookie has a bounded life |
 | sign-out | a `POST` of `/sign-out` with a CSRF token from `authkit.CSRFIssue`, clearing the cookie |
-| CSRF | the two `POST` routes only, sign-out and the key screen. Everything else is a `GET` and changes nothing |
+| CSRF | every `POST` route: sign-out, the mint form, the creation form, the visibility form, the deletion form, and the two on the key screen, each with a token from `authkit.CSRFIssue`. Everything else is a `GET` and changes nothing; the route table in `internal/web/server.go` is the checked-in list `TestRoutesAreReadOnly` asserts. Written first as "the two `POST` routes", before the creation, visibility, deletion and mint screens were added to this spec |
 
 A 401 from Origo means the token was refused; the interface clears the
 session and sends the person to sign in once. A repeat is an error page,
@@ -162,8 +171,13 @@ not a redirect loop.
 
 ### What a signed-out visitor sees
 
-Today: **a sign-in page and nothing else.** Not because the interface
-chose that, but because Origo has no anonymous read. Spec 007 requires a
+As written: **a sign-in page and nothing else.** Not because the
+interface chose that, but because Origo then had no anonymous read.
+Since Origo's `v0.2.0` of 2026-09-11 an installation can set
+`ORIGO_ANONYMOUS_READ` and its authorizer answers for the anonymous
+subject, and this interface needed no change for it, which was the
+point of the paragraph that ends this section. The rest is kept as the
+reasoning it was. Spec 007 requires a
 credential on every path of the public listener but `/readyz`,
 `/version`, `/.well-known/jwks.json`, and spec 022's two, and spec 016
 puts "the authorizer answering allow for an anonymous subject" and
@@ -285,9 +299,12 @@ inside it: the person sees a repository they cannot open, or fails to
 see one they can. A token says who someone is; only the authorizer says
 what they may see.
 
-**Until it lands.** The interface ships with the list screen degrading,
-not missing. When the collection read of `/v1/repos` is absent (today
-it is answered `invalid_request` as an unknown route) or answers 501,
+**Until it lands, and after.** The interface ships with the list screen
+degrading, not missing. Both modes landed in Origo's spec 026 on
+2026-09-11; an installation whose authorizer has no directory still
+takes this path. When the collection read of `/v1/repos` is absent (an
+Origo before spec 026 answers `invalid_request` for an unknown route)
+or answers 501,
 the home page is a "go to a repository" form, taking `<owner>/<slug>` once
 mode 2 is there and an id before that, plus the repositories this
 session has already opened, held in the session cookie
@@ -320,6 +337,11 @@ serves except the two the section above proposes.
 | visibility | `/{owner}/{slug}/visibility` | whether anyone may read the repository, and the button that changes it; administrators only | the registry's visibility read and write |
 | delete | `/{owner}/{slug}/delete` | what deleting does, and a form that asks for the name to be typed back; administrators only | the registry's visibility read for who administers; `DELETE /v1/repos/{id}`; the registry's row removal |
 | SSH keys | `/keys` | the signed-in person's public keys with their labels, fingerprints, dates and last use; a two-step add; a removal that asks first | the installation's key store: `GET /me/ssh-keys`, `POST /me/ssh-keys`, `DELETE /me/ssh-keys/{id}`; see below |
+| new repository | `/new` | the creation form, for a person who holds a name; the section "Creating a repository" below | the ownership registry, then `POST /v1/repos` |
+| agent tokens | `/tokens` | one form that mints a repository-bound token and shows it once, and the explanation that nothing is listed because nothing is kept | `POST /v1/repos/{id}/tokens` |
+| patch | `/{owner}/{slug}/patch/{sha}` | the commit's diff as the bytes Origo produced, for `git apply` | the same compare call the commit screen makes |
+| open | `/open` | the box on the home screen, taking `<owner>/<slug>` or an identifier and redirecting to the repository | `/v1/repos?owner=&slug=` or `/v1/repos/{id}` |
+| agent documentation | `/docs/agents` | how an agent uses this installation: the clone address, the token, and the JSON surface, in prose served by this binary | none |
 
 An owner name that is one of this interface's own first path segments is
 shadowed by the interface's route, because a literal segment is the more
@@ -674,14 +696,14 @@ the actor, and an event.
 | Item | Owner | Blocks |
 |---|---|---|
 | name resolution on Origo's JSON surface, mode 2 above | **done**: Origo's spec 026 serves `GET /v1/repos?owner=&slug=`, answering as the id route does. Every screen is addressed at `/{owner}/{slug}`; the `/r/{id}` addresses the screens had before redirect there for good, and the box on an installation with no directory takes either form | nothing |
-| the directory question on the authorizer contract and the collection route, mode 1 above | a new Origo spec, and the authorizer each installation runs | the repository list screen alone; everything else degrades to the name form |
-| the repository `latere-ai/origo-web` | this spec moves into it on its first commit | the build |
+| the directory question on the authorizer contract and the collection route, mode 1 above | **done**: Origo's spec 026, `complete` on 2026-09-11, with the `list` action on the authorizer contract and the directory mode of `GET /v1/repos`; the authorizer each installation runs answers it or says it has no directory | nothing; an installation without a directory takes the name form |
+| the repository `latere-ai/origo-web` | **done**: this spec moved into it on its first commit, 2026-09-10 | nothing |
 | a key management surface: spec 024 keeps keys out of Origo, behind an operator-run resolver Origo only reads | **done**: auth's spec 075 serves the resolver and the three `/me/ssh-keys` routes; an operator running another provider builds the same three | nothing |
-| an anonymous read path, with a subject sentinel that is not the empty string | an Origo spec; spec 016 scopes it out today | a public installation showing anything to a signed-out visitor |
+| an anonymous read path, with a subject sentinel that is not the empty string | **done**: Origo's `ORIGO_ANONYMOUS_READ`, released in its `v0.2.0` on 2026-09-11, with the anonymous subject its authorizer contract names | nothing |
 
-The first two touch the authorizer contract, which is a contract an
-operator implements, so they are Origo's to decide and not this
-service's to assume.
+The two that touched the authorizer contract, which is a contract an
+operator implements, were Origo's to decide and not this service's to
+assume, and Origo decided both.
 
 ## Acceptance criteria
 
@@ -1020,3 +1042,82 @@ repository, so they assert against the real read API and not a mock.
   stops at the measure, and the width a column does not use falls after
   the last piece of content rather than between two of them (proposed:
   `internal/web`, `TestTheBodyKeepsTheMastheadsEdges`).
+
+## Outcome
+
+Built from 2026-09-10 in `latere-ai/origo-web`, first tagged `v0.1.0`
+the same day, and at `v0.8.0` since 2026-09-11, which production serves
+at `https://code.latere.ai`. The gate of `verify.yml` runs
+`go tool lateregate` on every push and is green at `028e1fe`. Every one
+of the 79 tests the acceptance criteria name is in the tree under the
+package the criterion names, and `go test ./...` passes; 130 further
+tests hold what the criteria do not name. The spec sat at `drafted`
+with a Current state reading "Nothing is built" until a review on
+2026-09-12 read it against the tree, which is when the Current state,
+the three "What must land first" rows Origo has since closed, and the
+sections that said "today" were brought up to date, each keeping the
+reasoning it was written as.
+
+### What is proved where
+
+| Criterion | Test | State |
+|---|---|---|
+| every criterion of `internal/web`, `internal/session`, `internal/diff`, and `internal/keys` | the tests named beside each, 71 in all | passing in the gate on every push |
+| the token never leaves the cookie; every screen works without script; no cache is shared between subjects; paging is exact; the list degrades without a directory | `test/e2e`, `TestTokenNeverLeavesTheCookie`, `TestEveryScreenWorksWithoutScript`, `TestNoCacheIsSharedBetweenSubjects`, `TestPagingIsExact`, `TestListDegradesWithoutDirectory`, with `TestMintingAgainstARealInstallation` beside them | passing against a real Origo, `origod v0.2.0-72-g00ae0c6` on its `make dev` stack with the stub issuer and stub authorizer of Origo's spec 013, on 2026-09-12: six passed, the cache case with a subject the stub denied and the paging case over a 100-commit fixture. The tier is not run by any job: see the divergences |
+| no automated accessibility violation at AA in both themes; no horizontal overflow at 320, 768, and 1280 CSS pixels | `test/e2e`, `TestAccessibility`, `TestNarrowWidths` | the structural half of each is asserted without a browser in `internal/web` (`TestAccessibleStructure`, and the stylesheet's rules for the narrow widths); the browser half is not implemented. Both tests skip unless `ORIGOWEB_TEST_BROWSER` is set and fail by construction when it is, so the gap cannot be read as green |
+
+### Divergences and interpretations, each kept, with the reason
+
+- **The end-to-end tier runs on a developer's machine and in no job.**
+  The "Where it lives" section says the interface pins an `origod`
+  image by digest and runs its end-to-end tests against that container
+  in its own gate, so a contract change fails here on the next bump.
+  `verify.yml` has the one `gate` job, `make test-e2e` skips when
+  `ORIGOWEB_TEST_ORIGO_URL`, `ORIGOWEB_TEST_ISSUER_URL`, and
+  `ORIGOWEB_TEST_REPO_ID` are unset, and the Dockerfile pins no
+  `origod`. The six cases pass against a real Origo when the variables
+  are set, as the run above records, but the drift the split was said
+  to pay for is not caught on a push today. Not kept: this is the one
+  design claim the tree does not hold, and it is what keeps the spec at
+  `testing` beside the browser half.
+- **Two criteria have a structural half and an unbuilt browser half.**
+  An axe run at AA and a document that does not scroll sideways need a
+  browser, and the tree drives none. What can be asserted from the
+  markup and the stylesheet is asserted in `internal/web`; the two
+  `test/e2e` tests are the place the browser half runs when one is
+  configured, and until then they refuse to pass rather than skip
+  silently past the variable.
+- **Five screens the Screens table did not list.** `/new`, `/tokens`,
+  `/{owner}/{slug}/patch/{sha}`, `/open`, and `/docs/agents` were added
+  after the table was written, three of them by later sections of this
+  spec (creation, the mint form, the open box) and two by the tree. The
+  table carries them now. The route table in `internal/web/server.go`
+  is the whole list, and `TestRoutesAreReadOnly` holds it.
+- **Two address shapes differ from the table.** The log is
+  `/{owner}/{slug}/log?ref=` rather than `/log/{rev}`, and compare is
+  `/compare?base=&head=` rather than `/compare/{base}...{head}`, because
+  a revision may itself contain a slash and a query survives one where a
+  path segment does not. `?ref=` selects the revision on every
+  repository screen, which the README states as the rule. The table
+  keeps the shape it was designed with and this bullet is the record.
+- **The CSRF row counted two `POST` routes.** There are seven, as the
+  row now says, one for each form later sections added; every one
+  carries the token, which `TestAKeyFormNeedsItsToken` and
+  `TestRoutesAreReadOnly` hold.
+- **The interface departs from the interface specification in three
+  named places**, recorded in the criteria themselves: no copy button,
+  because a button that copies needs a script; the machine line as a
+  `footer` after `main` and absent on a screen with no machine view; and
+  the measure held at 78ch against the specification's 1020px.
+
+### What remains
+
+Two items, and the spec moves to `complete` when both are settled:
+
+- the end-to-end tier in a job of `verify.yml`, against a pinned
+  `origod` and the stub issuer and authorizer, with the fixture the
+  paging case needs and a subject the authorizer denies, so the design's
+  drift claim holds on every push;
+- the browser half of `TestAccessibility` and `TestNarrowWidths`, or a
+  decision that the structural half in `internal/web` is the criterion,
+  recorded here the way the interface specification's departures are.
