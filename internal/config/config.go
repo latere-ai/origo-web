@@ -229,11 +229,22 @@ func (c Config) Absolute(path string) string {
 	return strings.TrimRight(c.PublicURL.String(), "/") + path
 }
 
+// APIURL is the installation's address as an agent reaches it: the one the
+// git surface and the API surface both answer on, which is the clone host.
+//
+// It is not OrigoURL. That is the address this service talks to, and on a
+// cluster it is the in-cluster Service, which nothing outside the cluster
+// can reach. A page that handed an agent that address handed it one that
+// could not work.
+func (c Config) APIURL() string {
+	return strings.TrimRight(c.CloneHost.String(), "/")
+}
+
 // RepoAPIURL is the address of one repository on the Origo installation:
 // the read API's own entry point, which an agent with a token calls
 // directly rather than through this interface.
 func (c Config) RepoAPIURL(id string) string {
-	return fmt.Sprintf("%s/v1/repos/%s", strings.TrimRight(c.OrigoURL.String(), "/"), id)
+	return fmt.Sprintf("%s/v1/repos/%s", c.APIURL(), id)
 }
 
 // ArchiveURL is the address of a repository's archive on the Origo

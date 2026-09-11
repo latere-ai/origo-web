@@ -480,8 +480,29 @@ func TestTheDocumentationIsSelfContained(t *testing.T) {
 	if strings.Contains(body, "git.example.com") {
 		t.Error("the page carries an address nobody configured")
 	}
-	if !strings.Contains(body, h.cfg.OrigoURL.String()+"/v1/repos/") {
-		t.Error("the read line does not point at the installation")
+	if !strings.Contains(body, "https://git.elsewhere/v1/repos/") {
+		t.Error("the read line does not point at the installation's public address")
+	}
+}
+
+// TestAnAgentIsGivenThePublicAddress asserts that the addresses the
+// documentation and the token page hand an agent are ones an agent can
+// reach. The address this service talks to is, on a cluster, the in-cluster
+// Service, and a page that printed it handed every agent an address that
+// could not work.
+func TestAnAgentIsGivenThePublicAddress(t *testing.T) {
+	// The client the harness builds keeps talking to the fake; only the
+	// address the configuration names changes, which is what a page reads.
+	h := newHarness(t, func(c *config.Config) {
+		c.OrigoURL = mustURL(t, "http://origod.latere.svc.cluster.local")
+		c.CloneHost = mustURL(t, "https://code.example")
+	})
+	docs := h.get("/docs/agents").Body.String()
+	if strings.Contains(docs, "svc.cluster.local") {
+		t.Error("the documentation names the in-cluster address")
+	}
+	if !strings.Contains(docs, "https://code.example/v1/repos/") {
+		t.Errorf("the documentation does not name the public address:\n%s", docs)
 	}
 }
 

@@ -5,7 +5,6 @@ package web
 
 import (
 	"net/http"
-	"strings"
 )
 
 // docsData is the documentation page. Every address on it comes from
@@ -29,7 +28,7 @@ func (s *Server) handleAgentDocs(w http.ResponseWriter, r *http.Request) {
 	rq.v.Title = "Agent access"
 	s.render(w, r, http.StatusOK, "agents", docsData{
 		View:       rq.v,
-		APIBase:    strings.TrimRight(s.cfg.OrigoURL.String(), "/"),
+		APIBase:    s.cfg.APIURL(),
 		CloneHost:  hostOf(s.cfg.CloneHTTPS("<owner>", "<name>")),
 		CloneHTTPS: s.cfg.CloneHTTPS("<owner>", "<name>"),
 		CloneSSH:   s.cfg.CloneSSH("<owner>", "<name>"),
