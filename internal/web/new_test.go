@@ -4,12 +4,15 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
+
+	"latere.ai/x/pkg/authkit"
 
 	"github.com/latere-ai/origo-web/internal/config"
 	"github.com/latere-ai/origo-web/internal/registry"
@@ -281,4 +284,50 @@ func shorten(t *testing.T) {
 	was := createBackoff
 	createBackoff = time.Millisecond
 	t.Cleanup(func() { createBackoff = was })
+}
+
+// TestTheRowIsWithdrawnEvenWhenTheBrowserIsGone.
+//
+// The compensating withdrawal exists for the person who submits the form and
+// closes the tab. That cancels the request while the creation is still
+// retrying, so a withdrawal made on the request's own context would fail at
+// once and leave behind exactly the row it was added to remove.
+func TestTheRowIsWithdrawnEvenWhenTheBrowserIsGone(t *testing.T) {
+	h := newHarness(t)
+	h.fake.unknownFor = createAttempts + 1
+	shorten(t)
+	c := h.signedIn("alice")
+
+	// The form token first, on a request that completes.
+	token := h.csrf("/new", c)
+	form := url.Values{"owner": {"alice"}, "name": {"notes"}}
+	form.Set(authkit.CSRFFieldName(), token)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	req := httptest.NewRequest(http.MethodPost, "/new", strings.NewReader(form.Encode())).WithContext(ctx)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(c)
+	for _, ck := range h.csrfCookies {
+		req.AddCookie(ck)
+	}
+
+	// The browser goes while the creation is between attempts.
+	go func() {
+		for range 200 {
+			if len(h.registry.Written()) > 0 {
+				break
+			}
+			time.Sleep(time.Millisecond)
+		}
+		cancel()
+	}()
+	h.server.ServeHTTP(httptest.NewRecorder(), req)
+
+	written := h.registry.Written()
+	if len(written) != 1 {
+		t.Fatalf("the registry saw %d writes, want one", len(written))
+	}
+	if got := h.registry.Forgotten(); len(got) != 1 || got[0] != written[0].ID {
+		t.Fatalf("withdrew %v after the browser went, want the one row %q", got, written[0].ID)
+	}
 }

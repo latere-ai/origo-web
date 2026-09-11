@@ -521,9 +521,11 @@ incomplete one.
 The second call is retried, up to three attempts spaced past Origo's own
 deny cache, and only on the one refusal a fresh ownership row produces
 while the authorizer's replicas catch up. Every other refusal is the
-answer. When no attempt succeeds the row is withdrawn, because the
-person who submitted the form has gone and a row that outlived its
-repository would hold the name against its own owner.
+answer. When no attempt succeeds the row is withdrawn, on a context
+detached from the request: the case the withdrawal exists for is the
+person who submitted the form and closed the tab, and a call made on the
+request's own context would fail the moment the browser went and leave
+behind exactly the row it was added to remove.
 
 Renaming, transferring, freezing and deleting stay out, and so does
 granting another person access. The line this section draws is between
@@ -634,7 +636,9 @@ repository, so they assert against the real read API and not a mock.
   creation that never succeeds withdraws the row it wrote (proposed:
   `internal/web`,
   `TestACreationRetriesOnlyTheRefusalTheRegistryLagProduces`,
-  `TestACreationThatFailsKeepsNothing`).
+  `TestACreationThatFailsKeepsNothing`), including when the browser that
+  submitted the form has gone (proposed: `internal/web`,
+  `TestTheRowIsWithdrawnEvenWhenTheBrowserIsGone`).
 - A person who holds no name is told what to do next rather than shown a
   form, and an installation with no ownership component offers no
   affordance and answers the address as one it does not serve (proposed:

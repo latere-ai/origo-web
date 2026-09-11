@@ -206,11 +206,24 @@ func (s *Server) createAtOrigo(ctx context.Context, tok, id string, form newRepo
 	return origo.Repo{}, err
 }
 
-// forget removes the registry row a failed creation left behind. A failure
-// here is logged and not shown: the person has already been told the
-// repository was not created, and a second sentence about a row they never
-// saw would tell them nothing they can act on.
+// forgetTimeout bounds the compensating call, which runs on a context of its
+// own and so needs a deadline of its own.
+const forgetTimeout = 5 * time.Second
+
+// forget removes the registry row a failed creation left behind.
+//
+// It runs on a context detached from the request, because the case it exists
+// for is the person who closed the tab: the browser goes, the request
+// context is cancelled mid-retry, and a compensating call made on that same
+// context would fail at once and orphan the row it was added to remove. The
+// deadline is its own and short, since nobody is waiting for it.
+//
+// A failure here is logged and not shown: the person has already been told
+// the repository was not created, and a second sentence about a row they
+// never saw would tell them nothing they can act on.
 func (s *Server) forget(ctx context.Context, tok, id string) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), forgetTimeout)
+	defer cancel()
 	if err := s.registry.Forget(ctx, tok, id); err != nil {
 		slog.ErrorContext(ctx, "origoweb: a registry row outlived the creation that failed",
 			"repository_id", id, "error", err)
