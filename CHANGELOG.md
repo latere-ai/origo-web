@@ -15,6 +15,27 @@ already holds what was committed.
   The clone address is the widest thing on the page, and HTTPS and SSH are
   two tabs. The last commit sits above the file list instead of in a panel
   of its own.
+- You can manage your SSH keys here. The screen lists the keys on your
+  account with the label from the line you pasted, the algorithm beside the
+  fingerprint, the day you added each one and when it was last used, so you
+  can tell two of your own apart and see which one is dead. "never used" is
+  the only red on the page, because it is usually the one that means the key
+  can go.
+- Adding a key takes two steps. You paste the line, the screen shows you the
+  fingerprint that will be stored, and nothing is saved until you confirm.
+  Check it against `ssh-keygen -lf` on the machine that owns the key: that
+  is the whole point of the step, and the fingerprint you are shown is
+  computed by the store that will hold it, not by this page.
+- Removing a key asks first, on a page that names the key, and tells you
+  what stops working. A machine holding the matching private key loses its
+  clone and push within a minute; nothing else changes.
+- A key already on your account and a key on somebody else's are told apart.
+  Yours is named back to you so you can find it in the table; another
+  account's says only that the key is taken, because a public key is public
+  and naming the holder would say who has which credential.
+- The screen appears only where the installation runs a key store. If yours
+  does not, nothing changes and no navigation entry for it appears. See
+  "SSH keys" in the README for the three calls a store answers.
 
 ## v0.5.2 - 2026-09-11
 
