@@ -11,7 +11,7 @@
   {{- if .Owners}}
   <form class="panel stack" action="/new" method="post">
     <input type="hidden" name="{{.View.CSRFField}}" value="{{.View.CSRF}}">
-    <div class="fields">
+    <div class="fields stacked">
       <fieldset class="field">
         <legend>Owner</legend>
         <div class="choices scrolling">

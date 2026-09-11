@@ -841,6 +841,11 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
   align-items: start;
 }
 .fields .field input, .fields .field textarea { width: 100%; }
+/* A form a person fills in top to bottom is one column at every width: the
+ * owner, then the name, then the button, in the order they are read. Set
+ * as a row, the second field sat beside the first and the button under the
+ * first alone. */
+.fields.stacked { grid-template-columns: minmax(0, 1fr); }
 fieldset.field { border: none; margin: 0; padding: 0; min-width: 0; }
 fieldset.field legend { padding: 0; }
 
