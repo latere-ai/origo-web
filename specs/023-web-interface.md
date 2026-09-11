@@ -705,6 +705,10 @@ repository, so they assert against the real read API and not a mock.
   10 MiB text file is requested with a `Range` and shows a truncation
   notice; a 60 MiB file is not fetched at all and shows the size and the
   clone hint (proposed: `internal/web`, `TestFileViewLimits`).
+- A directory listing counts the rows on the screen and offers that
+  directory's own history beside the count. It counts the page and never the
+  directory, because Origo pages a tree by cursor and returns no total
+  (proposed: `internal/web`, `TestATreeCountsWhatItShows`).
 - A commit names its committer only where the committer is not the author,
   which is what a rebase, a cherry-pick and an applied patch leave behind
   (proposed: `internal/web`,

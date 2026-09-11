@@ -29,9 +29,9 @@
       </table>
     </div>
   </div>
-  <nav class="pager" aria-label="Pages">
-    <a href="{{.History}}">History</a>
-    {{- if .NextURL}}<a href="{{.NextURL}}">More entries</a>{{end}}
+  <nav class="pager" aria-label="Directory">
+    <span class="meta">{{.Count}} · <a href="{{.History}}">{{if .Path}}History of this directory{{else}}History{{end}}</a></span>
+    {{if .NextURL}}<a href="{{.NextURL}}">More entries</a>{{else}}<span class="inert">More entries</span>{{end}}
   </nav>
 </main>
 {{end}}

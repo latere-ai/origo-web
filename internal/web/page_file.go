@@ -30,8 +30,12 @@ type treeData struct {
 	Entries []entryView
 	NextURL string
 	History string
-	Stale   string
-	Empty   bool
+	// Count says how many entries this page of the directory holds. Origo
+	// pages a tree by cursor and returns no total, so it counts the rows on
+	// the screen and never claims to count the directory.
+	Count string
+	Stale string
+	Empty bool
 }
 
 // handleTree lists one directory at one revision.
@@ -60,6 +64,7 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 		Path:    path,
 		Crumbs:  pathCrumbs(rc.rv.URL(), rc.rv.RefQueryValue(), path),
 		Entries: s.entryViews(rc.rv, page.Items),
+		Count:   entryCount(len(page.Items)),
 		Stale:   firstNonEmpty(rc.stale, staleSentence(page.Meta)),
 		Empty:   len(page.Items) == 0,
 		History: rc.rv.URL() + "/log?" + logQuery(rc.rv, path),
@@ -76,6 +81,16 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 	rc.v.Title = firstNonEmpty(path, rc.repo.Slug) + " at " + rc.ref
 	data.View = rc.v
 	s.render(w, r, http.StatusOK, "tree", data)
+}
+
+// entryCount says how many entries one page of a tree holds. Origo pages a
+// tree by cursor and returns no total, so this counts the rows on the screen
+// and never claims to count the directory.
+func entryCount(n int) string {
+	if n == 1 {
+		return "1 entry"
+	}
+	return itoa(n) + " entries"
 }
 
 func logQuery(rv *repoView, path string) string {
