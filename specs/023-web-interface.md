@@ -705,6 +705,14 @@ repository, so they assert against the real read API and not a mock.
   10 MiB text file is requested with a `Range` and shows a truncation
   notice; a 60 MiB file is not fetched at all and shows the size and the
   clone hint (proposed: `internal/web`, `TestFileViewLimits`).
+- A commit names its committer only where the committer is not the author,
+  which is what a rebase, a cherry-pick and an applied patch leave behind
+  (proposed: `internal/web`,
+  `TestACommitNamesItsCommitterWhenItIsNotTheAuthor`).
+- A commit screen with a file rendered shut offers one address that opens
+  every one of them and one address back. Neither is offered where it would
+  do nothing, and opening every file renders no body the per-file budget
+  dropped (proposed: `internal/web`, `TestACommitOpensEveryFileOnAsking`).
 - The tree, log, and file screens page with Origo's cursors and every
   entry appears exactly once over a repository with a 5 001-entry
   directory and 100 commits (proposed: `test/e2e`, `TestPagingIsExact`).

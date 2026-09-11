@@ -13,20 +13,25 @@ import (
 )
 
 type commitData struct {
-	View      view
-	Repo      *repoView
-	Commit    commitView
-	Trailers  []origo.Trailer
-	Parents   []parentLink
-	Stats     *origo.Stats
-	Patch     diff.Patch
-	Files     []fileView
-	Root      bool
-	Single    string
-	PatchURL  string
-	TreeURL   string
-	Truncated bool
-	Stale     string
+	View     view
+	Repo     *repoView
+	Commit   commitView
+	Trailers []origo.Trailer
+	Parents  []parentLink
+	Stats    *origo.Stats
+	Patch    diff.Patch
+	Files    []fileView
+	Root     bool
+	Single   string
+	PatchURL string
+	TreeURL  string
+	// ExpandURL opens every file the budget rendered shut, and is empty
+	// when nothing on the screen is shut. CollapseURL is the way back, and
+	// is set only while the screen is expanded.
+	ExpandURL   string
+	CollapseURL string
+	Truncated   bool
+	Stale       string
 }
 
 type parentLink struct {
@@ -41,6 +46,10 @@ type fileView struct {
 	OnlyURL string
 	BlobURL string
 	LogURL  string
+	// PatchURL is the whole commit as the bytes git wrote, which is the
+	// answer for a file this page will not render. It is empty on a screen
+	// that has no patch of its own, such as a comparison.
+	PatchURL string
 }
 
 func (s *Server) handleCommit(w http.ResponseWriter, r *http.Request) {
@@ -89,17 +98,58 @@ func (s *Server) handleCommit(w http.ResponseWriter, r *http.Request) {
 	if data.Single != "" {
 		budget.Force = data.Single
 	}
+	expanded := r.URL.Query().Get("expand") == "1"
+	if expanded {
+		budget = openEvery(budget)
+	}
 	data.Patch = diff.Parse(text, budget)
 	data.Patch.Truncated = dm.Truncated
 	data.Truncated = dm.Truncated
-	data.Files = fileViews(rc.rv, data.Patch.Files, rc.rv.URL()+"/commit/"+url.PathEscape(commit.SHA), commit.SHA)
+	selfURL := rc.rv.URL() + "/commit/" + url.PathEscape(commit.SHA)
+	data.Files = fileViews(rc.rv, data.Patch.Files, selfURL, commit.SHA, data.PatchURL)
+	data.ExpandURL, data.CollapseURL = expandLinks(selfURL, data.Single, expanded, data.Patch)
 	s.render(w, r, http.StatusOK, "commit", data)
 }
 
-func fileViews(rv *repoView, files []diff.File, selfURL, rev string) []fileView {
+// openEvery is the budget with the two shut-file rules off. A file whose body
+// is over the per-file rule stays over it: that body was never rendered, and
+// opening every file is not the same question as rendering one of them.
+func openEvery(b diff.Budget) diff.Budget {
+	b.Collapse, b.PerPatch = 0, 0
+	return b
+}
+
+// expandLinks are the two addresses of the shut-file state: the one that
+// opens every file, and the one back. Each is empty where it would do
+// nothing, so a screen with nothing shut carries no control.
+func expandLinks(selfURL, single string, expanded bool, p diff.Patch) (expand, collapse string) {
+	q := url.Values{}
+	setIfNotEmpty(q, "path", single)
+	if expanded {
+		back := selfURL
+		if len(q) > 0 {
+			back += "?" + q.Encode()
+		}
+		return "", back
+	}
+	var shut bool
+	for _, f := range p.Files {
+		if f.Collapsed {
+			shut = true
+			break
+		}
+	}
+	if !shut {
+		return "", ""
+	}
+	q.Set("expand", "1")
+	return selfURL + "?" + q.Encode(), ""
+}
+
+func fileViews(rv *repoView, files []diff.File, selfURL, rev, patchURL string) []fileView {
 	out := make([]fileView, 0, len(files))
 	for i, f := range files {
-		v := fileView{File: f, ID: "f" + itoa(i+1)}
+		v := fileView{File: f, ID: "f" + itoa(i+1), PatchURL: patchURL}
 		sep := "?"
 		if strings.Contains(selfURL, "?") {
 			sep = "&"
@@ -198,7 +248,7 @@ func (s *Server) handleCompare(w http.ResponseWriter, r *http.Request) {
 	data.Patch.Truncated = meta.Truncated
 	data.Truncated = meta.Truncated
 	selfURL := rc.rv.URL() + "/compare?base=" + url.QueryEscape(base) + "&head=" + url.QueryEscape(head)
-	data.Files = fileViews(rc.rv, data.Patch.Files, selfURL, head)
+	data.Files = fileViews(rc.rv, data.Patch.Files, selfURL, head, "")
 	data.Stale = firstNonEmpty(rc.stale, staleSentence(meta))
 	s.render(w, r, http.StatusOK, "compare", data)
 }

@@ -8,6 +8,9 @@
   <div class="panel stack">
     <dl class="facts">
       <dt>Author</dt><dd>{{.Commit.Author}} &lt;{{.Commit.Email}}&gt; · <span title="{{.Commit.WhenExact}}">{{.Commit.WhenExact}}</span></dd>
+      {{- if .Commit.Committer}}
+      <dt>Committer</dt><dd>{{.Commit.Committer}} &lt;{{.Commit.CommitterEmail}}&gt; · <span title="{{.Commit.CommitterWhen}}">{{.Commit.CommitterWhen}}</span></dd>
+      {{- end}}
       <dt>Commit</dt><dd>{{.Commit.SHA}}</dd>
       {{- if .Parents}}
       <dt>{{if gt (len .Parents) 1}}Parents{{else}}Parent{{end}}</dt>
@@ -17,7 +20,7 @@
       <dt>{{.Key}}</dt><dd>{{.Value}}</dd>
       {{- end}}
     </dl>
-    <p class="meta"><a href="{{.TreeURL}}">Browse tree</a> · <a href="{{.PatchURL}}">Download patch</a></p>
+    <p class="meta"><a href="{{.TreeURL}}">Browse tree at {{.Commit.Short}}</a> · <a href="{{.PatchURL}}">Download patch</a>{{if .ExpandURL}} · <a href="{{.ExpandURL}}">Open every file</a>{{end}}{{if .CollapseURL}} · <a href="{{.CollapseURL}}">Shut the large files</a>{{end}}</p>
   </div>
 
   {{- if .Root}}

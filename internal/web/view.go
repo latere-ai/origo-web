@@ -146,10 +146,18 @@ type commitView struct {
 	When      string
 	WhenExact string
 	URL       string
+
+	// Committer is the person who wrote the commit object, set only when
+	// they are not the author. The two differ on a rebase, a cherry-pick
+	// and an applied patch, and there the second name is a fact about the
+	// commit. Where they agree it is the same fact twice.
+	Committer      string
+	CommitterEmail string
+	CommitterWhen  string
 }
 
 func newCommitView(c origo.Commit, repoURL string) commitView {
-	return commitView{
+	v := commitView{
 		SHA:       c.SHA,
 		Short:     origo.Short(c.SHA),
 		Subject:   c.Subject(),
@@ -160,6 +168,12 @@ func newCommitView(c origo.Commit, repoURL string) commitView {
 		WhenExact: absTime(c.Author.At),
 		URL:       repoURL + "/commit/" + url.PathEscape(c.SHA),
 	}
+	if c.Committer != (origo.Person{}) && c.Committer != c.Author {
+		v.Committer = c.Committer.Name
+		v.CommitterEmail = c.Committer.Email
+		v.CommitterWhen = absTime(c.Committer.At)
+	}
+	return v
 }
 
 // humanSize writes a byte count the way a person reads one.

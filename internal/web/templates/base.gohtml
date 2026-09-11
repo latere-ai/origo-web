@@ -114,7 +114,7 @@
     </div>
     <div class="notice">
       <p>{{.Changed}} changed lines. Too large to render inline.</p>
-      <p><a href="{{.OnlyURL}}">Show this file only</a> · {{if .BlobURL}}<a href="{{.BlobURL}}">View file</a> · {{end}}<a href="{{.LogURL}}">History</a></p>
+      <p><a href="{{.OnlyURL}}">Show this file only</a> · {{if .BlobURL}}<a href="{{.BlobURL}}">View file</a> · {{end}}{{if .PatchURL}}<a href="{{.PatchURL}}">Download patch</a> · {{end}}<a href="{{.LogURL}}">History</a></p>
     </div>
   </div>
 {{- else}}
@@ -125,6 +125,7 @@
       <span class="count-del">{{.Deletions}}</span>
       <span class="meta">{{.Status}}</span>
       <a href="{{.OnlyURL}}">this file only</a>
+      {{if .BlobURL}}<a href="{{.BlobURL}}">view file</a>{{end}}
     </summary>
     {{template "diffbody" .}}
   </details>
