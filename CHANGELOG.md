@@ -10,6 +10,8 @@ holds what was committed.
 
 ## Unreleased
 
+## v0.7.0 - 2026-09-11
+
 - The file page says whether its address moves. A file opened at a branch
   warns that the next push can change it and offers the address pinned to
   the commit. A file opened at a commit says the address always shows those
