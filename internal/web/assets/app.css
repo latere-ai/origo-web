@@ -243,6 +243,7 @@ p { margin: 0; }
  * width. A form fills its panel. A table, a tree, a commit log, a diff and a
  * file take the shell and scroll inside their own box when they need more. */
 .page {
+  min-height: 100vh;
   padding: var(--s-6) var(--s-6) var(--s-9);
   display: flex;
   flex-direction: column;
@@ -347,11 +348,18 @@ p { margin: 0; }
 .spread { display: flex; gap: var(--s-5); align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
 .meta { color: var(--ink-2); font-size: var(--t-12); }
 .muted { color: var(--ink-3); }
+/* The uppercase name of a small block: a group of links, a clone address, a
+ * step. It is a heading role as well as a span, because a block that has a
+ * name usually deserves a heading element too.
+ *
+ * Its ink is the secondary one and not the meta one, because this is the one
+ * meta role that sits on the page ground rather than on a panel, and the meta
+ * ink holds its 4.5:1 floor on a panel only. */
 .label {
   font-size: var(--t-11);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 /* ---- controls ---- */
@@ -588,16 +596,48 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
 
 /* ---- sign in ---- */
 
-/* The door is three panels, not a card centred in an empty window: the way
- * in, the clone address, and what this is. They sit side by side on a wide
- * screen and stack on a narrow one, and the row keeps the masthead's edges. */
+/* The front door is one column, centred, and it is the only screen in the
+ * interface that is. Everywhere else the body holds the masthead's edges
+ * because there is a table, a tree, a log or a diff to hold them with. This
+ * screen has one button and three short paragraphs and nothing else: run it
+ * to the full width of a 1500px window and the sentences stop at the measure
+ * with half the window empty beside them, which is the composition that rule
+ * exists to prevent. A column with the window either side of it is a margin;
+ * a column with the window on one side of it is a mistake.
+ *
+ * The three things on it are not three peers. One is what a visitor came to
+ * do and takes the whole column and the only filled control; the clone
+ * address is for someone who already has access; what the software is, is
+ * credibility and not an action. They are stacked in that order and parted by
+ * a rule, so the order reads as an order. */
 .gate {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-  gap: var(--s-6);
-  align-items: start;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.clone-shape { font-family: var(--font-mono); font-size: var(--t-12); color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.door {
+  width: 100%;
+  max-width: 27rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  padding: var(--s-7) 0;
+}
+.door-part { border-top: 1px solid var(--line); padding-top: var(--s-6); }
+.button-block { width: 100%; }
+.clone-shape {
+  font-family: var(--font-mono);
+  font-size: var(--t-12);
+  line-height: 1.7;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--s-3) var(--s-4);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 
 /* ---- pager ---- */
 

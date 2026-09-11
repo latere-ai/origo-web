@@ -102,6 +102,7 @@ var headingRoles = map[string]string{
 	".heading-section": "sans",
 	".heading-sub":     "sans",
 	".heading-path":    "mono",
+	".label":           "sans",
 }
 
 // TestAHeadingLooksLikeItsRole asserts the half of the role system the class
@@ -509,12 +510,25 @@ func TestTheBodyKeepsTheMastheadsEdges(t *testing.T) {
 
 	// No box between the masthead and the content narrows itself or
 	// centres itself. Either one is how half a window goes empty.
+	//
+	// The front door is the one exception, and it is written down here
+	// rather than left to a selector nobody listed. Every other screen holds
+	// the far edge with a table, a tree, a log, a diff or a document's
+	// samples. The door has a button and three short paragraphs: at a
+	// desktop width its sentences stop at the measure and the rest of the
+	// window is empty beside them, which is the composition this rule exists
+	// to prevent. So the door is a column the window sits either side of,
+	// and it is bounded once, by `.door`, which is asserted below.
 	boxes := map[string]bool{
 		"main": true, ".page": true, ".gate": true, ".doc": true,
 		".doc-body": true, ".panel": true, ".stack": true, ".fields": true,
+		".door": true,
 	}
 	for _, rule := range cssRules(css) {
 		for sel := range strings.SplitSeq(rule.selector, ",") {
+			if strings.TrimSpace(sel) == ".door" {
+				continue
+			}
 			if !boxes[strings.TrimSpace(sel)] {
 				continue
 			}
@@ -532,6 +546,31 @@ func TestTheBodyKeepsTheMastheadsEdges(t *testing.T) {
 					}
 				}
 			}
+		}
+	}
+
+	// The exception is one box on one screen, and it is a column with the
+	// window either side of it rather than a body that stops short of the
+	// masthead on one side.
+	var doors int
+	for _, rule := range cssRules(css) {
+		if strings.TrimSpace(rule.selector) != ".door" {
+			continue
+		}
+		doors++
+		if !strings.Contains(rule.body, "max-width:") {
+			t.Error("the front door's column is not bounded")
+		}
+	}
+	if doors != 1 {
+		t.Errorf("%d rules bound the front door's column, want one", doors)
+	}
+	for _, rule := range cssRules(css) {
+		if strings.TrimSpace(rule.selector) != ".gate" {
+			continue
+		}
+		if !strings.Contains(rule.body, "justify-content: center") {
+			t.Error("the front door's column is bounded without being centred, so the window empties on one side")
 		}
 	}
 

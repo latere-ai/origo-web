@@ -10,6 +10,15 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+- The signed-out page is one column instead of three cards in a row. The
+  way in comes first and is the only filled button on the page; the clone
+  address and what this software is sit under it, parted by a rule, in
+  the order they matter. The page no longer ends a third of the way down
+  an empty screen.
+- The clone address no longer says cloning needs "the same account" to
+  someone who has not got one yet. It says git asks for the same sign-in
+  this page does.
+
 ## v0.5.0 - 2026-09-11
 
 - The interface has a new look. The page is a warm paper tone instead of

@@ -603,6 +603,15 @@ repository, so they assert against the real read API and not a mock.
   the masthead and the content narrows or centres itself, and the
   documentation holds its far edge with the section list beside the
   words (proposed: `internal/web`, `TestTheBodyKeepsTheMastheadsEdges`).
+- The front door is the one screen bounded and centred, and the exception
+  is named rather than left to a selector nobody listed. Every other
+  screen holds its far edge with a table, a tree, a log, a diff or a
+  document's samples; the door has a button and three short paragraphs,
+  so at a desktop width its sentences would stop at the measure with the
+  rest of the window empty beside them. Exactly one rule bounds the
+  door's column, and the column is centred, so the window sits either
+  side of it rather than on one side (proposed: `internal/web`,
+  `TestTheBodyKeepsTheMastheadsEdges`).
 - No screen carries a native menu: no `select`, `option`, `optgroup` or
   `datalist` on any page, and the long choices are radio groups in a box
   that scrolls (proposed: `internal/web`,

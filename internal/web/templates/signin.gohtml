@@ -1,25 +1,27 @@
 {{define "title"}}Sign in{{end}}
 {{define "main"}}
 <main class="gate">
-  <div class="panel stack">
-    <h1 class="heading-page">Sign in to read git repositories</h1>
-    <p class="meta">Branches and tags, the commit log, what a commit changed, and any file.</p>
+  <div class="door">
+    <div class="stack">
+      <h1 class="heading-page">Sign in to read git repositories</h1>
+      <p class="lead">Branches and tags, the commit log, what a commit changed, and any file.</p>
+    </div>
     {{- if .Refused}}
     <p class="prose"><strong>You are signed out.</strong> The installation did not accept the credential this session held. Sign in again to carry on.</p>
     {{- end}}
-    <p><a class="button button-primary" href="/auth/start?return_to={{.ReturnTo}}">{{.ButtonLabel}}</a></p>
-    <p class="meta prose">There is no password and no sign-up here. Access follows the account your organisation already gave you, and what you may read is decided by the installation, not by this page.</p>
-  </div>
-  <div class="panel stack">
-    <h2 class="heading-section">Clone address</h2>
-    <p class="clone-shape">{{.CloneHTTPS}}{{if .CloneSSH}}
+    <a class="button button-primary button-block" href="/auth/start?return_to={{.ReturnTo}}">{{.ButtonLabel}}</a>
+    <p class="hint">This hands you to your identity provider. There is no password and no sign-up: access follows the account your organisation already gave you, and that account decides what you may read.</p>
+    <div class="door-part stack">
+      <h2 class="label">Clone address</h2>
+      <p class="clone-shape">{{.CloneHTTPS}}{{if .CloneSSH}}
 {{.CloneSSH}}{{end}}</p>
-    <p class="meta prose">Cloning needs the same account. Replace the two names with the repository you want.</p>
-  </div>
-  <div class="panel stack">
-    <h2 class="heading-section">Open source</h2>
-    <p class="meta prose">This is {{if .Hosted}}a hosted installation of {{end}}{{.View.ProjectName}}, an open-source git server. Anyone can read the code, and anyone can run their own.</p>
-    <p><a href="{{.View.ProjectURL}}">The {{.View.ProjectName}} project</a></p>
+      <p class="hint">Git asks for the same sign-in this page does. Replace the two names with the repository you want.</p>
+    </div>
+    <div class="door-part stack">
+      <h2 class="label">Open source</h2>
+      <p class="hint">This is {{if .Hosted}}a hosted installation of {{end}}{{.View.ProjectName}}, an open-source git server. Anyone can read the code, and anyone can run their own.</p>
+      <p><a href="{{.View.ProjectURL}}">The {{.View.ProjectName}} project</a></p>
+    </div>
   </div>
 </main>
 {{end}}
