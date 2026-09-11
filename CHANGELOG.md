@@ -10,6 +10,8 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+## v0.5.0 - 2026-09-11
+
 - The interface has a new look. The page is a warm paper tone instead of
   near-white, panels and tables sit on it with a rule you can actually
   see, and one rust accent carries links, focus and the button you are
