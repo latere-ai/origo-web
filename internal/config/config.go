@@ -62,10 +62,16 @@ type Config struct {
 	// form alone.
 	SSHCloneHost string
 
-	// KeysURL is the key management surface. No component owns one today
-	// (spec 023, spec 024), so it is unset by default and the key screen
-	// and its navigation entry are absent while it is.
-	KeysURL string
+	// KeysURL is the base address of the installation's public key store,
+	// the component that answers Origo's key resolution endpoint and that
+	// holds the keys a person adds. Unset is the default and the neutral
+	// one: an installation whose operator runs no such component has no
+	// key screen and no navigation entry for it, which is what spec 024
+	// leaves to the operator's product surface.
+	//
+	// It is the store's base URL and not one screen's, because this
+	// service makes three calls against it.
+	KeysURL *url.URL
 
 	// IssuerName is what the sign-in button names, for an installation
 	// whose people know their identity provider by name.
@@ -96,7 +102,6 @@ func Load() (Config, error) {
 	c := Config{
 		Addr:         cmp.Or(os.Getenv(EnvPrefix+"_ADDR"), ":8080"),
 		SSHCloneHost: strings.TrimSpace(os.Getenv(EnvPrefix + "_SSH_CLONE_HOST")),
-		KeysURL:      strings.TrimSpace(os.Getenv(EnvPrefix + "_KEYS_URL")),
 		IssuerName:   strings.TrimSpace(os.Getenv(EnvPrefix + "_ISSUER_NAME")),
 		ProductName:  strings.TrimSpace(os.Getenv(EnvPrefix + "_PRODUCT_NAME")),
 		ProjectURL:   cmp.Or(strings.TrimSpace(os.Getenv(EnvPrefix+"_PROJECT_URL")), DefaultProjectURL),
@@ -115,6 +120,14 @@ func Load() (Config, error) {
 	}
 	if c.PublicURL, err = requiredURL(EnvPrefix + "_PUBLIC_URL"); err != nil {
 		return Config{}, err
+	}
+	// The key store is optional, so an address that does not parse is a
+	// misconfiguration and not a reason to run without the screen: an
+	// operator who set the variable meant to turn the screen on.
+	if raw := strings.TrimSpace(os.Getenv(EnvPrefix + "_KEYS_URL")); raw != "" {
+		if c.KeysURL, err = parseURL(EnvPrefix+"_KEYS_URL", raw); err != nil {
+			return Config{}, err
+		}
 	}
 	if raw := strings.TrimSpace(os.Getenv(EnvPrefix + "_CLONE_HOST")); raw != "" {
 		if c.CloneHost, err = parseURL(EnvPrefix+"_CLONE_HOST", raw); err != nil {

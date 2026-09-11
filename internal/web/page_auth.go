@@ -32,7 +32,7 @@ func (s *Server) begin(w http.ResponseWriter, r *http.Request, section string) r
 			Section:     section,
 			SignedIn:    reader.Token != "",
 			Who:         reader.Who,
-			KeysEnabled: s.cfg.KeysURL != "",
+			KeysEnabled: s.keys != nil,
 			CanCreate:   s.cfg.RegistryURL() != nil,
 			CSRF:        s.sessions.CSRFToken(w, r),
 			Product:     s.cfg.Name(),
@@ -321,7 +321,7 @@ func (s *Server) handleKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rq.v.Title = "SSH keys"
-	s.render(w, r, http.StatusNotImplemented, "keys", keysData{View: rq.v, URL: s.cfg.KeysURL})
+	s.render(w, r, http.StatusNotImplemented, "keys", keysData{View: rq.v, URL: s.cfg.KeysURL.String()})
 }
 
 func (s *Server) handleKeysPost(w http.ResponseWriter, r *http.Request) {

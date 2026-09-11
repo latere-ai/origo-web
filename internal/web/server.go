@@ -122,7 +122,7 @@ func New(o Options) *Server {
 		"GET /keys":                  s.handleKeys,
 		"POST /keys":                 s.handleKeysPost,
 	}
-	for _, rt := range Routes(o.Config.KeysURL != "") {
+	for _, rt := range Routes(o.Config.KeysURL != nil) {
 		pattern := rt.Method + " " + rt.Pattern
 		h, listed := handlers[pattern]
 		if !listed {
