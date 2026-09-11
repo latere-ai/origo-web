@@ -16,7 +16,7 @@ resources:
 # about what is running; a target pins the tag the release workflow built.
 images:
   - name: ghcr.io/latere-ai/origoweb
-    newTag: v0.4.2
+    newTag: v0.5.1
 
 patches:
   - path: settings.yaml
