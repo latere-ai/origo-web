@@ -714,7 +714,11 @@ repository, so they assert against the real read API and not a mock.
   which draws one beside each field (proposed: `internal/web`,
   `TestTheQuotableValuesSitInOneDisclosure`).
 - A page's machine views are the last block of it, under a hairline, opened
-  by the word `machine` and named by format. Each address is this same page
+  by the word `machine` and named by format. It is a `footer` after the
+  screen's `main` rather than the last child of it, which is the second
+  departure here: one block in the shell puts the line on every screen that
+  has one without every screen carrying a copy of it, and a `footer` in the
+  page is a landmark of its own. Each address is this same page
   plus a suffix and answers what the link says; the same addresses are
   `<link rel="alternate">` in the head. A screen with no machine view carries
   no line, which is a departure from the interface specification's "on every
