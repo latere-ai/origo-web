@@ -121,12 +121,16 @@ func TestAHeadingLooksLikeItsRole(t *testing.T) {
 	css := string(mustAsset(t, "app.css"))
 
 	// One rule gives a role its treatment, and it is the rule whose whole
-	// selector is that role.
+	// selector is that role. A width breakpoint may step a role, which is
+	// the role changing with the screen's width and not one screen's
+	// opinion of it, so the count is taken outside the media blocks.
 	for role := range headingRoles {
 		var defined int
-		for _, rule := range cssRules(css) {
-			if rule.selector == role {
-				defined++
+		for _, rule := range cssRules(outsideMedia(css)) {
+			for sel := range strings.SplitSeq(rule.selector, ",") {
+				if strings.TrimSpace(sel) == role {
+					defined++
+				}
 			}
 		}
 		if defined != 1 {
@@ -194,6 +198,34 @@ func TestAHeadingLooksLikeItsRole(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// outsideMedia is the stylesheet with its media blocks removed, which is the
+// stylesheet as it applies at every width.
+func outsideMedia(css string) string {
+	var out strings.Builder
+	for {
+		i := strings.Index(css, "@media")
+		if i < 0 {
+			out.WriteString(css)
+			return out.String()
+		}
+		out.WriteString(css[:i])
+		depth, j := 0, i
+		for ; j < len(css); j++ {
+			switch css[j] {
+			case '{':
+				depth++
+			case '}':
+				if depth--; depth == 0 {
+					j++
+					goto done
+				}
+			}
+		}
+	done:
+		css = css[min(j, len(css)):]
 	}
 }
 

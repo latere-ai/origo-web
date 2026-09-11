@@ -602,9 +602,19 @@ repository, so they assert against the real read API and not a mock.
 - The reference selector lists branches and tags from `refs` and
   switching one is a form submission that lands on the same screen at
   the new revision (proposed: `internal/web`, `TestReferenceSelector`).
-- The overview shows both clone forms, the id form and the name form,
-  built from the configured clone host and never from a request header
-  (proposed: `internal/web`, `TestCloneURLsComeFromConfiguration`).
+- The overview shows one clone form at a time, built from the configured
+  clone host and never from a request header. The other form is a link to
+  this same screen carrying `clone=ssh`, so choosing between them is a
+  render and not a script swapping two strings, and an installation with
+  no SSH surface offers no choice (proposed: `internal/web`,
+  `TestCloneURLsComeFromConfiguration`).
+- The overview's heading area is a wrapping list of facts rather than a
+  sentence, so a fact can join the end of it without moving the others
+  and without a second line appearing under the heading. The reference
+  picker is a native `details` element holding the same radio group the
+  references screen uses, so it is one line until a reader wants it and
+  it opens with no script (proposed: `internal/web`,
+  `TestReferenceSelector`, `TestNoScreenCarriesANativeMenu`).
 - Every page has one `<h1>`, every table a header row with `scope`,
   every interactive element a visible focus style, and no automated
   accessibility violation at AA, over each screen in both themes

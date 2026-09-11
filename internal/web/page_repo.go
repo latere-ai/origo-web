@@ -102,6 +102,14 @@ type overviewData struct {
 	Readme     *readmeView
 	CloneHTTPS string
 	CloneSSH   string
+
+	// CloneIsSSH says which of the two addresses the screen is showing, and
+	// CloneSSHURL is the address of this screen showing the other one.
+	// Choosing between them is a link and a re-render, because the choice
+	// is in the address and nothing here runs a script to swap two strings.
+	CloneIsSSH  bool
+	CloneSSHURL string
+
 	ArchiveURL string
 	Branches   int
 	Tags       int
@@ -116,6 +124,15 @@ type readmeView struct {
 	URL  string
 }
 
+// refAndCloneQuery is this screen's own address asking for the SSH form,
+// keeping whatever revision the reader is on.
+func refAndCloneQuery(rv *repoView) string {
+	if q := rv.RefQuery(); q != "" {
+		return q + "&clone=ssh"
+	}
+	return "?clone=ssh"
+}
+
 func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 	rc, ok := s.openRepo(w, r, "overview")
 	if !ok {
@@ -128,6 +145,8 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 		CloneSSH:   s.cfg.CloneSSH(rc.repo.Owner, rc.repo.Slug),
 		Stale:      rc.stale,
 	}
+	data.CloneIsSSH = data.CloneSSH != "" && r.URL.Query().Get("clone") == "ssh"
+	data.CloneSSHURL = rc.rv.URL() + refAndCloneQuery(rc.rv)
 
 	branches, tags, _, err := s.refsFor(r, rc.tok, rc.repo.ID)
 	if err != nil {

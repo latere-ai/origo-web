@@ -10,6 +10,12 @@ already holds what was committed.
 
 ## Unreleased
 
+- The repository page puts the name, the counts, the branch picker and the
+  clone address in one block at the top. The branch picker opens in place.
+  The clone address is the widest thing on the page, and HTTPS and SSH are
+  two tabs. The last commit sits above the file list instead of in a panel
+  of its own.
+
 ## v0.5.2 - 2026-09-11
 
 - The repositories page groups repositories by owner, one table an owner,

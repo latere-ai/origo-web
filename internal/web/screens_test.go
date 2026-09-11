@@ -409,10 +409,18 @@ func TestCloneURLsComeFromConfiguration(t *testing.T) {
 	if !strings.Contains(body, "https://git.example/infra/origo.git") {
 		t.Errorf("the HTTPS clone address is not the configured one:\n%s", body)
 	}
-	if !strings.Contains(body, "git@git.example:infra/origo.git") {
-		t.Error("the SSH clone address is not the configured one")
-	}
 	if strings.Contains(body, "attacker.example") {
+		t.Error("a request header reached the page")
+	}
+
+	// The screen shows one address at a time and the other is a link to
+	// this same screen, so the SSH form is a second render and not a
+	// second string hidden in the first one.
+	ssh := h.get(h.repoPath("")+"?clone=ssh", h.signedIn("alice")).Body.String()
+	if !strings.Contains(ssh, "git@git.example:infra/origo.git") {
+		t.Errorf("the SSH clone address is not the configured one:\n%s", ssh)
+	}
+	if strings.Contains(ssh, "attacker.example") {
 		t.Error("a request header reached the page")
 	}
 
