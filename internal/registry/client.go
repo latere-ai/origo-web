@@ -152,7 +152,7 @@ func (c *Client) Namespaces(ctx context.Context, tok string) (Namespaces, error)
 	if c == nil || c.base == nil {
 		return Namespaces{}, ErrNoRegistry
 	}
-	resp, err := c.do(ctx, http.MethodGet, tok, "/repositories/namespaces", nil)
+	resp, err := c.do(ctx, http.MethodGet, tok, nil, "repositories", "namespaces")
 	if err != nil {
 		return Namespaces{}, err
 	}
@@ -188,7 +188,7 @@ func (c *Client) Create(ctx context.Context, tok, id, label, slug string) (Repos
 	if err != nil {
 		return Repository{}, fmt.Errorf("build request: %w", err)
 	}
-	resp, err := c.do(ctx, http.MethodPost, tok, "/repositories", body)
+	resp, err := c.do(ctx, http.MethodPost, tok, body, "repositories")
 	if err != nil {
 		return Repository{}, err
 	}
@@ -211,7 +211,7 @@ func (c *Client) Forget(ctx context.Context, tok, id string) error {
 	if c == nil || c.base == nil {
 		return ErrNoRegistry
 	}
-	resp, err := c.do(ctx, http.MethodDelete, tok, "/repositories/"+url.PathEscape(id), nil)
+	resp, err := c.do(ctx, http.MethodDelete, tok, nil, "repositories", id)
 	if err != nil {
 		return err
 	}
@@ -222,9 +222,20 @@ func (c *Client) Forget(ctx context.Context, tok, id string) error {
 // entry per organization a person administers.
 const maxBody = 1 << 20
 
-func (c *Client) do(ctx context.Context, method, tok, path string, body []byte) (*http.Response, error) {
+// do makes one call. The path is given as segments, and each is escaped into
+// exactly one segment of the address, so an id carrying a slash cannot add a
+// segment of its own. The escaped form is written to RawPath beside the
+// decoded Path, because url.URL escapes Path on its own terms and leaves a
+// slash inside it alone.
+func (c *Client) do(ctx context.Context, method, tok string, body []byte, segments ...string) (*http.Response, error) {
 	u := *c.base
-	u.Path = strings.TrimRight(u.Path, "/") + path
+	decoded := strings.TrimRight(u.Path, "/")
+	escaped := strings.TrimRight(u.EscapedPath(), "/")
+	for _, segment := range segments {
+		decoded += "/" + segment
+		escaped += "/" + url.PathEscape(segment)
+	}
+	u.Path, u.RawPath = decoded, escaped
 	var rdr io.Reader
 	if body != nil {
 		rdr = bytes.NewReader(body)
