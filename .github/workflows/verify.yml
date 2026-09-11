@@ -10,9 +10,87 @@ on:
 permissions:
   contents: read
 
+env:
+  # The Origo this interface is proved against, pinned by digest so a
+  # contract change fails here on the bump that brings it and nowhere
+  # else (spec 023, "Where it lives"). The stubs are Origo's spec 013 issuer
+  # and authorizer at the same release. MinIO is the bucket origod needs,
+  # the pins Origo's own workflow carries.
+  ORIGOD_IMAGE: ghcr.io/latere-ai/origod:v0.2.0@sha256:4f2cc4eae308524e664f025ed95cf7b62919de5155f211f3c8ae8310f533d072
+  STUBS_IMAGE: ghcr.io/latere-ai/origo-stubs:v0.2.0@sha256:a8865ba3fb08ec177397a3eb4a99aff998634cba374cf7d88c486bacf0b889c4
+  MINIO_IMAGE: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+  MC_IMAGE: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+  REPO_ID: 4b1d6c2e-8f3a-4e5b-9c7d-2a1b3c4d5e6f
+
 jobs:
   gate:
     uses: latere-ai/ci/.github/workflows/lateregate.yml@v1
     with:
       runs_on: ubuntu-latest
       test_os: '["ubuntu-latest"]'
+
+  # The end-to-end tier of spec 023: the interface against the pinned origod
+  # with the stub issuer and stub authorizer, one repository with a
+  # 100-commit history for the paging case and one subject the authorizer
+  # denies for the cache case. Everything runs on the host network so the
+  # issuer's address is one string for origod, the test, and the browser
+  # the test stands in for.
+  e2e:
+    name: end-to-end against the pinned origod
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Start the bucket
+        run: |
+          docker run -d --name minio --network host -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin "$MINIO_IMAGE" server /data
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1:9000/minio/health/live && break; sleep 1; done
+          docker run --rm --network host --entrypoint /bin/sh "$MC_IMAGE" -c 'mc alias set local http://127.0.0.1:9000 minioadmin minioadmin && mc mb --ignore-existing local/origo-e2e'
+      - name: Start the stub issuer and authorizer
+        run: |
+          docker run -d --name stubs --network host "$STUBS_IMAGE" \
+            -issuer-listen 127.0.0.1:8081 -authorizer-listen 127.0.0.1:8082 -sink-listen 127.0.0.1:8083 \
+            -issuer-url http://localhost:8081 -authorizer-token stub-authorizer-token
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:8081/jwks && break; sleep 1; done
+          curl -sf -o /dev/null -X PUT http://127.0.0.1:8082/rules -H 'Content-Type: application/json' \
+            -d '{"rules":[{"subject":"denied","allow":false,"reason":"denied by the end-to-end job"}]}'
+      - name: Start origod
+        run: |
+          openssl ecparam -genkey -name prime256v1 -out token-key.pem
+          docker run -d --name origod --network host \
+            -e ORIGO_S3_ENDPOINT=http://127.0.0.1:9000 -e ORIGO_S3_REGION=us-east-1 -e ORIGO_S3_BUCKET=origo-e2e \
+            -e ORIGO_S3_KEY=minioadmin -e ORIGO_S3_SECRET=minioadmin -e ORIGO_S3_PATH_STYLE=1 \
+            -e ORIGO_DATA_DIR=/var/lib/origo \
+            -e ORIGO_PUBLIC_URL=http://localhost:8090 -e ORIGO_PUBLIC_ADDR=:8090 -e ORIGO_INTERNAL_ADDR=:8091 \
+            -e ORIGO_GOSSIP_ADDR=127.0.0.1:0 \
+            -e ORIGO_OIDC_ISSUERS=http://localhost:8081 -e ORIGO_OIDC_INSECURE_ISSUERS=http://localhost:8081 \
+            -e ORIGO_AUTHORIZER_URL=http://127.0.0.1:8082 -e ORIGO_AUTHORIZER_TOKEN=stub-authorizer-token \
+            -e ORIGO_TOKEN_KEY="$(cat token-key.pem)" \
+            "$ORIGOD_IMAGE"
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1:8091/readyz && break; sleep 1; done
+          curl -sf -o /dev/null http://127.0.0.1:8091/readyz
+      - name: Create the repository and push its history
+        run: |
+          token=$(curl -sf -X POST http://localhost:8081/mint -H 'Content-Type: application/json' -d '{"sub":"dev","aud":"origo"}' | sed 's/.*"token":"\([^"]*\)".*/\1/')
+          curl -sf -o /dev/null -X POST -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+            http://localhost:8090/v1/repos -d "{\"id\":\"$REPO_ID\",\"owner\":\"dev\",\"slug\":\"history\"}"
+          git clone -q "http://x:$token@localhost:8090/dev/history.git" fixture
+          cd fixture
+          git config user.email dev@example.com && git config user.name dev
+          for i in $(seq 1 100); do echo "line $i" >> notes.txt; git add notes.txt; git commit -q -m "commit $i"; done
+          git push -q origin HEAD:main
+      - name: Run the tier
+        env:
+          ORIGOWEB_TEST_ORIGO_URL: http://localhost:8090
+          ORIGOWEB_TEST_ISSUER_URL: http://localhost:8081
+          ORIGOWEB_TEST_REPO_ID: ${{ env.REPO_ID }}
+          ORIGOWEB_TEST_DENIED_SUB: denied
+        run: make test-e2e
+      - name: What origod and the stubs said
+        if: failure()
+        run: |
+          docker logs origod 2>&1 | tail -50
+          docker logs stubs 2>&1 | tail -20
