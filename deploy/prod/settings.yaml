@@ -8,6 +8,10 @@
 # This installation is Latere's, so it carries Latere's name and Latere's
 # mark. Both are settings and neither has a default: an installation nobody
 # names calls itself Origo and draws no mark at all.
+#
+# ORIGOWEB_KEYS_URL turns the SSH keys screen on. It is unset in the base,
+# because an operator who runs no key store has no place to add a key and
+# is better served by no screen than by one that cannot work.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -30,3 +34,21 @@ spec:
               value: Latere Code
             - name: ORIGOWEB_BRAND_MARK
               value: latere
+            # The key store. Origo holds no public key: it asks auth whose
+            # an offered key is, and auth is where a person adds one, so
+            # this is the same address the session is signed in against
+            # (auth's spec 075). The public host rather than the in-cluster
+            # Service, because the call carries the person's own token and
+            # the issuer in that token is the public one.
+            - name: ORIGOWEB_KEYS_URL
+              value: https://auth.latere.ai
+            # The scope auth requires before it will let this interface
+            # manage a person's keys. Adding a public key creates a
+            # credential that pushes to every repository that person can
+            # write, so auth gates it on a scope granted to this one client
+            # rather than on holding any valid token. The base asks for the
+            # OIDC minimum: a scope an issuer has not registered is refused
+            # at the authorization request, so it belongs here, where the
+            # issuer is known to grant it.
+            - name: ORIGOWEB_AUTH_SCOPES
+              value: openid,email,profile,offline_access,origo:ssh-keys

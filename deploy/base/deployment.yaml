@@ -77,6 +77,13 @@ spec:
             # refresh token. Without it the session dies with the first
             # access token rather than lasting its twelve hours, because
             # there is nothing to refresh with.
+            #
+            # The base asks for the OIDC minimum and nothing else. A scope
+            # the issuer has not registered for this client is refused at
+            # the authorization request, which is a sign-in that does not
+            # work rather than a feature that is absent, so a scope a key
+            # store requires belongs in the overlay of an installation
+            # whose issuer grants it.
             - name: ORIGOWEB_AUTH_SCOPES
               value: openid,email,profile,offline_access
             - name: ORIGOWEB_AUTH_COOKIE_KEY
