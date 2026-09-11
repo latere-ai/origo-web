@@ -38,6 +38,7 @@ follow your system setting.
 | a file, with line anchors | `/r/{id}/blob/{path}` |
 | the bytes of a file | `/r/{id}/raw/{path}` |
 | agent tokens: mint one, and see it once | `/tokens` |
+| SSH keys: the keys on your account, add one, remove one | `/keys` |
 | how to drive the installation from an agent | `/docs/agents` |
 
 A branch or a tag is chosen with `?ref=`, which is what the selector on the
@@ -89,7 +90,7 @@ of this and `git.example.com` in front of Origo.
 | `ORIGOWEB_PRODUCT_NAME` | `Origo` | what your installation calls itself, if you have named it |
 | `ORIGOWEB_PROJECT_URL` | the Origo repository | where you link people to the open-source project |
 | `ORIGOWEB_BRAND_MARK` | unset | a logo beside the name; the only one this build carries is `latere`, and it is Latere's |
-| `ORIGOWEB_KEYS_URL` | unset | a key management surface, if you have one; see [Limits](#limits) |
+| `ORIGOWEB_KEYS_URL` | unset | the base address of your key store; the SSH keys screen appears only when it is set. See [SSH keys](#ssh-keys) |
 | `ORIGOWEB_AUTH_URL` | `https://auth.latere.ai` | your OIDC issuer, which must be one of Origo's `ORIGO_OIDC_ISSUERS`; it is also where repositories are created, see [Creating a repository](#creating-a-repository) |
 | `ORIGOWEB_AUTH_CLIENT_ID` | required | the client registered for the browser flow |
 | `ORIGOWEB_AUTH_CLIENT_SECRET` | unset | a confidential client's secret; a public client uses PKCE alone |
@@ -98,6 +99,45 @@ of this and `git.example.com` in front of Origo.
 
 `deploy/` holds a Kubernetes base: a Deployment of two stateless replicas, a
 Service, an Ingress, and the three secrets above.
+
+## SSH keys
+
+Origo serves git over SSH and stores no public key. On every connection it
+asks a store you run whose the offered key is, and that store is also where
+a person adds one. Point `ORIGOWEB_KEYS_URL` at it and the SSH keys screen
+appears. Leave it unset and the screen and its navigation entry are absent,
+which is the default.
+
+The screen expects three calls on that address, each carrying the signed-in
+person's own token:
+
+| Call | Answers |
+|---|---|
+| `GET /me/ssh-keys` | `{"keys": [...]}`, each with `id`, `comment`, `key_type`, `bits`, `fingerprint`, `created_at`, `last_used_at` |
+| `POST /me/ssh-keys` with `{"public_key", "confirm": false}` | the parsed key, stored nowhere |
+| `POST /me/ssh-keys` with `"confirm": true` | `201` and the stored key |
+| `DELETE /me/ssh-keys/{id}` | `204` |
+
+Adding a key takes two steps on purpose. The first submission sends the
+paste and shows you the fingerprint the store computed; the second stores
+it. **This service never reads a key**: it does not parse your paste, does
+not compute a fingerprint and does not decide which algorithms are allowed.
+The store does all three, both times, so the fingerprint you checked is the
+key that was saved.
+
+Check that fingerprint against `ssh-keygen -lf ~/.ssh/id_ed25519.pub` on the
+machine that owns the key before you confirm. That is the whole point of the
+step.
+
+A refusal comes back as a code the screen turns into a sentence:
+`invalid_public_key` for a paste that is not one acceptable key,
+`key_already_added` for a key you already have, and
+`key_already_registered` for one registered to someone else. A store that
+answers `403` is one that has not been told to accept this interface, which
+is a setting on your side.
+
+If you run Latere's auth, this is already built: point
+`ORIGOWEB_KEYS_URL` at it and grant this client the scope it asks for.
 
 ## Naming your installation
 
@@ -160,10 +200,6 @@ because they were left out.
   signed-out visitor sees the sign-in page and nothing else. Every read here
   is already issued without a credential when there is none, so the day
   Origo answers one, the same page shows the repository.
-- **SSH keys.** Public keys are held outside Origo, behind a resolver Origo
-  only reads, and no component owns a place to add or remove one. The screen
-  and its navigation entry appear only when `ORIGOWEB_KEYS_URL` names a
-  surface, which is never by default.
 
 - **A list of your agent tokens, and a way to revoke one.** Origo signs a
   token rather than recording it, so nothing is written when one is minted:
