@@ -33,6 +33,7 @@ func (s *Server) begin(w http.ResponseWriter, r *http.Request, section string) r
 			SignedIn:    reader.Token != "",
 			Who:         reader.Who,
 			KeysEnabled: s.cfg.KeysURL != "",
+			CanCreate:   s.cfg.RegistryURL() != nil,
 			CSRF:        s.sessions.CSRFToken(w, r),
 			Product:     s.cfg.Name(),
 			ProjectName: config.ProjectName,

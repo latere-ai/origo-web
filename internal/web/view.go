@@ -26,7 +26,14 @@ type view struct {
 	Section     string
 	SignedIn    bool
 	KeysEnabled bool
-	CSRF        string
+
+	// CanCreate reports that this installation has a component that
+	// records who owns a repository, which is what a creation needs and
+	// what Origo does not hold. It is read from configuration and costs no
+	// call, so a screen never waits on it and an installation without one
+	// offers nothing that would refuse.
+	CanCreate bool
+	CSRF      string
 
 	// Who names the signed-in person, empty when nobody is. It is the most
 	// human claim the session already holds, and the masthead carries it on

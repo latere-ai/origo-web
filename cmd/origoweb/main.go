@@ -24,6 +24,7 @@ import (
 
 	"github.com/latere-ai/origo-web/internal/config"
 	"github.com/latere-ai/origo-web/internal/origo"
+	"github.com/latere-ai/origo-web/internal/registry"
 	"github.com/latere-ai/origo-web/internal/session"
 	"github.com/latere-ai/origo-web/internal/web"
 )
@@ -58,6 +59,7 @@ func run() error {
 			Config:    cfg,
 			Sessions:  sessions,
 			API:       origo.New(cfg.OrigoURL, otel.HTTPClient()),
+			Registry:  registry.New(cfg.RegistryURL(), otel.HTTPClient()),
 			Version:   Version,
 			Commit:    Commit,
 			BuildTime: Date,

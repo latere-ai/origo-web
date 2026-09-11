@@ -130,6 +130,35 @@ func Load() (Config, error) {
 	return c, nil
 }
 
+// RegistryURL is the address of the repository registry, which is the
+// identity provider's own: the component that issues the token also holds
+// the handles, the organizations and the record of who owns which
+// repository, so there is no second address to configure and no second
+// credential to hold. Empty when no provider is configured, which leaves
+// the interface with no creation screen.
+func (c Config) RegistryURL() *url.URL {
+	raw := strings.TrimRight(strings.TrimSpace(c.OIDC.AuthURL), "/")
+	if raw == "" {
+		return nil
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return nil
+	}
+	return u
+}
+
+// AccountURL is where a person claims the name their repositories live
+// under. It is the identity provider's own account screen, because the name
+// is the provider's to hold.
+func (c Config) AccountURL() string {
+	u := c.RegistryURL()
+	if u == nil {
+		return ""
+	}
+	return strings.TrimRight(u.String(), "/") + "/me"
+}
+
 // Name is what the interface calls itself, which is the project's own name
 // until an operator names the installation something else.
 func (c Config) Name() string { return cmp.Or(c.ProductName, ProjectName) }

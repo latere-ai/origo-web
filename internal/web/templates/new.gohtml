@@ -1,0 +1,51 @@
+{{define "title"}}New repository{{end}}
+{{define "main"}}
+<main class="stack">
+  <h1 class="heading-page">New repository</h1>
+  <p class="lead">An empty repository, ready to push to. Nothing is imported and no first commit is made.</p>
+
+  {{- if .Error}}
+  <p class="notice" role="alert"><strong>That did not work.</strong> {{.Error}}</p>
+  {{- end}}
+
+  {{- if .Owners}}
+  <form class="panel stack" action="/new" method="post">
+    <input type="hidden" name="{{.View.CSRFField}}" value="{{.View.CSRF}}">
+    <div class="fields">
+      <fieldset class="field">
+        <legend>Owner</legend>
+        <div class="choices scrolling">
+          {{- range .Owners}}
+          <div class="choice">
+            <input id="owner-{{.Label}}" type="radio" name="owner" value="{{.Label}}"{{if eq .Label $.Form.Owner}} checked{{end}} required>
+            <label for="owner-{{.Label}}"><span class="option-title">{{.Label}}</span><span class="option-note">{{if .Remaining}}{{.Name}}, room for {{.Remaining}} more{{else}}{{.Name}}, no room for another{{end}}</span></label>
+          </div>
+          {{- end}}
+        </div>
+        <span class="hint">Your own name, and every organisation you administer.</span>
+      </fieldset>
+
+      <div class="field">
+        <label for="name">Name</label>
+        <input id="name" name="name" class="mono" value="{{.Form.Name}}" maxlength="64" placeholder="a short name, like notes" required>
+        <span class="hint">Letters, digits, and the characters . _ - up to 64 of them. It becomes the last part of the clone URL.</span>
+      </div>
+    </div>
+    <div class="row">
+      <button class="button-primary" type="submit">Create repository</button>
+      <span class="hint">You land on the repository, with the commands to push to it.</span>
+    </div>
+  </form>
+  {{- else}}
+  <div class="panel stack">
+    <h2 class="heading-section">You have no name to create under yet</h2>
+    <p class="prose">A repository lives under a name: yours, or an organisation you administer. {{if .View.Who}}The account you are signed in as, {{.View.Who}}, holds neither.{{end}}</p>
+    {{- if .AccountURL}}
+    <p class="prose">Claim a name on your account, then come back. <a href="{{.AccountURL}}">Go to your account</a>.</p>
+    {{- else}}
+    <p class="prose">Ask whoever administers this installation for a name.</p>
+    {{- end}}
+  </div>
+  {{- end}}
+</main>
+{{end}}

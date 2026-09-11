@@ -18,6 +18,7 @@ import (
 
 	"github.com/latere-ai/origo-web/internal/config"
 	"github.com/latere-ai/origo-web/internal/origo"
+	"github.com/latere-ai/origo-web/internal/registry"
 	"github.com/latere-ai/origo-web/internal/session"
 )
 
@@ -26,6 +27,11 @@ type Options struct {
 	Config   config.Config
 	Sessions *session.Manager
 	API      *origo.Client
+	// Registry writes the row that says who owns a repository, which is
+	// the half of a creation Origo does not hold. Nil leaves the creation
+	// screen absent, which is what an installation whose authorizer keeps
+	// no registry gets.
+	Registry *registry.Client
 
 	Version   string
 	Commit    string
@@ -37,6 +43,7 @@ type Server struct {
 	cfg      config.Config
 	sessions *session.Manager
 	api      *origo.Client
+	registry *registry.Client
 	mux      *http.ServeMux
 }
 
@@ -47,11 +54,15 @@ type Route struct {
 }
 
 // Routes is the whole route table, in one place so it can be asserted
-// against. Everything here is a GET except sign-out, the key screen and the
-// mint form, the three routes that change anything, and none of them touches
-// repository content: this interface has no write path to a repository of
-// any kind. Minting writes nothing either: the token it asks for is signed
-// and kept nowhere.
+// against. Everything here is a GET except four forms: sign-out, the key
+// screen, the mint form, and the one that creates a repository.
+//
+// None of them touches repository content. This interface has no write path
+// to a repository of any kind: nothing here edits a file, moves a reference,
+// renames, transfers, freezes or deletes anything. Minting writes nothing,
+// because the token it asks for is signed and kept nowhere. Creating brings
+// an empty repository into being, which is the one thing a person cannot
+// obtain from any other screen and which changes no repository that exists.
 func Routes(keys bool) []Route {
 	rs := []Route{
 		{"GET", "/{$}"},
@@ -63,6 +74,8 @@ func Routes(keys bool) []Route {
 		{"GET", "/assets/{file}"},
 		{"GET", "/tokens"},
 		{"POST", "/tokens"},
+		{"GET", "/new"},
+		{"POST", "/new"},
 		{"GET", "/docs/agents"},
 		{"GET", "/r/{id}"},
 		{"GET", "/r/{id}/refs"},
@@ -82,7 +95,7 @@ func Routes(keys bool) []Route {
 
 // New builds the server.
 func New(o Options) *Server {
-	s := &Server{cfg: o.Config, sessions: o.Sessions, api: o.API, mux: http.NewServeMux()}
+	s := &Server{cfg: o.Config, sessions: o.Sessions, api: o.API, registry: o.Registry, mux: http.NewServeMux()}
 
 	handlers := map[string]http.HandlerFunc{
 		"GET /{$}":                   s.handleHome,
@@ -94,6 +107,8 @@ func New(o Options) *Server {
 		"GET /assets/{file}":         s.handleAsset,
 		"GET /tokens":                s.handleTokens,
 		"POST /tokens":               s.handleTokensPost,
+		"GET /new":                   s.handleNew,
+		"POST /new":                  s.handleNewPost,
 		"GET /docs/agents":           s.handleAgentDocs,
 		"GET /r/{id}":                s.handleOverview,
 		"GET /r/{id}/refs":           s.handleRefs,

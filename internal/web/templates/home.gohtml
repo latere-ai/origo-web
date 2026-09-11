@@ -1,7 +1,12 @@
 {{define "title"}}Repositories{{end}}
 {{define "main"}}
 <main class="stack">
-  <h1 class="heading-page">Repositories</h1>
+  <div class="spread">
+    <h1 class="heading-page">Repositories</h1>
+    {{- if and .View.SignedIn .View.CanCreate}}
+    <a class="button" href="/new">New repository</a>
+    {{- end}}
+  </div>
   {{template "stale" .Stale}}
   {{- if .Directory}}
     {{- if .Repos}}
