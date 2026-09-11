@@ -13,7 +13,7 @@
     <h2 class="heading-section">What happens</h2>
     <p>Nobody can read, clone, push to or open it from the moment you press the button. Existing clones are not affected.</p>
     <p>The name <code>{{.Name}}</code> is free to use again.</p>
-    <p>The server keeps the content for seven days, then removes it for good. Within that time an administrator can restore it through the API. This site cannot.</p>
+    <p>The server keeps the content for {{.Hold}}, then removes it for good. Within that time an administrator can restore it through the API. This site cannot.</p>
     <form class="stack" action="{{.Repo.URL}}/delete" method="post">
       <input type="hidden" name="{{.View.CSRFField}}" value="{{.View.CSRF}}">
       <div class="field">

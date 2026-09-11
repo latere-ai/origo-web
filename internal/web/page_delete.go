@@ -31,6 +31,8 @@ type deleteData struct {
 	// retyped.
 	Typed string
 	Error string
+	// Hold is how long the server keeps the content, in words.
+	Hold string
 }
 
 // deleteHold is how long Origo keeps the content of a deleted repository
@@ -141,7 +143,7 @@ func (s *Server) renderDelete(w http.ResponseWriter, r *http.Request, rc repoCon
 	name := rc.repo.Owner + "/" + rc.repo.Slug
 	rc.v.Title = "Delete " + name
 	s.render(w, r, status, "delete", deleteData{
-		View: rc.v, Repo: rc.rv, Name: name, Typed: typed, Error: refusal,
+		View: rc.v, Repo: rc.rv, Name: name, Typed: typed, Error: refusal, Hold: deleteHold,
 	})
 }
 
