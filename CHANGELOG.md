@@ -10,6 +10,14 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+- You can create a repository. **New repository** on the repositories page
+  asks for a name to put it under and a name for it, and lands you on the
+  empty repository with the commands to push to it. What you may put it
+  under is your own name and any organisation you administer; if you have
+  not claimed a name yet, the page says so and links you to your account.
+  Nothing is imported and no first commit is made. The button appears only
+  on an installation that has somewhere to record who owns a repository.
+
 ## v0.5.1 - 2026-09-11
 
 - The signed-out page is one column instead of three cards in a row. The

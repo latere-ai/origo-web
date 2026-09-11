@@ -10,7 +10,7 @@ depends_on:
 affects: [specs/README.md]
 effort: large
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-09-11
 author: changkun
 ---
 
@@ -468,7 +468,7 @@ slots rather than qualities:
 Written out so a later contributor reads it as a boundary and not as a
 gap. The interface has **no write path to repository content of any
 kind** and never will: no editing a file, no creating a branch or tag,
-no merging, no reverting, no uploading, no repository creation, rename,
+no merging, no reverting, no uploading, no rename,
 transfer, freeze, or deletion. Origo's specs 019 and 020 serve those to
 a platform's own API, which is where the audit trail and the workflow
 belong.
@@ -485,6 +485,50 @@ in-browser terminal, and any rendering of a file format beyond Markdown
 and plain text. Origo's spec 009 already scopes out search, blame, and
 rendering on the server side; this spec does not smuggle them onto the
 client.
+
+### Creating a repository, which this spec once excluded
+
+This section narrows the exclusion above, and says why the narrowing is
+not the first step onto a slope.
+
+The sentence originally read "no repository creation, rename, transfer,
+freeze, or deletion". Four of those five change a repository that
+exists, and they stay out for the reason they were written out: they
+belong to a platform's own API, where the audit trail and the workflow
+are. **Creation is not one of them.** It changes no repository, moves no
+reference, and writes no byte of content; it brings an empty repository
+into being. The rule the section is named for, "no write path to
+repository content", is untouched by it.
+
+What forced the question was the empty state. A signed-in person opening
+the repositories screen with nothing on it had no answer to "how do I
+make one", and the honest answer at the time was that nobody could:
+creation was a product operation, admitted to a registered service
+client and to nobody else. An interface whose only answer to its own
+empty state is "ask an administrator" is not a small interface, it is an
+incomplete one.
+
+| Decision | Value |
+|---|---|
+| the routes | `GET /new` renders the screen, `POST /new` creates, with the form token every other form requires |
+| the credential | none of its own. Both calls carry the signed-in person's own token, so the `delegation \| none` row above still holds in full: a bug here can create nothing a person could not create with curl at the same two addresses |
+| who decides | the installation's authorizer, which is the component that holds the names and the record of who owns what. This interface asks and renders; it holds no ownership model and no second copy of one |
+| what a person may create under | what the authorizer says: their own name, and an organisation they administer. The screen draws the answer and never derives one from a token claim, for the reason the repository list gives at length |
+| the order | the ownership row first, the repository second, which is the authorizer's own rule: the failure that leaves a repository unreachable is preferred to the one that leaves it unguarded |
+| where a person lands | on the repository, at `/r/{id}`, which is also added to the addresses this session has opened |
+| an installation with no such component | no screen and no affordance. `ORIGOWEB_AUTH_URL` is the address, because the provider that issues the token is the one that holds the names; unset, the creation screen is absent exactly as the key screen is |
+
+The second call is retried, up to three attempts spaced past Origo's own
+deny cache, and only on the one refusal a fresh ownership row produces
+while the authorizer's replicas catch up. Every other refusal is the
+answer. When no attempt succeeds the row is withdrawn, because the
+person who submitted the form has gone and a row that outlived its
+repository would hold the name against its own owner.
+
+Renaming, transferring, freezing and deleting stay out, and so does
+granting another person access. The line this section draws is between
+bringing a repository into being and changing one that exists, and it is
+the same line Origo's own create route draws.
 
 ## What must land first
 
@@ -570,8 +614,32 @@ repository, so they assert against the real read API and not a mock.
   same content (proposed: `internal/web`, `TestStaleNotice`).
 - The interface has no route that changes repository content: the route
   table is asserted against a checked-in list, and the only non-`GET`
-  routes are sign-out and the key screen, both requiring a CSRF token
+  routes are sign-out, the key screen, the mint form and the creation
+  form, each requiring a CSRF token
   (proposed: `internal/web`, `TestRoutesAreReadOnly`).
+- A signed-in person creates a repository under a name the authorizer
+  says is theirs and lands on it; the ownership row and the repository
+  carry one id; both calls carry the person's own token and no other
+  credential (proposed: `internal/web`,
+  `TestCreatingARepositoryLandsOnIt`,
+  `TestTheCreationScreenSendsOnlyTheReadersToken`).
+- A creation refused for a name that is not theirs, a name already
+  taken, an owner at its limit, and a request the authorizer will not
+  read are four sentences and four statuses, each with the form filled
+  in as it was left, and none of them reaches Origo (proposed:
+  `internal/web`, `TestEveryRefusalIsItsOwnSentence`). A name Origo
+  would reject never becomes a row (proposed: `internal/web`,
+  `TestANameTheInstallationWillNotTakeIsRefusedBeforeARowIsWritten`).
+- Only the refusal a fresh ownership row produces is retried, and a
+  creation that never succeeds withdraws the row it wrote (proposed:
+  `internal/web`,
+  `TestACreationRetriesOnlyTheRefusalTheRegistryLagProduces`,
+  `TestACreationThatFailsKeepsNothing`).
+- A person who holds no name is told what to do next rather than shown a
+  form, and an installation with no ownership component offers no
+  affordance and answers the address as one it does not serve (proposed:
+  `internal/web`, `TestAPersonWithNoNameIsToldWhatToDo`,
+  `TestTheCreationAffordanceFollowsTheInstallation`).
 - With the key surface unconfigured, the key screen and its navigation
   entry are absent and every other screen is unchanged (proposed:
   `internal/web`, `TestKeyScreenIsOptional`).

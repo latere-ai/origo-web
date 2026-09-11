@@ -90,7 +90,7 @@ of this and `git.example.com` in front of Origo.
 | `ORIGOWEB_PROJECT_URL` | the Origo repository | where you link people to the open-source project |
 | `ORIGOWEB_BRAND_MARK` | unset | a logo beside the name; the only one this build carries is `latere`, and it is Latere's |
 | `ORIGOWEB_KEYS_URL` | unset | a key management surface, if you have one; see [Limits](#limits) |
-| `ORIGOWEB_AUTH_URL` | `https://auth.latere.ai` | your OIDC issuer, which must be one of Origo's `ORIGO_OIDC_ISSUERS` |
+| `ORIGOWEB_AUTH_URL` | `https://auth.latere.ai` | your OIDC issuer, which must be one of Origo's `ORIGO_OIDC_ISSUERS`; it is also where repositories are created, see [Creating a repository](#creating-a-repository) |
 | `ORIGOWEB_AUTH_CLIENT_ID` | required | the client registered for the browser flow |
 | `ORIGOWEB_AUTH_CLIENT_SECRET` | unset | a confidential client's secret; a public client uses PKCE alone |
 | `ORIGOWEB_AUTH_AUDIENCE` | the issuer | must be the audience Origo verifies, normally `origo` |
@@ -121,6 +121,31 @@ does not extend it.
 What you may read is Origo's decision and not this interface's. A repository
 you cannot see and a repository that does not exist read the same, because
 that is a difference Origo deliberately refuses to make.
+
+## Creating a repository
+
+**New repository** on the repositories page. Choose a name to put it under
+and a name for it, and you land on the empty repository with the commands to
+push to it. Nothing is imported and no first commit is made.
+
+What you may put it under is your own name, and any organisation you
+administer. If you have not claimed a name yet, the page says so and links
+you to your account, because a repository lives under a name and this
+interface will not invent one for you.
+
+Two things decide the rest, and neither of them is this interface. Your
+identity provider says which names are yours and how many repositories each
+may hold; Origo makes the repository and asks the same question again before
+it writes anything. A refusal from either is shown as it came, with your
+form as you left it, and nothing is created.
+
+The button is there only when your installation has somewhere to record who
+owns a repository, which is what `ORIGOWEB_AUTH_URL` names. An installation
+without one has repositories made some other way, and shows no button.
+
+Renaming, transferring and deleting are not here, and will not be. They
+change a repository that already exists, and they belong to whatever holds
+your audit trail.
 
 ## Limits
 
