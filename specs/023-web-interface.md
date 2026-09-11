@@ -502,6 +502,43 @@ slots rather than qualities:
   is where the one width rule is legible: the same shell, bounded text,
   unbounded tables.
 
+### Visibility
+
+A repository is private or public. A public one is read and cloned with
+no account at all (auth's spec 077, Origo's spec 027). Origo holds no
+visibility, so the interface reads and writes it at the registry with the
+person's own token, beside the create call it already makes there.
+
+Two surfaces, and no more.
+
+- The overview carries a `public` badge when the repository is public,
+  and, for somebody who may change it, one link to the screen below. The
+  read is one extra call on the overview alone and a failure is silence:
+  an installation whose registry has no visibility surface shows the
+  repository without the badge rather than failing a screen over a fact
+  that is not its subject.
+- `GET /r/{id}/visibility` is the change screen and `POST` applies it. It
+  is a screen and not a control on the overview, because the person has
+  to read one sentence before they press the button and this interface
+  runs no script, so there is no dialog to read it in. The screen says
+  what changes, then offers the button.
+
+The copy is fixed here because the private direction is the one a person
+has to be told about:
+
+> Making it private: Only people you have given access can read this
+> repository. Copies that were already cloned stay where they are. Making
+> it private does not delete them.
+
+> Making it public: Anyone can read and clone this repository. They do
+> not need an account. The code, every branch, every tag, and the full
+> history become readable. Nobody can push to it without access. This
+> does not show the repository in any list.
+
+Somebody who may read a repository but not administer it gets the
+interface's one refusal, which is the same answer an absent repository
+gets, so nobody learns which it was.
+
 ## Not in this spec
 
 Written out so a later contributor reads it as a boundary and not as a
@@ -592,6 +629,13 @@ The end-to-end tests run against a pinned `origod` container with
 Origo's stub issuer and stub authorizer (spec 013) and a fixture
 repository, so they assert against the real read API and not a mock.
 
+- The visibility screen says what changes in both directions, an
+  administrator flips a repository both ways, a reader gets the one
+  refusal, an unknown value writes nothing, and the overview carries the
+  badge (`internal/web`, `TestVisibilityScreenSaysWhatChanges`,
+  `TestVisibilityChangesBothWays`, `TestVisibilityIsNotForAReader`,
+  `TestVisibilityRefusesAValueItDoesNotKnow`,
+  `TestOverviewShowsThePublicBadge`).
 - Signing in redirects to the issuer with PKCE and a nonce, the callback
   exchanges the code and lands on the originally requested path, and the
   session cookie is `__Host-` prefixed, `HttpOnly`, `Secure`,
