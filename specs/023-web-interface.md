@@ -853,13 +853,21 @@ repository, so they assert against the real read API and not a mock.
   references screen uses, so it is one line until a reader wants it and
   it opens with no script (proposed: `internal/web`,
   `TestReferenceSelector`, `TestNoScreenCarriesANativeMenu`).
-- Every page has one `<h1>`, every table a header row with `scope`,
-  every interactive element a visible focus style, and no automated
-  accessibility violation at AA, over each screen in both themes
-  (proposed: `test/e2e`, `TestAccessibility`).
-- Every screen renders at 320, 768, and 1280 CSS pixels with no
-  horizontal overflow of the document (proposed: `test/e2e`,
-  `TestNarrowWidths`).
+- Every page has one `<h1>`, every table a header row with `scope` and
+  a caption naming what it holds, and a label on every control, over
+  each screen (`internal/web`, `TestAccessibleStructure`). Written
+  until 2026-09-12 with an automated accessibility run at AA in both
+  themes beside it, which needs a browser the tree does not drive; the
+  user decided the structural half is the criterion, and the contrast
+  the run would have measured is measured from the tokens themselves in
+  `TestBothThemesMeetTheirContrast` below.
+- The stylesheet holds the rules a narrow screen needs: one width
+  breakpoint, data tables that restack under it, and code and diffs that
+  scroll inside their own box rather than reflowing (`internal/web`,
+  `TestTheNarrowRulesAreThere`). Written until 2026-09-12 as no
+  horizontal overflow of the document at 320, 768, and 1280 CSS pixels,
+  which needs a browser to measure; the same decision made the rules
+  the criterion.
 - A response carrying `Origo-Stale` renders the staleness line and the
   same content (proposed: `internal/web`, `TestStaleNotice`).
 - The interface has no route that changes repository content: the route
@@ -1064,29 +1072,32 @@ reasoning it was written as.
 |---|---|---|
 | every criterion of `internal/web`, `internal/session`, `internal/diff`, and `internal/keys` | the tests named beside each, 71 in all | passing in the gate on every push |
 | the token never leaves the cookie; every screen works without script; no cache is shared between subjects; paging is exact; the list degrades without a directory | `test/e2e`, `TestTokenNeverLeavesTheCookie`, `TestEveryScreenWorksWithoutScript`, `TestNoCacheIsSharedBetweenSubjects`, `TestPagingIsExact`, `TestListDegradesWithoutDirectory`, with `TestMintingAgainstARealInstallation` beside them | passing against a real Origo, `origod v0.2.0-72-g00ae0c6` on its `make dev` stack with the stub issuer and stub authorizer of Origo's spec 013, on 2026-09-12: six passed, the cache case with a subject the stub denied and the paging case over a 100-commit fixture. The tier is not run by any job: see the divergences |
-| no automated accessibility violation at AA in both themes; no horizontal overflow at 320, 768, and 1280 CSS pixels | `test/e2e`, `TestAccessibility`, `TestNarrowWidths` | the structural half of each is asserted without a browser in `internal/web` (`TestAccessibleStructure`, and the stylesheet's rules for the narrow widths); the browser half is not implemented. Both tests skip unless `ORIGOWEB_TEST_BROWSER` is set and fail by construction when it is, so the gap cannot be read as green |
+| the accessible structure of every page; the stylesheet's narrow-width rules | `internal/web`, `TestAccessibleStructure`, `TestTheNarrowRulesAreThere` | passing in the gate. Until 2026-09-12 the two criteria also named a browser half, `TestAccessibility` and `TestNarrowWidths` in `test/e2e`, which skipped without a browser and failed by construction with one; the user decided the structural half is the criterion, the two tests are gone, and the bullets say what they were |
 
 ### Divergences and interpretations, each kept, with the reason
 
-- **The end-to-end tier runs on a developer's machine and in no job.**
-  The "Where it lives" section says the interface pins an `origod`
-  image by digest and runs its end-to-end tests against that container
-  in its own gate, so a contract change fails here on the next bump.
-  `verify.yml` has the one `gate` job, `make test-e2e` skips when
-  `ORIGOWEB_TEST_ORIGO_URL`, `ORIGOWEB_TEST_ISSUER_URL`, and
-  `ORIGOWEB_TEST_REPO_ID` are unset, and the Dockerfile pins no
-  `origod`. The six cases pass against a real Origo when the variables
-  are set, as the run above records, but the drift the split was said
-  to pay for is not caught on a push today. Not kept: this is the one
-  design claim the tree does not hold, and it is what keeps the spec at
-  `testing` beside the browser half.
-- **Two criteria have a structural half and an unbuilt browser half.**
-  An axe run at AA and a document that does not scroll sideways need a
-  browser, and the tree drives none. What can be asserted from the
-  markup and the stylesheet is asserted in `internal/web`; the two
-  `test/e2e` tests are the place the browser half runs when one is
-  configured, and until then they refuse to pass rather than skip
-  silently past the variable.
+- **The end-to-end tier ran on a developer's machine and in no job
+  until 2026-09-12.** The "Where it lives" section says the interface
+  pins an `origod` image by digest and runs its end-to-end tests against
+  that container in its own gate, so a contract change fails here on the
+  next bump. Until then `verify.yml` had the one `gate` job, `make
+  test-e2e` skipped when `ORIGOWEB_TEST_ORIGO_URL`,
+  `ORIGOWEB_TEST_ISSUER_URL`, and `ORIGOWEB_TEST_REPO_ID` were unset,
+  and nothing pinned an `origod`. The `e2e` job of `verify.yml` now
+  starts MinIO, the `origo-stubs` and the `origod` of Origo's `v0.2.0`,
+  each by digest, on the runner's host network, creates one repository,
+  pushes it a 100-commit history for the paging case, denies one
+  subject on the stub authorizer for the cache case, and runs the tier
+  on every push. The pin is where a contract change is felt: the bump
+  that brings it is the commit that has to make the tier pass.
+- **Two criteria named a browser half nothing drove.** An axe run at AA
+  and a document that does not scroll sideways need a browser, and the
+  tree drives none. The user decided on 2026-09-12 that the structural
+  half, asserted from the markup and the stylesheet in `internal/web`,
+  is the criterion; the two `test/e2e` tests that had refused to pass
+  without a browser are gone and the criteria say what they were. The
+  contrast a browser run would have measured is measured from the
+  tokens themselves in `TestBothThemesMeetTheirContrast`.
 - **Five screens the Screens table did not list.** `/new`, `/tokens`,
   `/{owner}/{slug}/patch/{sha}`, `/open`, and `/docs/agents` were added
   after the table was written, three of them by later sections of this
@@ -1112,12 +1123,6 @@ reasoning it was written as.
 
 ### What remains
 
-Two items, and the spec moves to `complete` when both are settled:
-
-- the end-to-end tier in a job of `verify.yml`, against a pinned
-  `origod` and the stub issuer and authorizer, with the fixture the
-  paging case needs and a subject the authorizer denies, so the design's
-  drift claim holds on every push;
-- the browser half of `TestAccessibility` and `TestNarrowWidths`, or a
-  decision that the structural half in `internal/web` is the criterion,
-  recorded here the way the interface specification's departures are.
+One thing, and the spec moves to `complete` on it: the first run of the
+`e2e` job on `main`, cited here by its run id the way the deck's
+stack-proof sentences are.

@@ -419,27 +419,6 @@ func TestListDegradesWithoutDirectory(t *testing.T) {
 	}
 }
 
-// TestAccessibility and TestNarrowWidths need a browser: an axe run at AA in
-// both themes, and a document that does not scroll sideways at 320, 768 and
-// 1280 CSS pixels. The structural half of both is asserted without one in
-// internal/web (TestAccessibleStructure and the stylesheet's narrow rules);
-// this is where the browser half runs when one is configured.
-func TestAccessibility(t *testing.T) {
-	start(t)
-	if os.Getenv("ORIGOWEB_TEST_BROWSER") == "" {
-		t.Skip("set ORIGOWEB_TEST_BROWSER to the browser this tier drives")
-	}
-	t.Fatal("the browser half of this criterion is not implemented; see spec 023")
-}
-
-func TestNarrowWidths(t *testing.T) {
-	start(t)
-	if os.Getenv("ORIGOWEB_TEST_BROWSER") == "" {
-		t.Skip("set ORIGOWEB_TEST_BROWSER to the browser this tier drives")
-	}
-	t.Fatal("the browser half of this criterion is not implemented; see spec 023")
-}
-
 func attrOf(n *html.Node, name string) string {
 	for _, a := range n.Attr {
 		if a.Key == name {
