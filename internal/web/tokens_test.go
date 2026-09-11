@@ -391,8 +391,9 @@ func TestTheSecretPanelCarriesNoControlThatNeedsAScript(t *testing.T) {
 }
 
 // TestTheDocumentationSaysWhatIsBuiltAndWhatIsNot asserts the page does not
-// promise a tool server that does not exist, and that it says the things the
-// installation actually does.
+// promise a tool server, which Origo measured and chose a command over, and
+// that it says the things the installation actually does: the command, the
+// skill that teaches an agent to use it, and the variables both need.
 func TestTheDocumentationSaysWhatIsBuiltAndWhatIsNot(t *testing.T) {
 	h := newHarness(t)
 	rec := h.get("/docs/agents")
@@ -401,10 +402,10 @@ func TestTheDocumentationSaysWhatIsBuiltAndWhatIsNot(t *testing.T) {
 	}
 	body := rec.Body.String()
 
-	if !strings.Contains(body, "Not yet available.") {
-		t.Error("the page does not mark the tool server as unbuilt")
-	}
 	for _, wrong := range []string{
+		"Not yet available",        // nothing on the page is unbuilt
+		"planned",                  // nor promised
+		"Model Context Protocol",   // there is no tool server; there is a command
 		"retryable",                // the refusal document carries no such field
 		"X-RateLimit",              // the installation sends one header, not three
 		"token_scope_insufficient", // not one of the codes
@@ -419,19 +420,21 @@ func TestTheDocumentationSaysWhatIsBuiltAndWhatIsNot(t *testing.T) {
 		}
 	}
 	for _, want := range []string{
-		"RateLimit-Limit",  // the one header that is sent
-		"Origo-Contract",   // on every answer
-		"Origo-Truncated",  // how a cut body says so
-		"/v1/repos/",       // the shape of every address
-		"rate_limited",     // a code that exists
-		"non_fast_forward", // and another
-		"one hour",         // the lifetime cap
+		"RateLimit-Limit",       // the one header that is sent
+		"Origo-Contract",        // on every answer
+		"Origo-Truncated",       // how a cut body says so
+		"/v1/repos/",            // the shape of every address
+		"rate_limited",          // a code that exists
+		"non_fast_forward",      // and another
+		"one hour",              // the lifetime cap
+		"origo ls",              // the command, by example
+		"skills/origo/SKILL.md", // and the skill that teaches it
+		"ORIGO_REPO",            // one of the four variables both need
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the page does not carry %q", want)
 		}
 	}
-
 }
 
 // TestTheDocumentationIsSelfContained asserts every section the contents

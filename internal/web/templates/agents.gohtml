@@ -11,7 +11,7 @@
     <a href="#read">3 · Read endpoints</a>
     <a href="#limits">4 · Rate limits</a>
     <a href="#errors">5 · Errors</a>
-    <a href="#mcp">6 · MCP server</a>
+    <a href="#cli">6 · The origo command</a>
   </nav>
   <div class="stack">
     <h1 class="heading-page">Agent access</h1>
@@ -120,12 +120,20 @@ curl -H "Authorization: Bearer $ORIGO_TOKEN" \
       <p>Every response carries the <code>Origo-Contract</code> header. Its value is the API contract version and changes when this page changes.</p>
     </section>
 
-    <section id="mcp" class="stack">
-      <h2 class="heading-section">6 · MCP server</h2>
-      <p><strong>Not yet available.</strong> Everything above this section works today.</p>
-      <p>A planned Model Context Protocol server will run beside an agent over standard input and output and expose the endpoints above as tools. It will use the same tokens, rate limits and errors.</p>
-      <p>It will not create tokens.</p>
-      <p>Until then, use git and the endpoints in section 3.</p>
+    <section id="cli" class="stack">
+      <h2 class="heading-section">6 · The origo command</h2>
+      <p>There is no MCP server. Origo ships a command instead, <code>origo</code>, which reads and changes one repository over the endpoints above without cloning it: list a tree, read a file, read history, compare two commits, and commit, revert, merge or cherry-pick. It prints lines, so a shell filters an answer, and every read takes <code>--json</code>.</p>
+      <p>It runs where the agent runs and changes nothing on the server. It is in every Origo release archive beside the server binary, and needs four variables and no configuration file.</p>
+      <pre class="scroller sample">export ORIGO_URL={{.APIBase}}
+export ORIGO_TOKEN=...                         # section 1
+export ORIGO_REPO=&lt;identifier&gt;                 # or &lt;owner&gt;/&lt;name&gt;
+export ORIGO_AUTHOR="Name &lt;you@example.com&gt;"   # writes only
+
+origo ls -r -n 0 | grep -i handler
+origo cat internal/api/read.go
+origo log -n 20 --json</pre>
+      <p>The skill at <code>skills/origo/SKILL.md</code> in the Origo repository teaches an agent to use the command correctly the first time: how to hold a token bound to one repository, what each command answers without a flag, and how to read a truncated answer. Copy it wherever the agent host keeps skills.</p>
+      <p>The command does not create tokens and does no administration. Create the token here and hand it over.</p>
     </section>
   </div>
 
