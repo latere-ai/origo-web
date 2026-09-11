@@ -302,6 +302,7 @@ var mutedUses = map[string]bool{
 	".button:hover":                true,
 	".diff-file > summary::before": true,
 	".picker > summary::after":     true,
+	".copy > summary::before":      true,
 	".pager .inert":                true,
 }
 

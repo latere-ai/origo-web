@@ -70,8 +70,8 @@ func TestACommitOpensEveryFileOnAsking(t *testing.T) {
 		t.Fatalf("the open link answered %d", rec.Code)
 	}
 	page := doc(t, rec.Body.String())
-	for _, d := range elements(page, "details") {
-		if !hasAttr(d, "open") {
+	for _, d := range classed(page, "diff-file") {
+		if d.Data == "details" && !hasAttr(d, "open") {
 			t.Error("a file is still shut on the screen that opens every file")
 		}
 	}

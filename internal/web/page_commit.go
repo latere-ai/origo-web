@@ -30,6 +30,8 @@ type commitData struct {
 	// is set only while the screen is expanded.
 	ExpandURL   string
 	CollapseURL string
+	// Copy is what a reader is likely to quote from this page.
+	Copy []copyItem
 	Truncated   bool
 	Stale       string
 }
@@ -81,6 +83,12 @@ func (s *Server) handleCommit(w http.ResponseWriter, r *http.Request) {
 		Stale:    firstNonEmpty(rc.stale, staleSentence(meta)),
 		Single:   r.URL.Query().Get("path"),
 	}
+	data.Copy = copyList(
+		copyItem{Label: "Commit", Value: commit.SHA},
+		copyItem{Label: "Patch address", Value: s.cfg.Absolute(patchURL)},
+		copyItem{Label: "Tree at this commit", Value: s.cfg.Absolute(data.TreeURL)},
+		copyItem{Label: "Clone address", Value: s.cfg.CloneHTTPS(rc.repo.Owner, rc.repo.Slug)},
+	)
 	for _, p := range commit.Parents {
 		data.Parents = append(data.Parents, parentLink{Short: origo.Short(p), URL: rc.rv.URL() + "/commit/" + url.PathEscape(p)})
 	}

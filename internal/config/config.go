@@ -222,6 +222,13 @@ func (c Config) CloneSSH(owner, slug string) string {
 	return fmt.Sprintf("git@%s:%s/%s.git", c.SSHCloneHost, owner, slug)
 }
 
+// Absolute is one of this service's own paths as a whole address. A value a
+// person quotes somewhere else has to carry the host, and the host is the one
+// an operator configured and never one a request header claimed.
+func (c Config) Absolute(path string) string {
+	return strings.TrimRight(c.PublicURL.String(), "/") + path
+}
+
 // RepoAPIURL is the address of one repository on the Origo installation:
 // the read API's own entry point, which an agent with a token calls
 // directly rather than through this interface.

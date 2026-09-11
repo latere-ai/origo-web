@@ -65,6 +65,25 @@
     </g></svg>
 {{- end -}}
 
+{{- /* The quotable values of a page, in one disclosure. It is shut until a
+       reader asks, every value is labelled, and no value is a control: a
+       field selects on focus and the platform's own copy key does the rest. */ -}}
+{{- define "copy" -}}
+{{- if .}}
+<details class="copy">
+  <summary><span class="label">copy</span> <span class="hint">{{len .}} values</span></summary>
+  <div class="copy-body">
+    {{- range .}}
+    <div class="field">
+      <label for="{{.ID}}">{{.Label}}</label>
+      <input id="{{.ID}}" class="mono" readonly value="{{.Value}}">
+    </div>
+    {{- end}}
+  </div>
+</details>
+{{- end}}
+{{- end -}}
+
 {{- define "stale" -}}
 {{if .}}<p class="notice"><strong>This page may be out of date.</strong> The data was last refreshed {{.}} ago.</p>{{end}}
 {{- end -}}

@@ -362,3 +362,34 @@ func (r repoView) RefQueryValue() string {
 	}
 	return r.Ref
 }
+
+// copyItem is one value on a page that a person or an agent is likely to
+// quote somewhere else: an address, a hash, a path.
+//
+// The values are collected into one disclosure rather than marked one by one
+// beside the text they come from, so the reading column stays a reading
+// column and each value is labelled. Each is a readonly field, which selects
+// on focus, so Tab and the platform's own copy key are the whole
+// interaction. There is no copy button, because a button that copies needs a
+// script and this interface runs none.
+type copyItem struct {
+	// ID is the field's id, which its label points at.
+	ID string
+	// Label names the value in the register a person quotes it in.
+	Label string
+	// Value is the value itself.
+	Value string
+}
+
+// copyList numbers the fields so each label points at its own.
+func copyList(items ...copyItem) []copyItem {
+	out := make([]copyItem, 0, len(items))
+	for _, it := range items {
+		if it.Value == "" {
+			continue
+		}
+		it.ID = "copy-" + itoa(len(out)+1)
+		out = append(out, it)
+	}
+	return out
+}

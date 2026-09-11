@@ -16,6 +16,7 @@ import (
 	"golang.org/x/net/html/atom"
 	"latere.ai/x/pkg/md"
 
+	"github.com/latere-ai/origo-web/internal/config"
 	"github.com/latere-ai/origo-web/internal/origo"
 )
 
@@ -155,7 +156,9 @@ type blobData struct {
 	CloneHTTPS string
 	// Pin says whether this address moves, and carries the address of the
 	// other state. It is nil where Origo named no commit for the read.
-	Pin   *pinView
+	Pin *pinView
+	// Copy is what a reader is likely to quote from this page.
+	Copy  []copyItem
 	Stale string
 }
 
@@ -199,6 +202,16 @@ func newPinView(rv *repoView, base, resolved string) *pinView {
 		URL:  base + "?ref=" + url.QueryEscape(resolved),
 		Link: "Pin to " + short,
 	}
+}
+
+// permalink is the whole address of this file at the commit the read
+// resolved to, which is what a citation of it has to carry. It is empty where
+// Origo named no commit, because an address at a reference is not one.
+func permalink(cfg config.Config, rv *repoView, path, resolved string) string {
+	if resolved == "" {
+		return ""
+	}
+	return cfg.Absolute(rv.URL() + "/blob/" + escapePath(path) + "?ref=" + url.QueryEscape(resolved))
 }
 
 // isObjectID reports whether a reference is written as an object id: hex, and
@@ -265,6 +278,14 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 		Pin:        newPinView(rc.rv, rc.rv.URL()+"/blob/"+escapePath(path), meta.Commit),
 		Stale:      rc.stale,
 	}
+	// The permalink comes first: it is the address a citation of this file
+	// should carry, and the one the page above offers to move to.
+	data.Copy = copyList(
+		copyItem{Label: "Permalink", Value: permalink(s.cfg, rc.rv, path, meta.Commit)},
+		copyItem{Label: "Commit", Value: meta.Commit},
+		copyItem{Label: "Path", Value: path},
+		copyItem{Label: "Clone address", Value: s.cfg.CloneHTTPS(rc.repo.Owner, rc.repo.Slug)},
+	)
 	rc.v.Title = entry.Name()
 	data.View = rc.v
 

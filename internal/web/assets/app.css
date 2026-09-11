@@ -776,6 +776,29 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
  * pinned and a short id. */
 .pin { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); align-items: baseline; margin: 0; }
 
+/* Every quotable value of a page in one disclosure, shut until a reader asks
+ * for it. It is a native details element: it opens with no script, and the
+ * fields inside it are readonly, so the platform's own copy key is the whole
+ * interaction and no button has to work. */
+.copy {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.copy > summary {
+  display: flex;
+  gap: var(--s-3);
+  align-items: baseline;
+  padding: var(--s-2) var(--s-3);
+  cursor: pointer;
+  list-style: none;
+}
+.copy > summary::-webkit-details-marker { display: none; }
+.copy > summary::before { content: '▸'; color: var(--ink-3); font-size: var(--t-11); }
+.copy[open] > summary::before { content: '▾'; }
+.copy-body { padding: 0 var(--s-3) var(--s-3); display: flex; flex-direction: column; gap: var(--s-3); }
+.copy-body input { min-width: 0; }
+
 /* The machine views of a page: the same content at this same address plus a
  * suffix, in a format a program reads. It is the last block of every page
  * that has one, under a hairline, named by format so it is found by shape

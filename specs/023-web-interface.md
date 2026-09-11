@@ -705,6 +705,14 @@ repository, so they assert against the real read API and not a mock.
   10 MiB text file is requested with a `Range` and shows a truncation
   notice; a 60 MiB file is not fetched at all and shows the size and the
   clone hint (proposed: `internal/web`, `TestFileViewLimits`).
+- The values a page is likely to be quoted from sit in one shut `details`
+  element: one label a value, every field readonly, no button, and no field
+  for a value the installation could not supply. The file screen leads with
+  the permalink, which is a whole address at the commit the read resolved to.
+  The interface has no copy button anywhere, because a button that copies
+  needs a script, and this is a departure from the interface specification,
+  which draws one beside each field (proposed: `internal/web`,
+  `TestTheQuotableValuesSitInOneDisclosure`).
 - A page's machine views are the last block of it, under a hairline, opened
   by the word `machine` and named by format. Each address is this same page
   plus a suffix and answers what the link says; the same addresses are
