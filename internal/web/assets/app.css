@@ -5,9 +5,13 @@
  *
  * The tokens are Latere Design System v2, transcribed from
  * latere-ai/frontend/src/styles/tokens.css: a neutral ground, a neutral
- * surface, a three-step neutral ink ramp, two hairline weights, and the
- * radii ladder. v2's rule is that the accent is the ink, and a product
- * colour survives only as a wordmark and never as a page theme.
+ * surface, a three-step neutral ink ramp and two hairline weights. v2's
+ * rule is that the accent is the ink, and a product colour survives only as
+ * a wordmark and never as a page theme.
+ *
+ * The radii and the spacing are this product's own and not v2's: every
+ * corner is 4px or less and every surface is padded by one step, so a screen
+ * is dense. TestTheRadiiAreSmall and TestTheSurfacesAreCompact hold both.
  *
  * This product takes one accent of its own, the way cella, industria, lux
  * and topos each do: it redeclares --accent over the neutral base and
@@ -67,8 +71,6 @@
    * else. */
   --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, 'PingFang SC', 'Noto Sans CJK SC', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  --t-30: 30px;
-  --t-24: 24px;
   --t-19: 19px;
   --t-15: 15px;
   --t-13: 13px;
@@ -86,13 +88,10 @@
   --s-8: 48px;
   --s-9: 64px;
 
-  /* v2's radii ladder. */
-  --radius-xs: 8px;
-  --radius-sm: 12px;
-  --radius-md: 16px;
-  --radius-lg: 22px;
-  --radius-xl: 28px;
-  --radius-pill: 999px;
+  /* Radii. Small everywhere: a corner marks an edge and nothing more. */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
 
   /* A table row is 28px, so about thirty of them fit a laptop screen. */
   --row: 28px;
@@ -223,25 +222,25 @@ pre { margin: 0; }
  * screen can open with a sentence at section size and the repository screen
  * with an identifier in mono, and neither invents a look of its own.
  *
- *   .heading-page      the subject of the screen        --t-24
- *   .heading-section   the name of a panel or a step    --t-19
- *   .heading-sub       the name of a block inside one   --t-15
+ *   .heading-page      the subject of the screen        --t-19
+ *   .heading-section   the name of a panel or a step    --t-15
+ *   .heading-sub       the name of a block inside one   --t-13
  *
  * Rendered Markdown is authored content and not chrome, so `.readme` sets
  * its own scale and is the one exemption from this. */
 h1, h2, h3, h4 { margin: 0; font-size: inherit; line-height: inherit; font-weight: 600; }
-.heading-page { font-size: var(--t-24); line-height: 1.25; letter-spacing: -0.01em; }
-.heading-section { font-size: var(--t-19); line-height: 1.3; }
-.heading-sub { font-size: var(--t-15); line-height: 1.4; }
+.heading-page { font-size: var(--t-19); line-height: 1.3; letter-spacing: -0.01em; }
+.heading-section { font-size: var(--t-15); line-height: 1.4; }
+.heading-sub { font-size: var(--t-13); line-height: 1.5; }
 /* The subject of a screen that is a machine string: a repository's owner and
  * slug, a path in a tree, a filename. It is the page role at the page size
  * and in mono, because monospace is what says the string is the machine's
  * and not a sentence. It breaks anywhere, because nobody chose its length. */
 .heading-path {
   font-family: var(--font-mono);
-  font-size: var(--t-24);
+  font-size: var(--t-19);
   font-weight: 500;
-  line-height: 1.25;
+  line-height: 1.3;
   overflow-wrap: anywhere;
 }
 p { margin: 0; }
@@ -262,10 +261,10 @@ p { margin: 0; }
  * width. A form fills its panel. A table, a tree, a commit log, a diff and a
  * file take the shell and scroll inside their own box when they need more. */
 .page {
-  padding: var(--s-6) var(--s-6) var(--s-9);
+  padding: var(--s-4) var(--s-5) var(--s-7);
   display: flex;
   flex-direction: column;
-  gap: var(--s-6);
+  gap: var(--s-4);
 }
 
 .masthead {
@@ -274,7 +273,7 @@ p { margin: 0; }
   justify-content: space-between;
   gap: var(--s-4);
   flex-wrap: wrap;
-  padding-bottom: var(--s-4);
+  padding-bottom: var(--s-3);
   border-bottom: 1px solid var(--line);
 }
 .brand {
@@ -291,7 +290,7 @@ p { margin: 0; }
 /* The mark is drawn in currentColor, so it is ink in the light theme and
  * ink in the dark one, and it needs no second copy and no fetch. */
 .mark { display: block; width: auto; height: 1.35em; }
-.masthead nav { display: flex; gap: var(--s-5); flex-wrap: wrap; align-items: center; }
+.masthead nav { display: flex; gap: var(--s-4); flex-wrap: wrap; align-items: center; }
 .masthead nav a, .masthead nav button {
   color: var(--ink-2);
   font-size: var(--t-12);
@@ -329,7 +328,7 @@ p { margin: 0; }
  * so the state reads without colour and at any zoom. */
 .sections { display: flex; gap: var(--s-2); flex-wrap: wrap; border-bottom: 1px solid var(--line); }
 .sections a {
-  padding: var(--s-2) var(--s-4);
+  padding: var(--s-1) var(--s-3);
   color: var(--ink-2);
   text-decoration: none;
   border-bottom: 2px solid transparent;
@@ -346,11 +345,11 @@ p { margin: 0; }
 .panel {
   background: var(--surface);
   border: 1px solid var(--line-2);
-  border-radius: var(--radius-lg);
-  padding: var(--s-6);
+  border-radius: var(--radius-md);
+  padding: var(--s-4);
   display: flex;
   flex-direction: column;
-  gap: var(--s-5);
+  gap: var(--s-3);
 }
 .panel.flush { padding: 0; overflow: hidden; }
 .panel-head {
@@ -359,14 +358,14 @@ p { margin: 0; }
   justify-content: space-between;
   gap: var(--s-4);
   flex-wrap: wrap;
-  padding: var(--s-4) var(--s-5);
+  padding: var(--s-2) var(--s-4);
   border-bottom: 1px solid var(--line);
   background: var(--raised);
 }
 .prose, .lead, .notice, .doc p { max-width: var(--measure); }
-.stack { display: flex; flex-direction: column; gap: var(--s-4); }
-.row { display: flex; gap: var(--s-4); align-items: center; flex-wrap: wrap; }
-.spread { display: flex; gap: var(--s-5); align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.stack { display: flex; flex-direction: column; gap: var(--s-3); }
+.row { display: flex; gap: var(--s-3); align-items: center; flex-wrap: wrap; }
+.spread { display: flex; gap: var(--s-4); align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
 .meta { color: var(--ink-2); font-size: var(--t-12); }
 .muted { color: var(--ink-3); }
 /* The uppercase name of a small block: a group of links, a clone address, a
@@ -385,9 +384,9 @@ button, .button {
   font: inherit;
   font-size: var(--t-12);
   font-weight: 500;
-  padding: var(--s-3) var(--s-5);
+  padding: var(--s-2) var(--s-4);
   border: 1px solid var(--line-2);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
@@ -412,12 +411,12 @@ input, textarea {
   background: var(--surface);
   border: 1px solid var(--line-2);
   border-radius: var(--radius-md);
-  padding: var(--s-3) var(--s-4);
+  padding: var(--s-2) var(--s-3);
   max-width: 100%;
 }
 input.mono, textarea.mono { font-family: var(--font-mono); }
 form { margin: 0; }
-.field { display: flex; flex-direction: column; gap: var(--s-2); }
+.field { display: flex; flex-direction: column; gap: var(--s-1); }
 .inline-form { display: flex; gap: var(--s-3); align-items: flex-end; flex-wrap: wrap; }
 
 /* ---- text roles ----
@@ -455,16 +454,16 @@ label, legend { font-size: var(--t-12); color: var(--ink-2); }
  * scrolls. The browser gives both arrow-key movement with no script, which
  * this interface has none of; Home and End are the browser's to give and it
  * does not. */
-.choices { display: flex; flex-direction: column; gap: var(--s-3); }
+.choices { display: flex; flex-direction: column; gap: var(--s-2); }
 .choices.scrolling {
   max-height: 16rem;
   overflow-y: auto;
-  padding: var(--s-3) var(--s-4);
+  padding: var(--s-2) var(--s-3);
   border: 1px solid var(--line-2);
   border-radius: var(--radius-md);
   background: var(--surface);
 }
-.choice { display: grid; grid-template-columns: auto 1fr; gap: var(--s-3); align-items: start; }
+.choice { display: grid; grid-template-columns: auto 1fr; gap: var(--s-2); align-items: start; }
 .choice input { min-height: 0; margin: 3px 0 0; }
 .choice label { display: grid; gap: 1px; cursor: pointer; }
 
@@ -476,8 +475,8 @@ table { border-collapse: collapse; width: 100%; font-size: var(--t-13); }
  * block, so it is the same treatment and not a second one. It is a line of
  * text above the column headers and never a bar of its own: a bar here sits
  * directly under the panel's own header bar and reads as two headers. */
-caption { text-align: left; padding: var(--s-4) var(--s-5) var(--s-2); }
-th, td { text-align: left; padding: var(--s-2) var(--s-4); border-bottom: 1px solid var(--line); }
+caption { text-align: left; padding: var(--s-3) var(--s-4) var(--s-1); }
+th, td { text-align: left; padding: var(--s-1) var(--s-3); border-bottom: 1px solid var(--line); }
 thead th { border-bottom: 1px solid var(--line-2); }
 thead th {
   font-size: var(--t-11);
@@ -511,7 +510,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
   border: 1px solid var(--line-2);
   border-radius: var(--radius-sm);
   background: var(--raised);
-  padding: var(--s-4) var(--s-5);
+  padding: var(--s-3) var(--s-4);
   font-size: var(--t-12);
   color: var(--ink-2);
   display: flex;
@@ -519,18 +518,18 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
   gap: var(--s-2);
 }
 .notice strong { color: var(--ink); }
-.empty { padding: var(--s-7) var(--s-5); text-align: center; color: var(--ink-2); }
+.empty { padding: var(--s-5) var(--s-4); text-align: center; color: var(--ink-2); }
 
 /* ---- diff ---- */
 
 .diff-file { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); overflow: hidden; }
-.diff-file + .diff-file { margin-top: var(--s-4); }
+.diff-file + .diff-file { margin-top: var(--s-3); }
 .diff-file > summary, .diff-file > .diff-head {
   display: flex;
   gap: var(--s-4);
   align-items: center;
   flex-wrap: wrap;
-  padding: var(--s-3) var(--s-5);
+  padding: var(--s-2) var(--s-4);
   background: var(--raised);
   cursor: pointer;
   list-style: none;
@@ -582,17 +581,17 @@ table.source tr:target td.gutter { color: var(--ink); font-weight: 600; }
 
 /* ---- readme ---- */
 
-.readme { padding: var(--s-6); font-size: var(--t-15); line-height: 1.6; }
+.readme { padding: var(--s-5); font-size: var(--t-15); line-height: 1.6; }
 .readme > :first-child { margin-top: 0; }
-.readme h1, .readme h2, .readme h3, .readme h4 { margin: var(--s-6) 0 var(--s-3); }
-.readme h1 { font-size: var(--t-24); }
-.readme h2 { font-size: var(--t-19); }
-.readme h3 { font-size: var(--t-15); }
+.readme h1, .readme h2, .readme h3, .readme h4 { margin: var(--s-5) 0 var(--s-2); }
+.readme h1 { font-size: var(--t-19); }
+.readme h2 { font-size: var(--t-15); }
+.readme h3 { font-size: var(--t-13); }
 .readme p, .readme ul, .readme ol, .readme blockquote { margin: 0 0 var(--s-4); }
 .readme code { background: var(--code); padding: 1px var(--s-1); border-radius: var(--radius-xs); }
 .readme pre {
   background: var(--code);
-  padding: var(--s-4);
+  padding: var(--s-3);
   border-radius: var(--radius-sm);
   overflow-x: auto;
 }
@@ -646,10 +645,10 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
   max-width: 27rem;
   display: flex;
   flex-direction: column;
-  gap: var(--s-6);
-  padding: var(--s-7) 0;
+  gap: var(--s-5);
+  padding: var(--s-5) 0;
 }
-.door-part { border-top: 1px solid var(--line); padding-top: var(--s-6); }
+.door-part { border-top: 1px solid var(--line); padding-top: var(--s-5); }
 .button-block { width: 100%; }
 .clone-shape {
   font-family: var(--font-mono);
@@ -659,14 +658,14 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
   background: var(--surface);
   border: 1px solid var(--line-2);
   border-radius: var(--radius-md);
-  padding: var(--s-3) var(--s-4);
+  padding: var(--s-2) var(--s-3);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 /* ---- repository overview ---- */
 
-.repo-head { display: flex; flex-direction: column; gap: var(--s-4); }
+.repo-head { display: flex; flex-direction: column; gap: var(--s-3); }
 
 /* The facts about a repository, in one wrapping row: the way to its log and
  * its references, its size, and when it was last pushed. It is a list and not
@@ -703,7 +702,7 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
   color: var(--ink-2);
 }
 
-.repo-controls { display: flex; gap: var(--s-5); align-items: flex-start; flex-wrap: wrap; }
+.repo-controls { display: flex; gap: var(--s-4); align-items: flex-start; flex-wrap: wrap; }
 
 /* The reference picker is a native details element. It is one line until a
  * reader wants it, it opens with no script, and what is inside it is the same
@@ -719,14 +718,14 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
   display: flex;
   gap: var(--s-3);
   align-items: baseline;
-  padding: var(--s-3) var(--s-4);
+  padding: var(--s-2) var(--s-3);
   cursor: pointer;
   list-style: none;
 }
 .picker > summary::-webkit-details-marker { display: none; }
 .picker > summary::after { content: '▾'; margin-left: auto; color: var(--ink-3); }
 .picker[open] > summary::after { content: '▴'; }
-.picker-body { padding: 0 var(--s-4) var(--s-4); display: flex; flex-direction: column; gap: var(--s-4); }
+.picker-body { padding: 0 var(--s-3) var(--s-3); display: flex; flex-direction: column; gap: var(--s-3); }
 
 /* The clone address is what most people came to this screen for, so it is the
  * widest thing on it. The two forms are two addresses of this same screen: a
@@ -763,7 +762,7 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
   background: transparent;
   font-family: var(--font-mono);
   font-size: var(--t-12);
-  padding: var(--s-3) var(--s-4);
+  padding: var(--s-2) var(--s-3);
 }
 
 /* A commit subject in a header bar: it is a sentence a person wrote, so it is
@@ -795,7 +794,7 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
 .fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: var(--s-6);
+  gap: var(--s-4);
   align-items: start;
 }
 .fields .field input, .fields .field textarea { width: 100%; }
@@ -808,8 +807,8 @@ fieldset.field legend { padding: 0; }
 .secret {
   background: var(--ink);
   color: var(--bg);
-  padding: var(--s-6);
-  border-radius: var(--radius-lg);
+  padding: var(--s-4);
+  border-radius: var(--radius-md);
 }
 .secret p { margin: 0; font-size: var(--t-12); line-height: 1.6; }
 .secret .meta, .secret label { color: var(--bg); }
@@ -826,7 +825,7 @@ fieldset.field legend { padding: 0; }
 
 .sample {
   margin: 0;
-  padding: var(--s-4) var(--s-5);
+  padding: var(--s-3) var(--s-4);
   background: var(--code);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
@@ -836,7 +835,7 @@ fieldset.field legend { padding: 0; }
 
 /* ---- documentation ---- */
 
-.doc .heading-section { margin: var(--s-5) 0 0; padding-top: var(--s-5); border-top: 1px solid var(--line); }
+.doc .heading-section { margin: var(--s-4) 0 0; padding-top: var(--s-4); border-top: 1px solid var(--line); }
 .doc p { margin: 0; font-size: var(--t-13); line-height: 1.65; color: var(--ink-2); }
 .doc p strong { color: var(--ink); }
 .doc code {
@@ -857,7 +856,7 @@ fieldset.field legend { padding: 0; }
 .doc-body {
   display: grid;
   grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr);
-  gap: var(--s-7);
+  gap: var(--s-6);
   align-items: start;
 }
 .toc {
@@ -874,13 +873,13 @@ fieldset.field legend { padding: 0; }
 /* ---- narrow ---- */
 
 @media (max-width: 640px) {
-  .page { padding: var(--s-5) var(--s-4) var(--s-8); gap: var(--s-5); }
+  .page { padding: var(--s-3) var(--s-3) var(--s-6); gap: var(--s-3); }
   /* A finger, not a pointer: every control is at least a tap target. */
   button, .button, input, textarea { min-height: var(--tap); }
-  .panel { padding: var(--s-5); border-radius: var(--radius-md); }
-  .heading-page, .heading-path { font-size: var(--t-19); }
-  .fields { gap: var(--s-5); }
-  .doc-body { grid-template-columns: 1fr; gap: var(--s-5); }
+  .panel { padding: var(--s-3); }
+  .heading-page, .heading-path { font-size: var(--t-15); }
+  .fields { gap: var(--s-3); }
+  .doc-body { grid-template-columns: 1fr; gap: var(--s-4); }
   .toc { position: static; }
   .facts { grid-template-columns: 1fr; gap: var(--s-1); }
   .facts dd { margin-bottom: var(--s-3); }

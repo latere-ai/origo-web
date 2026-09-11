@@ -932,3 +932,88 @@ func TestOneLeftEdgeHoldsOnEveryScreen(t *testing.T) {
 		}
 	}
 }
+
+// TestTheRadiiAreSmall holds every corner in the interface to 4px or less.
+// A large radius and a pill-shaped control spend space around the content
+// and read as decoration, and the interface is compact. Every token on the
+// radius scale and every literal border-radius is checked, so a rule that
+// bypasses the scale is caught as well as a scale that grows.
+func TestTheRadiiAreSmall(t *testing.T) {
+	const maxPx = 4
+	css := string(mustAsset(t, "app.css"))
+	var checked int
+	for _, rule := range cssRules(css) {
+		for decl := range strings.SplitSeq(rule.body, ";") {
+			name, value, ok := strings.Cut(decl, ":")
+			name, value = strings.TrimSpace(name), strings.TrimSpace(value)
+			if !ok || (name != "border-radius" && !strings.HasPrefix(name, "--radius-")) {
+				continue
+			}
+			if strings.HasPrefix(value, "var(--radius-") || value == "0" {
+				continue
+			}
+			px, err := strconv.Atoi(strings.TrimSuffix(value, "px"))
+			if err != nil {
+				t.Errorf("%s: %s is %q, want a pixel value", rule.selector, name, value)
+				continue
+			}
+			checked++
+			if px > maxPx {
+				t.Errorf("%s: %s is %dpx, want %dpx or less", rule.selector, name, px, maxPx)
+			}
+		}
+	}
+	if checked == 0 {
+		t.Fatal("no radius was found to check")
+	}
+}
+
+// TestTheSurfacesAreCompact holds the spacing that sets the density of a
+// screen. A table row, a control, a panel and the page frame each take at
+// most one named step of the spacing scale as their vertical padding, so a
+// window shows as many rows as it has room for and a form does not spread
+// over it. The bound is the step and not the pixel, so the scale itself can
+// move without moving this test.
+func TestTheSurfacesAreCompact(t *testing.T) {
+	css := string(mustAsset(t, "app.css"))
+	bounds := map[string]int{
+		"th, td":          1, // a table row
+		"button, .button": 2, // a control
+		"input, textarea": 2,
+		".panel":          4, // a panel's own padding
+		".page":           4, // the page frame's top
+	}
+	for selector, maxStep := range bounds {
+		var found bool
+		for _, rule := range cssRules(outsideMedia(css)) {
+			if strings.TrimSpace(rule.selector) != selector {
+				continue
+			}
+			found = true
+			var padding string
+			for decl := range strings.SplitSeq(rule.body, ";") {
+				if name, value, ok := strings.Cut(decl, ":"); ok && strings.TrimSpace(name) == "padding" {
+					padding = strings.TrimSpace(value)
+				}
+			}
+			if padding == "" {
+				t.Errorf("%s sets no padding", selector)
+				continue
+			}
+			// The first value of the shorthand is the top, which is what
+			// stacks down a screen.
+			top := strings.Fields(padding)[0]
+			step, err := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(top, "var(--s-"), ")"))
+			if err != nil {
+				t.Errorf("%s pads %q, want a step of the spacing scale", selector, top)
+				continue
+			}
+			if step > maxStep {
+				t.Errorf("%s pads its top by --s-%d, want --s-%d or less", selector, step, maxStep)
+			}
+		}
+		if !found {
+			t.Errorf("%s is not styled", selector)
+		}
+	}
+}
