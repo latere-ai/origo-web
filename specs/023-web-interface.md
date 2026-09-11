@@ -317,27 +317,66 @@ serves except the two the section above proposes.
 | tree | `/{owner}/{slug}/tree/{rev}/{path}` | one row per entry: name, type, mode, size, and the entry's last commit is **not** shown, because that is one call per row and Origo offers no batch for it | `/v1/repos/{id}/tree/{rev}?path={path}&cursor=` |
 | file | `/{owner}/{slug}/blob/{rev}/{path}` | the file with line numbers and anchors, its size and mode, links to raw and to history | `/v1/repos/{id}/tree/{rev}?path={dir}` to find the entry's blob sha and size, then `/v1/repos/{id}/blob/{sha}`; spec 009's blob route takes no `path`, which is why the tree call comes first and why the size is known before any bytes are fetched |
 | raw | `/{owner}/{slug}/raw/{rev}/{path}` | the bytes, streamed through with the `Content-Type` Origo detected and `Content-Disposition: attachment` | the same two calls; the blob body is copied, never buffered |
-| SSH keys | `/keys` | the signed-in person's public keys, add and remove | a contract that does not exist yet; see below |
+| SSH keys | `/keys` | the signed-in person's public keys with their labels, fingerprints, dates and last use; a two-step add; a removal that asks first | the installation's key store: `GET /me/ssh-keys`, `POST /me/ssh-keys`, `DELETE /me/ssh-keys/{id}`; see below |
 
 The archive link on the overview points at
 `/v1/repos/{id}/archive/{sha}.tar.gz` on the Origo installation
 directly, so a large tarball never passes through this service.
 
-**The key screen is separable, and it is the one screen with no contract
-behind it.** SSH access is being specced in parallel (spec 024) and it
-puts the key store outside Origo on purpose: Origo stores no public key
-and resolves an offered key to a subject through an operator-run
-endpoint it only reads. So no component owns a place to add or remove a
-person's key, and this spec does not invent one. What the screen needs,
-whenever some component grows it, is a list of the signed-in subject's
-keys with a comment and a fingerprint, an add taking one key, and a
-remove taking one fingerprint, each authorised as that subject.
+**The key screen is separable, and it is the only screen that talks to
+something other than Origo.** Origo stores no public key: its spec 024
+resolves an offered key to a subject through an endpoint the operator
+runs, and that same component is where a person adds one. This interface
+is a client of it, exactly as it is a client of Origo, and it carries the
+signed-in person's own token to both.
 
-Until then the screen and its navigation entry exist only when a key
-surface is configured, which the interface probes for once at start-up
-and which is unconfigured by default. Everything else in this document
-is built, reviewed, and shipped without it, and the interface is
-complete and useful with the whole screen absent.
+Latere's key store is auth (its spec 075). An operator running another
+identity provider points `ORIGOWEB_KEYS_URL` at whatever they built, and
+an operator who built nothing sets it to nothing: the screen and its
+navigation entry are absent while it is unset, which is the default.
+Everything else in this document is built, reviewed and shipped without
+it, and the interface is complete and useful with the whole screen gone.
+
+**This service reads no key.** It does not parse a paste, does not
+compute a fingerprint and does not decide what algorithm is acceptable.
+That is the same rule as "the interface holds no git knowledge", applied
+to the other component it speaks to, and it is what the two-step add
+exists to make possible:
+
+```
+paste ──▶ POST /me/ssh-keys {public_key, confirm: false}
+                 │  the store parses, checks for a duplicate, stores nothing
+                 ▼
+        the fingerprint the store computed, rendered for checking
+                 │  the person confirms
+                 ▼
+          POST /me/ssh-keys {public_key, confirm: true}
+```
+
+Both steps run the same parser in the store, so the fingerprint a person
+checked and the key that was saved cannot disagree. A parser here would
+be a second one, and two parsers can differ.
+
+Three screens in one address, and each is a page a reader meets: the
+table with the add form, the parsed key waiting for a yes, and the
+removal asking before it acts. A removal is a link to a page that names
+the key and a form on that page, never a link that acts.
+
+**What a row says**, because the point of the table is telling two of
+your own keys apart: the label, which is the comment at the end of the
+line you pasted; the algorithm beside the fingerprint, as "ed25519" or
+"rsa-4096", since a 2048 bit RSA key is the weakest thing an
+installation accepts and which one a key is matters; the day it was
+added; and when it was last used. "never used" is the one red in the
+product and it sits beside the words rather than instead of them, so it
+survives greyscale and a screen reader reads the same fact.
+
+**What a refusal says** is written here and never quoted from the store.
+The store answers a code for whoever reads its API; a person meets one
+sentence. A key already on the account and a key on somebody else's are
+two different facts and get two different sentences, and a store that
+will not talk to this client at all is the installation's problem and is
+not written as though the person could fix it.
 
 ### Rendering
 
@@ -390,7 +429,7 @@ request and the cookie.
 | `ORIGOWEB_PUBLIC_URL` | none, required | its own base URL, used to build the redirect URI and absolute links |
 | `ORIGOWEB_CLONE_HOST` | `ORIGOWEB_ORIGO_URL` | what the clone URLs on the overview name, for an installation whose git host differs from its API address |
 | `ORIGOWEB_SSH_CLONE_HOST` | unset | the host shown for the SSH clone form; unset means only the HTTPS form is shown, which is what an installation without the SSH surface gets |
-| `ORIGOWEB_KEYS_URL` | unset | a key management surface; the key screen and its navigation entry exist only when it is set |
+| `ORIGOWEB_KEYS_URL` | unset | the base address of the installation's key store, which serves `/me/ssh-keys`; the key screen and its navigation entry exist only when it is set, and an address that does not parse is a start-up failure rather than a screen quietly missing |
 | `ORIGOWEB_ISSUER_NAME` | unset | what the sign-in button calls the identity provider |
 | `ORIGOWEB_PRODUCT_NAME` | `Origo` | what the installation calls itself, in the masthead and the tab title |
 | `ORIGOWEB_PROJECT_URL` | the Origo repository | where the signed-out page links to the open-source project |
@@ -539,7 +578,7 @@ the same line Origo's own create route draws.
 | name resolution on Origo's JSON surface, mode 2 above | a new Origo spec | nothing; without it every screen is addressed by id at `/r/{id}` and the `/{owner}/{slug}` URLs and the name box wait for it |
 | the directory question on the authorizer contract and the collection route, mode 1 above | a new Origo spec, and the authorizer each installation runs | the repository list screen alone; everything else degrades to the name form |
 | the repository `latere-ai/origo-web` | this spec moves into it on its first commit | the build |
-| a key management surface: spec 024 keeps keys out of Origo, behind an operator-run resolver Origo only reads, so no component today owns an add or a remove | unassigned; not spec 024's, which needs only the read | the key screen alone |
+| a key management surface: spec 024 keeps keys out of Origo, behind an operator-run resolver Origo only reads | **done**: auth's spec 075 serves the resolver and the three `/me/ssh-keys` routes; an operator running another provider builds the same three | nothing |
 | an anonymous read path, with a subject sentinel that is not the empty string | an Origo spec; spec 016 scopes it out today | a public installation showing anything to a signed-out visitor |
 
 The first two touch the authorizer contract, which is a contract an
@@ -626,9 +665,9 @@ repository, so they assert against the real read API and not a mock.
   same content (proposed: `internal/web`, `TestStaleNotice`).
 - The interface has no route that changes repository content: the route
   table is asserted against a checked-in list, and the only non-`GET`
-  routes are sign-out, the key screen, the mint form and the creation
-  form, each requiring a CSRF token
-  (proposed: `internal/web`, `TestRoutesAreReadOnly`).
+  routes are sign-out, the mint form, the creation form and the two on
+  the key screen, each requiring a CSRF token (proposed: `internal/web`,
+  `TestRoutesAreReadOnly`, `TestAKeyFormNeedsItsToken`).
 - A signed-in person creates a repository under a name the authorizer
   says is theirs and lands on it; the ownership row and the repository
   carry one id; both calls carry the person's own token and no other
@@ -654,9 +693,6 @@ repository, so they assert against the real read API and not a mock.
   affordance and answers the address as one it does not serve (proposed:
   `internal/web`, `TestAPersonWithNoNameIsToldWhatToDo`,
   `TestTheCreationAffordanceFollowsTheInstallation`).
-- With the key surface unconfigured, the key screen and its navigation
-  entry are absent and every other screen is unchanged (proposed:
-  `internal/web`, `TestKeyScreenIsOptional`).
 - The repository list groups by owner, with one table and one caption an
   owner, so the owner is written once as its group rather than on every
   row. A filter over the list is offered only when the whole directory
@@ -665,6 +701,35 @@ repository, so they assert against the real read API and not a mock.
   of fifty and look like it had searched everything the reader may see
   (proposed: `internal/web`,
   `TestTheDirectoryIsGroupedByOwnerAndFilteredWhenItIsWhole`).
+- With no key store configured, the key screen and its navigation entry
+  are absent and every other screen is unchanged (proposed:
+  `internal/web`, `TestKeyScreenIsOptional`).
+- A paste is shown back as the store's own fingerprint and stored only
+  on a second submission, and a confirmed add lands on the list through
+  a redirect so a reload repeats nothing (proposed: `internal/web`,
+  `TestAddingAKeyIsTwoSteps`).
+- This service reads no key: a paste it could not have parsed and a
+  fingerprint it could not have computed both reach the screen unchanged
+  (proposed: `internal/web`, `TestTheScreenReadsNoKeyItself`).
+- A refused paste keeps what was typed, says what was wrong in this
+  service's own words, and never shows the store's; a key already on the
+  account and one on another account get two different sentences
+  (proposed: `internal/web`, `TestARefusedPasteKeepsWhatWasTyped`,
+  `TestADuplicateSaysWhichKindItIs`).
+- A removal is asked about on a page that names the key, and an id that
+  is not the reader's is answered exactly as one that does not exist
+  (proposed: `internal/web`, `TestRemovingAKeyAsksFirst`).
+- A store that is down says so, says the keys themselves keep working,
+  and offers no form that cannot work; a store that refuses this client
+  is written as the installation's problem (proposed: `internal/web`,
+  `TestAnOutageSaysSoAndOffersNoForm`,
+  `TestTheStoreRefusingThisClientIsAnOperatorProblem`).
+- A key id is escaped into one path segment, so an id carrying a slash
+  or a `..` cannot address another key (proposed: `internal/keys`,
+  `TestRemoveDeletesByID`).
+- Every page-wide property holds on all three key screens, which are
+  rendered into the set every such test runs over (proposed:
+  `internal/web`, `keyScreens` in `everyPage`).
 - With the collection read of `/v1/repos` absent or answering 501, the
   home page is the
   name form and the recently-opened list, and the rest of the interface
