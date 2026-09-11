@@ -1,12 +1,31 @@
 # origo-web
 
-A web interface for an [Origo](https://github.com/latere-ai/origo)
-installation. It shows repositories, branches and tags, the commit log,
-commit diffs, the file tree and file contents. It also creates
-repositories, changes a repository's visibility, manages SSH keys and
-issues agent tokens.
+A window onto an [Origo](https://github.com/latere-ai/origo) installation
+for people who already know which repository they want. It shows
+repositories, branches and tags, the commit log, commit diffs, the file
+tree and file contents. It also creates repositories, changes a
+repository's visibility, manages SSH keys and issues agent tokens.
 
-There are no comments, reviews, stars, forks or issues.
+## Using it
+
+Sign in with your organisation account, press **New repository**, and the
+overview shows the clone address:
+
+```sh
+git clone git@code.example.com:owner/name.git
+```
+
+Commit and push as anywhere else; the overview shows the result. SSH uses
+a key from the **SSH keys** page. Over HTTPS a public repository clones
+with no credential when the installation admits anonymous reads, and a
+private one asks for a password, which is an agent token, with any
+username. Every screen has an address, so a branch, a commit, a file and a
+diff each travel as a link.
+
+## Scope
+
+It stays a browser for git. There are no comments, reviews, stars, forks
+or issues, and it will not grow them.
 
 ## How it works
 
@@ -44,17 +63,11 @@ There is no JavaScript. Every control is a link, a form or a native
 on the overview sets it, so every screen at every revision has a URL.
 
 Repositories are addressed by owner and name, the way git addresses
-them. Origo resolves the pair, so a rename moves the address. The
-identifier address every screen once had, `/r/{id}`, redirects to the
-name for good, and a clone address pasted into the browser lands on the
-repository. The identifier itself is what the API and agent tokens use;
-it is shown on the agent tokens page.
-
-An owner name that is one of this interface's own first path segments is
-shadowed by the interface: `assets` and `r` entirely, and `auth` and
-`docs` for the names `start`, `callback` and `agents`. Origo reserves `r`
-and `v1` itself. An authorizer that hands out owner names should reserve
-the others.
+them, so a rename moves the address. `/r/{id}` redirects to the name, and
+a clone address pasted into the browser lands on the repository. The
+identifier is what the API and agent tokens use; the agent tokens page
+shows it. Owner names the interface's own routes shadow are listed in
+[`deploy/prod/README.md`](deploy/prod/README.md).
 
 The repositories page lists what you can see, grouped by owner, when the
 installation can list repositories. Otherwise it offers a box to enter
@@ -79,11 +92,11 @@ make build && out/origoweb
 
 Point a hostname at it. Origo itself is unchanged.
 
-Use a separate hostname. Origo serves clone and push under
-`/{owner}/{name}/...`, which collides with a browsing interface. For
-example, `code.example.com` for this and `git.example.com` for Origo.
-`deploy/prod/README.md` shows how to share one hostname with an Ingress
-split.
+Origo serves clone and push under `/{owner}/{name}/...`, the same shape
+as this interface's addresses, so the two need either two hostnames,
+`code.example.com` for this and `git.example.com` for Origo, or one
+hostname with an Ingress split, which is what Latere runs and
+[`deploy/prod/README.md`](deploy/prod/README.md) shows.
 
 ### Settings
 

@@ -10,6 +10,12 @@ holds what was committed.
 
 ## Unreleased
 
+- The sign-in page says what each clone address needs: a key on your
+  account over SSH, an agent token over HTTPS, and nothing for a public
+  repository.
+- The README opens with what the interface is for and how a person uses
+  it. Operator detail moved to the deployment notes.
+
 ## v0.8.0 - 2026-09-11
 
 - The tree tab of a repository nobody has pushed to says the repository has

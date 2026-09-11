@@ -4,7 +4,7 @@
   <div class="door">
     <div class="stack">
       <h1 class="heading-page">Sign in</h1>
-      <p class="lead">Browse repositories, branches, commits, diffs and files.</p>
+      <p class="lead">The repositories your account can see, with their branches, commits, diffs and files.</p>
     </div>
     {{- if .Refused}}
     <p class="prose"><strong>You are signed out.</strong> Your session was rejected. Sign in again.</p>
@@ -15,7 +15,7 @@
       <h2 class="label">Clone address</h2>
       <p class="clone-shape">{{.CloneHTTPS}}{{if .CloneSSH}}
 {{.CloneSSH}}{{end}}</p>
-      <p class="hint">Cloning uses the same account. Replace owner and name with your repository.</p>
+      <p class="hint">{{if .CloneSSH}}SSH uses a key on your account; HTTPS{{else}}HTTPS{{end}} takes an agent token as the password, and a public repository needs neither. Replace owner and name with your repository.</p>
     </div>
     <div class="door-part stack">
       <h2 class="label">Open source</h2>

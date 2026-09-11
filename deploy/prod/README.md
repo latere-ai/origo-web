@@ -44,3 +44,12 @@ prefix, so the two git rules win over `/`, and `/v1/` wins over `/` on
 length. `/.well-known/jwks.json` is an exact match rather than a
 `/.well-known/` prefix: a prefix would also capture the ACME challenge path
 and break certificate renewal.
+
+## Owner names the interface shadows
+
+The interface's own first path segments win over a repository owner of
+the same name, because a literal segment is the more specific route:
+`assets` and `r` entirely, and `auth` and `docs` for the repository names
+`start`, `callback` and `agents`. Origo refuses `r` and `v1` as owners
+itself. The authorizer that hands out owner names is where the rest
+belong.
