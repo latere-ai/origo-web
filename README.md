@@ -1,61 +1,59 @@
 # origo-web
 
-A read-only web interface for an [Origo](https://github.com/latere-ai/origo) installation:
-repositories, branches and tags, the commit log, a commit's diff, the file
-tree, a file. In the spirit of cgit and sourcehut.
+A web interface for an [Origo](https://github.com/latere-ai/origo)
+installation. It shows repositories, branches and tags, the commit log,
+commit diffs, the file tree and file contents. It also creates
+repositories, changes a repository's visibility, manages SSH keys and
+issues agent tokens.
 
-No comments, no reviews, no stars, no forks, no issues. It is a window onto a
-git repository for people who already know which repository they want.
+There are no comments, reviews, stars, forks or issues.
 
-It has one screen that is not a read: a form that asks the installation for
-a token bound to one repository, which is how an agent gets a credential.
-The token is shown once and kept nowhere.
+## How it works
 
-## What it is
+One binary that serves HTML. It is a client of Origo's HTTP API: it never
+runs git, never reads object storage and never decides access. It sends
+your own token to Origo and renders the response, so you see exactly what
+you can clone.
 
-One binary. It serves HTML, and it is a client of Origo's read API and
-nothing else: it never runs git, never reads object storage, and never
-decides who may see what. It sends your own token to the installation and
-shows you what comes back, so what you can see here is exactly what you can
-clone.
-
-Every page works with JavaScript disabled, because there is no JavaScript.
-Every control is a link, a form, or a native `<details>`. Light and dark
-follow your system setting.
+There is no JavaScript. Every control is a link, a form or a native
+`<details>` element. Light and dark themes follow the system setting.
 
 ## Screens
 
 | Screen | Address |
 |---|---|
-| sign in | `/sign-in` |
-| repositories | `/` |
-| overview: clone lines, the reference selector, the root tree, the readme | `/r/{id}` |
-| branches and tags | `/r/{id}/refs` |
-| commit log, filterable by path | `/r/{id}/log` |
-| a commit, its message, its parents and its diff | `/r/{id}/commit/{sha}` |
-| any two revisions compared | `/r/{id}/compare?base=&head=` |
-| the file tree | `/r/{id}/tree/{path}` |
-| a file, with line anchors | `/r/{id}/blob/{path}` |
-| the bytes of a file | `/r/{id}/raw/{path}` |
-| agent tokens: mint one, and see it once | `/tokens` |
-| SSH keys: the keys on your account, add one, remove one | `/keys` |
-| how to drive the installation from an agent | `/docs/agents` |
+| Sign in | `/sign-in` |
+| Repositories | `/` |
+| New repository | `/new` |
+| Repository overview: clone address, branch picker, root tree, readme | `/r/{id}` |
+| Branches and tags | `/r/{id}/refs` |
+| Commit log, filterable by path | `/r/{id}/log` |
+| Commit: message, parents, diff | `/r/{id}/commit/{sha}` |
+| Patch download | `/r/{id}/patch/{sha}` |
+| Compare two revisions | `/r/{id}/compare?base=&head=` |
+| File tree | `/r/{id}/tree/{path}` |
+| File with line anchors | `/r/{id}/blob/{path}` |
+| Raw file | `/r/{id}/raw/{path}` |
+| Visibility | `/r/{id}/visibility` |
+| Agent tokens | `/tokens` |
+| SSH keys | `/keys` |
+| Agent documentation | `/docs/agents` |
 
-A branch or a tag is chosen with `?ref=`, which is what the selector on the
-overview submits, so any screen at any revision is a URL you can send to
-someone.
+`?ref=` selects a branch or tag on any repository screen. The branch picker
+on the overview sets it, so every screen at every revision has a URL.
 
-**Repositories are addressed by identifier, not by name.** Origo's JSON API
-answers questions about a repository you already name by its identifier and
-has no way to resolve `owner/name` or to list what you may see. Until it
-does, the home page is a box you paste an identifier into and a list of what
-you have opened in this session, and the names are shown on every page even
-though the address is the identifier. See [Limits](#limits).
+Repositories are addressed by identifier. Origo's API does not resolve
+`owner/name`, and the identifier survives a rename. Owner and name are
+shown on every page.
+
+The repositories page lists what you can see, grouped by owner, when the
+installation can list repositories. Otherwise it offers a box to enter an
+identifier and lists the repositories opened in this session.
 
 ## Run it
 
-You need an Origo installation, a second OIDC client registered for the
-browser flow whose tokens carry Origo's audience, and a cookie key.
+You need an Origo installation, an OIDC client registered for the browser
+flow whose tokens carry Origo's audience, and a cookie key.
 
 ```sh
 export ORIGOWEB_ORIGO_URL=https://git.example.com
@@ -68,157 +66,135 @@ export ORIGOWEB_AUTH_COOKIE_KEY=$(openssl rand -hex 32)
 make build && out/origoweb
 ```
 
-Then point a hostname at it and open it. Nothing about your Origo
-installation changes, and an operator who skips all of this has an
-installation that works exactly as before.
+Point a hostname at it. Origo itself is unchanged.
 
-**Give it its own hostname.** Origo's git surface claims
-`/{owner}/{name}/...` for clone and push, which is the shape a browsing
-interface wants; one hostname cannot serve both. `code.example.com` in front
-of this and `git.example.com` in front of Origo.
+Use a separate hostname. Origo serves clone and push under
+`/{owner}/{name}/...`, which collides with a browsing interface. For
+example, `code.example.com` for this and `git.example.com` for Origo.
+`deploy/prod/README.md` shows how to share one hostname with an Ingress
+split.
 
 ### Settings
 
-| Setting | Default | What it does |
+| Setting | Default | Meaning |
 |---|---|---|
-| `ORIGOWEB_ADDR` | `:8080` | the address it listens on |
-| `ORIGOWEB_ORIGO_URL` | required | the Origo installation, the one address it talks to |
-| `ORIGOWEB_PUBLIC_URL` | required | its own address, used to build the sign-in redirect |
-| `ORIGOWEB_CLONE_HOST` | `ORIGOWEB_ORIGO_URL` | what the clone lines say, when your git host differs from your API address |
-| `ORIGOWEB_SSH_CLONE_HOST` | unset | the host in the SSH clone line; unset shows the HTTPS line alone |
-| `ORIGOWEB_ISSUER_NAME` | unset | what the sign-in button calls your identity provider |
-| `ORIGOWEB_PRODUCT_NAME` | `Origo` | what your installation calls itself, if you have named it |
-| `ORIGOWEB_PROJECT_URL` | the Origo repository | where you link people to the open-source project |
-| `ORIGOWEB_BRAND_MARK` | unset | a logo beside the name; the only one this build carries is `latere`, and it is Latere's |
-| `ORIGOWEB_KEYS_URL` | unset | the base address of your key store; the SSH keys screen appears only when it is set. See [SSH keys](#ssh-keys) |
-| `ORIGOWEB_AUTH_URL` | `https://auth.latere.ai` | your OIDC issuer, which must be one of Origo's `ORIGO_OIDC_ISSUERS`; it is also where repositories are created, see [Creating a repository](#creating-a-repository) |
-| `ORIGOWEB_AUTH_CLIENT_ID` | required | the client registered for the browser flow |
-| `ORIGOWEB_AUTH_CLIENT_SECRET` | unset | a confidential client's secret; a public client uses PKCE alone |
-| `ORIGOWEB_AUTH_AUDIENCE` | the issuer | must be the audience Origo verifies, normally `origo` |
-| `ORIGOWEB_AUTH_COOKIE_KEY` | required | 32 bytes of hex; rotating it signs everyone out |
+| `ORIGOWEB_ADDR` | `:8080` | Listen address |
+| `ORIGOWEB_ORIGO_URL` | required | Base URL of the Origo installation |
+| `ORIGOWEB_PUBLIC_URL` | required | This service's own base URL, used for the sign-in redirect |
+| `ORIGOWEB_CLONE_HOST` | `ORIGOWEB_ORIGO_URL` | Base URL in HTTPS clone addresses, when it differs from the API address |
+| `ORIGOWEB_SSH_CLONE_HOST` | unset | Host in SSH clone addresses. Unset shows HTTPS only |
+| `ORIGOWEB_ISSUER_NAME` | unset | Name of the identity provider on the sign-in button |
+| `ORIGOWEB_PRODUCT_NAME` | `Origo` | Name of this installation |
+| `ORIGOWEB_PROJECT_URL` | the Origo repository | Link to the open-source project |
+| `ORIGOWEB_BRAND_MARK` | unset | Logo beside the name. The only value this build accepts is `latere` |
+| `ORIGOWEB_KEYS_URL` | unset | Base URL of the SSH key store. Enables the SSH keys page. See [SSH keys](#ssh-keys) |
+| `ORIGOWEB_AUTH_URL` | `https://auth.latere.ai` | OIDC issuer. Must be one of Origo's `ORIGO_OIDC_ISSUERS`. Also the repository registry, see [Creating a repository](#creating-a-repository) |
+| `ORIGOWEB_AUTH_CLIENT_ID` | required | OIDC client id for the browser flow |
+| `ORIGOWEB_AUTH_CLIENT_SECRET` | unset | Client secret. A public client uses PKCE only |
+| `ORIGOWEB_AUTH_AUDIENCE` | the issuer | Audience Origo verifies, normally `origo` |
+| `ORIGOWEB_AUTH_COOKIE_KEY` | required | 32 bytes as hex. Rotating it signs everyone out |
 
-`deploy/` holds a Kubernetes base: a Deployment of two stateless replicas, a
-Service, an Ingress, and the three secrets above.
+`deploy/` holds a Kubernetes base: a Deployment with two stateless
+replicas, a Service, an Ingress and the three secrets above.
 
 ## SSH keys
 
-Origo serves git over SSH and stores no public key. On every connection it
-asks a store you run whose the offered key is, and that store is also where
-a person adds one. Point `ORIGOWEB_KEYS_URL` at it and the SSH keys screen
-appears. Leave it unset and the screen and its navigation entry are absent,
-which is the default.
+Origo serves git over SSH and stores no public keys. It resolves an offered
+key through a key store you run, and that store is where a person adds
+keys. Set `ORIGOWEB_KEYS_URL` to its base address and the SSH keys page
+appears. Unset, the page and its navigation entry are absent.
 
-The screen expects three calls on that address, each carrying the signed-in
+The page makes three calls to that address, each with the signed-in
 person's own token:
 
-| Call | Answers |
+| Call | Response |
 |---|---|
 | `GET /me/ssh-keys` | `{"keys": [...]}`, each with `id`, `comment`, `key_type`, `bits`, `fingerprint`, `created_at`, `last_used_at` |
-| `POST /me/ssh-keys` with `{"public_key", "confirm": false}` | the parsed key, stored nowhere |
+| `POST /me/ssh-keys` with `{"public_key", "confirm": false}` | the parsed key, not stored |
 | `POST /me/ssh-keys` with `"confirm": true` | `201` and the stored key |
 | `DELETE /me/ssh-keys/{id}` | `204` |
 
-Adding a key takes two steps on purpose. The first submission sends the
-paste and shows you the fingerprint the store computed; the second stores
-it. **This service never reads a key**: it does not parse your paste, does
-not compute a fingerprint and does not decide which algorithms are allowed.
-The store does all three, both times, so the fingerprint you checked is the
-key that was saved.
+Adding a key takes two steps. The first request sends the pasted key with
+`confirm: false` and the page shows the fingerprint the store computed. The
+second request stores it. This service never parses a key, computes a
+fingerprint or restricts algorithms. The store does all three, so the
+fingerprint you reviewed is the key that was saved.
 
-Check that fingerprint against `ssh-keygen -lf ~/.ssh/id_ed25519.pub` on the
-machine that owns the key before you confirm. That is the whole point of the
-step.
+Check the fingerprint against `ssh-keygen -lf ~/.ssh/id_ed25519.pub` on
+the machine that owns the key before confirming.
 
-A refusal comes back as a code the screen turns into a sentence:
-`invalid_public_key` for a paste that is not one acceptable key,
-`key_already_added` for a key you already have, and
-`key_already_registered` for one registered to someone else. A store that
-answers `403` is one that has not been told to accept this interface, which
-is a setting on your side.
+The page understands three error codes: `invalid_public_key`,
+`key_already_added` for a key on your account, and
+`key_already_registered` for a key on another account. A `403` from the
+store means this client is not permitted to manage keys, which is a
+setting on the store.
 
-If you run Latere's auth, this is already built: point
-`ORIGOWEB_KEYS_URL` at it and grant this client the scope it asks for.
+Latere's auth service implements this API. Point `ORIGOWEB_KEYS_URL` at it
+and grant this client the scope it requests.
 
-## Naming your installation
+## Naming the installation
 
-Origo is the software. An installation of it can carry your own name: set
-`ORIGOWEB_PRODUCT_NAME` and every page says that instead, while the
-signed-out page still says it runs Origo and links to the project. Leave it
-unset and your installation calls itself Origo, which is what it is.
+Set `ORIGOWEB_PRODUCT_NAME` to give your installation its own name. Every
+page uses it. The signed-out page still says the installation runs Origo
+and links to the project. Unset, the interface calls itself Origo.
 
-The logo is separate, because a logo belongs to whoever owns it. Nothing is
-drawn unless `ORIGOWEB_BRAND_MARK` names one, and the only mark this build
-carries is Latere's. Your name is yours to set; Latere's mark is not.
+`ORIGOWEB_BRAND_MARK` draws a logo beside the name. The only mark in this
+build is `latere`, which belongs to Latere. Nothing is drawn unless it is
+set.
 
 ## Signing in
 
-You sign in with the account your organisation already gave you. There is no
-password here and no sign-up. Your access token lives in one encrypted
-cookie, is sent to Origo unchanged, and is in no page, no address bar and no
-log line. A session lasts twelve hours from sign-in; refreshing your token
-does not extend it.
+Sign in with the account your organisation provides. There is no password
+and no sign-up here. Your access token lives in one encrypted cookie and is
+sent to Origo unchanged. It appears in no page, URL or log line. A session
+lasts twelve hours from sign-in.
 
-What you may read is Origo's decision and not this interface's. A repository
-you cannot see and a repository that does not exist read the same, because
-that is a difference Origo deliberately refuses to make.
+Origo decides what you may read. A repository you cannot see and a
+repository that does not exist look the same, because Origo does not
+distinguish them.
 
 ## Creating a repository
 
-**New repository** on the repositories page. Choose a name to put it under
-and a name for it, and you land on the empty repository with the commands to
-push to it. Nothing is imported and no first commit is made.
+**New repository** on the repositories page asks for an owner and a name
+and opens the empty repository with push instructions. Nothing is imported
+and no first commit is made.
 
-What you may put it under is your own name, and any organisation you
-administer. If you have not claimed a name yet, the page says so and links
-you to your account, because a repository lives under a name and this
-interface will not invent one for you.
+Owners are your own account name and the organisations you administer. If
+you have not claimed a name, the page links to your account.
 
-Two things decide the rest, and neither of them is this interface. Your
-identity provider says which names are yours and how many repositories each
-may hold; Origo makes the repository and asks the same question again before
-it writes anything. A refusal from either is shown as it came, with your
-form as you left it, and nothing is created.
+The identity provider decides which names are yours and how many
+repositories each may hold. Origo creates the repository and checks again
+before writing. A refusal from either is shown with your form intact.
 
-The button is there only when your installation has somewhere to record who
-owns a repository, which is what `ORIGOWEB_AUTH_URL` names. An installation
-without one has repositories made some other way, and shows no button.
+The button appears only when `ORIGOWEB_AUTH_URL` names a registry that
+records repository ownership.
 
-Renaming, transferring and deleting are not here, and will not be. They
-change a repository that already exists, and they belong to whatever holds
-your audit trail.
+Renaming, transferring and deleting are not offered here.
 
-## Limits
+## Visibility
 
-Four things are missing because no component can answer them yet, not
-because they were left out.
+An administrator of a repository can make it public or private from the
+overview page. A public repository can be read and cloned without an
+account. Making a repository private does not affect existing clones.
 
-- **A list of your repositories.** Origo answers questions about one
-  repository at a time, and the service that decides who may see what
-  answers one yes or no at a time, with no way to enumerate. The home page
-  degrades to a box and a per-session history until both grow the question.
-- **Public repositories.** Origo requires a credential on every read, so a
-  signed-out visitor sees the sign-in page and nothing else. Every read here
-  is already issued without a credential when there is none, so the day
-  Origo answers one, the same page shows the repository.
+The overview shows a `public` badge. When the registry cannot be reached,
+the badge says visibility is unavailable, so a failed read never looks
+like a private repository.
 
-- **A list of your agent tokens, and a way to revoke one.** Origo signs a
-  token rather than recording it, so nothing is written when one is minted:
-  there is nothing to list and nothing to withdraw, and a short lifetime is
-  what bounds a leak instead. The token screen says so in the reader's own
-  words and offers the form that works. The table is written against a
-  capability, so an installation that grows a record of its tokens shows it
-  here with no change to this interface.
+## Not included
 
-Two more, on purpose: there is no syntax highlighting, and no blame. Neither
-is needed to read a diff, and both are a large dependency over file content
-nobody vetted.
+- **Token listing and revocation.** Origo signs tokens and does not record
+  them, so there is nothing to list or revoke. The tokens page says so. On
+  an installation that records tokens, the page lists them.
+- **Syntax highlighting and blame.** Both are large dependencies over
+  unvetted file content.
+- **Search.** There is no file or repository search.
 
 ## Where it lives
 
-This directory is a Go module of its own, `github.com/latere-ai/origo-web`,
-sitting inside the Origo repository until its own exists. Nothing here can
-import Origo's internals, which is the point: it speaks the same published
-API a third-party client would.
+This is its own Go module, `github.com/latere-ai/origo-web`. It imports
+nothing from Origo's internals and speaks the same published API a
+third-party client would.
 
-MIT, like Origo. The typeface is Inter under the SIL Open Font License,
-served from the binary; the monospace stack is your system's.
+MIT, like Origo. IBM Plex Sans and IBM Plex Mono are served from the
+binary under the SIL Open Font License.
