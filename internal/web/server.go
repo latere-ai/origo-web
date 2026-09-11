@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strings"
 
+	"latere.ai/x/pkg/cache"
 	"latere.ai/x/pkg/health"
 
 	"github.com/latere-ai/origo-web/internal/config"
@@ -51,7 +52,13 @@ type Server struct {
 	api      *origo.Client
 	registry *registry.Client
 	keys     *keys.Client
-	mux      *http.ServeMux
+	// visibility holds what the registry last said about who may read a
+	// repository, keyed by reader and repository. The overview needs the
+	// answer on every render and Origo cannot supply it, so the call is
+	// made once per reader per repository per visibilityTTL rather than
+	// once per render.
+	visibility *cache.TTLCache[string, registry.Visibility]
+	mux        *http.ServeMux
 }
 
 // Route is one entry of the route table.
@@ -114,6 +121,7 @@ func New(o Options) *Server {
 	s := &Server{
 		cfg: o.Config, sessions: o.Sessions, api: o.API,
 		registry: o.Registry, keys: o.Keys, mux: http.NewServeMux(),
+		visibility: newVisibilityCache(),
 	}
 
 	handlers := map[string]http.HandlerFunc{
