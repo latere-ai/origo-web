@@ -663,6 +663,18 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
   color: var(--ink-2);
 }
 
+/* A badge names a state of the thing beside it, not a link and not a
+   control. It is the accent because the state it names is the one a
+   reader has to see without looking for it. */
+.badge {
+  padding: 0 var(--s-2);
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  color: var(--accent);
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
 .repo-controls { display: flex; gap: var(--s-5); align-items: flex-start; flex-wrap: wrap; }
 
 /* The reference picker is a native details element. It is one line until a

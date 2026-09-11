@@ -11,6 +11,8 @@
         <a href="{{.Repo.URL}}/refs#tags">{{.Tags}} {{if eq .Tags 1}}tag{{else}}tags{{end}}</a>
         <span class="size">{{.Repo.Size}}</span>
         {{- if .Repo.Pushed}}<span title="{{.Repo.PushedExact}}">pushed {{.Repo.Pushed}}</span>{{end}}
+        {{- if .Public}}<span class="badge">public</span>{{end}}
+        {{- if .VisibilityURL}}<a href="{{.VisibilityURL}}">{{if .Public}}who can read it{{else}}make it public{{end}}</a>{{end}}
         {{- if .Repo.Frozen}}<strong>frozen, accepts no pushes</strong>{{end}}
         {{- if .ArchiveURL}}<a href="{{.ArchiveURL}}">download tar.gz</a>{{end}}
       </p>

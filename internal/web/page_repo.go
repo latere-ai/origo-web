@@ -110,6 +110,12 @@ type overviewData struct {
 	CloneIsSSH  bool
 	CloneSSHURL string
 
+	// Public says the repository is readable without an account, and
+	// VisibilityURL is where an administrator changes that. Both are
+	// empty on an installation whose registry has no visibility surface.
+	Public        bool
+	VisibilityURL string
+
 	ArchiveURL string
 	Branches   int
 	Tags       int
@@ -147,6 +153,7 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 	}
 	data.CloneIsSSH = data.CloneSSH != "" && r.URL.Query().Get("clone") == "ssh"
 	data.CloneSSHURL = rc.rv.URL() + refAndCloneQuery(rc.rv)
+	data.Public, data.VisibilityURL = s.visibilityOf(r, rc)
 
 	branches, tags, _, err := s.refsFor(r, rc.tok, rc.repo.ID)
 	if err != nil {
@@ -191,6 +198,29 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 		data.Readme = s.readme(r, rc, entry)
 	}
 	s.render(w, r, http.StatusOK, "overview", data)
+}
+
+// visibilityOf reads whether the repository is public and, for somebody
+// who may change it, where the control is.
+//
+// It is one extra call on the overview alone, and a failure is silence: an
+// installation whose registry has no visibility surface, or a registry
+// that is not answering, shows the repository without the badge rather
+// than failing the screen over a fact that is not the screen's subject.
+// A signed-out reader has no token and asks nothing.
+func (s *Server) visibilityOf(r *http.Request, rc repoContext) (bool, string) {
+	if rc.tok == "" {
+		return false, ""
+	}
+	v, err := s.registry.ReadVisibility(r.Context(), rc.tok, rc.repo.ID)
+	if err != nil {
+		return false, ""
+	}
+	url := ""
+	if v.CanChange {
+		url = rc.rv.URL() + "/visibility"
+	}
+	return v.Public(), url
 }
 
 // findReadme picks the root readme, preferring the Markdown form. The tree
