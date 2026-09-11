@@ -20,6 +20,7 @@ import (
 
 	"github.com/latere-ai/origo-web/internal/config"
 	"github.com/latere-ai/origo-web/internal/origo"
+	"github.com/latere-ai/origo-web/internal/registry"
 	"github.com/latere-ai/origo-web/internal/session"
 )
 
@@ -290,6 +291,13 @@ type harness struct {
 	cfg     config.Config
 	backend *httptest.Server
 
+	// registry is the component that records who owns a repository, and
+	// registryServer is where it answers. Both are here for every harness,
+	// because the creation screen is one of the screens a page-wide
+	// property has to hold on.
+	registry       *fakeRegistry
+	registryServer *httptest.Server
+
 	// csrfCookies is what the last rendered form left behind.
 	csrfCookies []*http.Cookie
 }
@@ -306,8 +314,15 @@ func newHarness(t *testing.T, opts ...func(*config.Config)) *harness {
 	if err != nil {
 		t.Fatal(err)
 	}
+	reg := newFakeRegistry()
+	regServer := httptest.NewServer(reg)
+	t.Cleanup(regServer.Close)
+
+	// The registry is the identity provider: the component that issues the
+	// token is the one that holds the names and the record of who owns
+	// what, which is why there is one address here and not two.
 	oc := oidc.Config{
-		AuthURL: "https://issuer.example", ClientID: "origoweb",
+		AuthURL: regServer.URL, ClientID: "origoweb",
 		RedirectURL: "https://code.example/auth/callback", CookieKey: testCookieKey,
 		Audience: "origo",
 	}
@@ -327,7 +342,12 @@ func newHarness(t *testing.T, opts ...func(*config.Config)) *harness {
 	sealer.SessionTTL = session.Lifetime
 	return &harness{
 		t: t, fake: fake, backend: backend, cfg: cfg, oidc: oidc.New(sealer),
-		server: New(Options{Config: cfg, Sessions: sessions, API: origo.New(base, backend.Client())}),
+		registry: reg, registryServer: regServer,
+		server: New(Options{
+			Config: cfg, Sessions: sessions,
+			API:      origo.New(base, backend.Client()),
+			Registry: registry.New(mustURL(t, regServer.URL), regServer.Client()),
+		}),
 	}
 }
 

@@ -33,6 +33,7 @@ func (h *harness) screens() map[string]string {
 		"tree":     h.repoPath("/tree/internal"),
 		"file":     h.repoPath("/blob/README.md"),
 		"tokens":   "/tokens",
+		"new":      "/new",
 		"docs":     "/docs/agents",
 	}
 }
@@ -285,14 +286,18 @@ func TestStaleNotice(t *testing.T) {
 }
 
 // TestRoutesAreReadOnly asserts the route table against a checked-in list.
-// This interface has no write path to repository content of any kind, and the
-// only routes that are not a GET are sign-out and the key screen, each of
-// which requires a token issued to this session.
+//
+// This interface has no write path to repository content of any kind. The
+// four routes that are not a GET are sign-out, the key screen, the mint
+// form and the creation form, each of which requires a token issued to this
+// session, and none of which edits a file, moves a reference, or changes a
+// repository that exists. Creating brings an empty repository into being,
+// which is a different thing from writing to one.
 func TestRoutesAreReadOnly(t *testing.T) {
 	want := []string{
 		"GET /{$}", "GET /sign-in", "GET /open", "GET /auth/start", "GET /auth/callback",
 		"POST /sign-out", "GET /assets/{file}",
-		"GET /tokens", "POST /tokens", "GET /docs/agents",
+		"GET /tokens", "POST /tokens", "GET /new", "POST /new", "GET /docs/agents",
 		"GET /r/{id}", "GET /r/{id}/refs", "GET /r/{id}/log", "GET /r/{id}/commit/{sha}",
 		"GET /r/{id}/patch/{sha}", "GET /r/{id}/compare", "GET /r/{id}/tree/{path...}",
 		"GET /r/{id}/blob/{path...}", "GET /r/{id}/raw/{path...}",
@@ -313,7 +318,7 @@ func TestRoutesAreReadOnly(t *testing.T) {
 
 	// Every form refuses a submission with no token.
 	h := newHarness(t, func(c *config.Config) { c.KeysURL = "https://keys.example" })
-	for _, path := range []string{"/sign-out", "/keys", "/tokens"} {
+	for _, path := range []string{"/sign-out", "/keys", "/tokens", "/new"} {
 		req := httptest.NewRequest(http.MethodPost, path, nil)
 		req.AddCookie(h.signedIn("alice"))
 		rec := httptest.NewRecorder()
@@ -330,7 +335,7 @@ func TestRoutesAreReadOnly(t *testing.T) {
 	c := h.signedIn("alice")
 	addresses := []string{
 		"/", "/sign-in", "/open", "/auth/start", "/auth/callback", "/sign-out",
-		"/keys", "/tokens", "/docs/agents", "/assets/app.css", h.repoPath(""), h.repoPath("/refs"),
+		"/keys", "/tokens", "/new", "/docs/agents", "/assets/app.css", h.repoPath(""), h.repoPath("/refs"),
 		h.repoPath("/log"), h.repoPath("/commit/9f3c1abf20d4e7c8b5a1930fe6d2c4471be08a3d"),
 		h.repoPath("/patch/9f3c1abf20d4e7c8b5a1930fe6d2c4471be08a3d"), h.repoPath("/compare"),
 		h.repoPath("/tree/internal"), h.repoPath("/blob/README.md"), h.repoPath("/raw/README.md"),
@@ -338,7 +343,8 @@ func TestRoutesAreReadOnly(t *testing.T) {
 	}
 	for _, address := range addresses {
 		for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
-			if method == http.MethodPost && (address == "/sign-out" || address == "/keys" || address == "/tokens") {
+			if method == http.MethodPost && (address == "/sign-out" || address == "/keys" ||
+				address == "/tokens" || address == "/new") {
 				continue
 			}
 			req := httptest.NewRequest(method, address, nil)
