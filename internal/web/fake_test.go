@@ -58,6 +58,63 @@ type fakeOrigo struct {
 	// ignoreRange makes the installation answer 200 to a ranged read, the
 	// way a proxy that strips the header would.
 	ignoreRange bool
+
+	// created is every repository the create route made, in order.
+	created []origo.CreateRequest
+	// unknownFor is how many creates the authorizer denies with
+	// unknown_repository before it allows one, which is the refusal a
+	// registry row that has not reached every replica produces.
+	unknownFor int
+	// createStatus and createCode override the create route's answer.
+	createStatus int
+	createCode   string
+}
+
+// createRoute is Origo's create: the caller chooses the id, and the
+// authorizer is asked whether this subject may administer it under this
+// owner before anything is written.
+func (f *fakeOrigo) createRoute(w http.ResponseWriter, r *http.Request) {
+	var req origo.CreateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "invalid"}})
+		return
+	}
+	f.mu.Lock()
+	if f.unknownFor > 0 {
+		f.unknownFor--
+		f.mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]any{
+			"code": "forbidden", "details": map[string]any{"reason": "unknown_repository"},
+		}})
+		return
+	}
+	status, code := f.createStatus, f.createCode
+	if status == 0 {
+		f.created = append(f.created, req)
+	}
+	f.mu.Unlock()
+	if status != 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": code}})
+		return
+	}
+	branch := req.DefaultBranch
+	if branch == "" {
+		branch = "main"
+	}
+	w.WriteHeader(http.StatusCreated)
+	writeJSON(w, origo.Repo{ID: req.ID, Owner: req.Owner, Slug: req.Slug, DefaultBranch: branch})
+}
+
+// Created is every repository the create route made.
+func (f *fakeOrigo) Created() []origo.CreateRequest {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]origo.CreateRequest(nil), f.created...)
 }
 
 type fakeBlob struct {
@@ -194,6 +251,8 @@ func (f *fakeOrigo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case strings.HasSuffix(p, "/tokens"):
 		f.tokenRoute(w, r, p)
+	case p == "/v1/repos" && r.Method == http.MethodPost:
+		f.createRoute(w, r)
 	case p == "/v1/repos":
 		w.WriteHeader(http.StatusNotImplemented)
 		_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "no_directory"}})
@@ -345,8 +404,11 @@ func newHarness(t *testing.T, opts ...func(*config.Config)) *harness {
 		registry: reg, registryServer: regServer,
 		server: New(Options{
 			Config: cfg, Sessions: sessions,
-			API:      origo.New(base, backend.Client()),
-			Registry: registry.New(mustURL(t, regServer.URL), regServer.Client()),
+			API: origo.New(base, backend.Client()),
+			// Built from the configuration the way the binary builds it,
+			// so a test that unsets the provider gets an interface with
+			// no registry rather than one wired past its own settings.
+			Registry: registry.New(cfg.RegistryURL(), regServer.Client()),
 		}),
 	}
 }

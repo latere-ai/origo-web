@@ -49,10 +49,12 @@ var nameFormatRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$`)
 // longer than the deny and not shorter.
 //
 // Only that one reason is retried. Every other refusal is the answer.
-const (
-	createAttempts = 3
-	createBackoff  = 6 * time.Second
-)
+const createAttempts = 3
+
+// createBackoff is how long the wait between attempts is. It is a variable
+// so a test can drive the retry without waiting out a real one; nothing in
+// the running service changes it.
+var createBackoff = 6 * time.Second
 
 // newRepoData is the creation screen.
 type newRepoData struct {
