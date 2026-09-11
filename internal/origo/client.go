@@ -554,3 +554,30 @@ func (c *Client) postJSON(ctx context.Context, tok, path string, body []byte, ou
 	}
 	return nil
 }
+
+// CreateRequest is the body of Origo's create: the caller chooses the id,
+// which is how a registry row can be written before the repository exists
+// and how a retry of a half-finished create is the same call again.
+type CreateRequest struct {
+	ID            string `json:"id"`
+	Owner         string `json:"owner"`
+	Slug          string `json:"slug"`
+	DefaultBranch string `json:"default_branch,omitempty"`
+}
+
+// Create makes one repository at the installation.
+//
+// It is the one call this service makes that brings a repository into
+// being, and it still holds the rule the rest of the package holds: the
+// person's own token is what is sent, and Origo asks its authorizer whether
+// that person may administer this id under this owner. This service decides
+// nothing; it only carries the answer back.
+func (c *Client) Create(ctx context.Context, tok string, req CreateRequest) (Repo, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return Repo{}, fmt.Errorf("build request: %w", err)
+	}
+	var out Repo
+	err = c.postJSON(ctx, tok, "/v1/repos", body, &out)
+	return out, err
+}

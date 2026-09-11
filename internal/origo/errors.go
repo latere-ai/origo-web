@@ -18,8 +18,33 @@ import (
 type Error struct {
 	Status int
 	Code   string
-	cause  error
+	// Details is the developer half of Origo's error document. One key
+	// matters to this service: on a 403 from the authorizer it carries
+	// "reason", the token the operator's endpoint denied with.
+	Details map[string]any
+	cause   error
 }
+
+// Reason is the authorizer's own deny token, empty when the refusal did not
+// come from one. A creation refused with "unknown_repository" is the one
+// case this service retries: the registry row exists and the authorizer
+// replica answering has not rebuilt its snapshot yet.
+func (e *Error) Reason() string {
+	reason, _ := e.Details["reason"].(string)
+	return reason
+}
+
+// DeniedAs reports that err is a refusal the authorizer gave with this
+// reason.
+func DeniedAs(err error, reason string) bool {
+	var e *Error
+	return errors.As(err, &e) && e.Reason() == reason
+}
+
+// ReasonUnknownRepository is what an authorizer answers for a repository it
+// has no row for. Spec 072 of auth makes it the deny that a just-written
+// registry row turns into an allow within one snapshot interval.
+const ReasonUnknownRepository = "unknown_repository"
 
 func (e *Error) Error() string {
 	if e.cause != nil {
@@ -72,14 +97,20 @@ func readError(resp *http.Response) *Error {
 	e := &Error{Status: resp.StatusCode}
 	var doc struct {
 		Error struct {
-			Code string `json:"code"`
+			Code    string         `json:"code"`
+			Details map[string]any `json:"details"`
 		} `json:"error"`
-		Code string `json:"code"`
+		Code    string         `json:"code"`
+		Details map[string]any `json:"details"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<16)).Decode(&doc); err == nil {
 		e.Code = doc.Error.Code
+		e.Details = doc.Error.Details
 		if e.Code == "" {
 			e.Code = doc.Code
+		}
+		if e.Details == nil {
+			e.Details = doc.Details
 		}
 	}
 	if e.Code == "" {
