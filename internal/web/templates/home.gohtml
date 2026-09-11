@@ -61,14 +61,14 @@
   {{- else}}
   <div class="panel stack">
     <h2 class="heading-section">This installation does not list repositories</h2>
-    <p class="prose">Enter a repository identifier to open it. Repositories opened in this session are listed below.</p>
+    <p class="prose">Enter a repository as owner/name, or its identifier, to open it. Repositories opened in this session are listed below.</p>
     {{- if .View.Who}}
     <p class="hint">Signed in as {{.View.Who}}.</p>
     {{- end}}
     <form class="inline-form" action="/open" method="get">
       <div class="field">
-        <label for="id">Repository identifier</label>
-        <input id="id" name="id" class="mono" size="40" required>
+        <label for="id">Repository</label>
+        <input id="id" name="id" class="mono" size="40" placeholder="owner/name" required>
       </div>
       <button type="submit">Open</button>
     </form>

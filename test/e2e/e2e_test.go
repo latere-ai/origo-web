@@ -160,8 +160,20 @@ func (s *stack) post(path string, form url.Values, c *http.Cookie) *httptest.Res
 
 var csrfValue = regexp.MustCompile(`name="` + regexp.QuoteMeta(authkit.CSRFFieldName()) + `" value="([^"]+)"`)
 
-func (s *stack) screens() map[string]string {
-	r := "/r/" + s.repo
+// repoURL is the name address of the fixture repository, learned from the
+// permanent redirect its identifier address answers with: the suite is
+// given an identifier, and the interface is addressed by owner and name.
+func (s *stack) repoURL(c *http.Cookie) string {
+	s.t.Helper()
+	rec := s.get("/r/"+s.repo, c)
+	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") == "" {
+		s.t.Fatalf("/r/%s answered %d, want a permanent redirect to the name", s.repo, rec.Code)
+	}
+	return rec.Header().Get("Location")
+}
+
+func (s *stack) screens(c *http.Cookie) map[string]string {
+	r := s.repoURL(c)
 	return map[string]string{
 		"home":       "/",
 		"overview":   r,
@@ -257,7 +269,7 @@ func tokenValue(t *testing.T, body string) string {
 func TestTokenNeverLeavesTheCookie(t *testing.T) {
 	s := start(t)
 	c, token := s.session("alice")
-	for name, path := range s.screens() {
+	for name, path := range s.screens(c) {
 		rec := s.get(path, c)
 		if strings.Contains(rec.Body.String(), token) {
 			t.Errorf("%s: the token is in the body", name)
@@ -281,7 +293,7 @@ func TestTokenNeverLeavesTheCookie(t *testing.T) {
 func TestEveryScreenWorksWithoutScript(t *testing.T) {
 	s := start(t)
 	c, _ := s.session("alice")
-	for name, path := range s.screens() {
+	for name, path := range s.screens(c) {
 		rec := s.get(path, c)
 		if rec.Code != http.StatusOK {
 			t.Errorf("%s answered %d", name, rec.Code)
@@ -321,7 +333,8 @@ func TestNoCacheIsSharedBetweenSubjects(t *testing.T) {
 		t.Skip("set ORIGOWEB_TEST_DENIED_SUB to a subject the authorizer denies")
 	}
 	allowed, _ := s.session("alice")
-	first := s.get("/r/"+s.repo, allowed)
+	repo := s.repoURL(allowed)
+	first := s.get(repo, allowed)
 	if first.Code != http.StatusOK {
 		t.Fatalf("the allowed reader got %d", first.Code)
 	}
@@ -330,7 +343,7 @@ func TestNoCacheIsSharedBetweenSubjects(t *testing.T) {
 	}
 
 	refused, _ := s.session(denied)
-	second := s.get("/r/"+s.repo, refused)
+	second := s.get(repo, refused)
 	if second.Code != http.StatusNotFound {
 		t.Fatalf("the denied reader got %d, want the refusal", second.Code)
 	}
@@ -346,7 +359,7 @@ func TestPagingIsExact(t *testing.T) {
 	c, _ := s.session("alice")
 
 	seen := map[string]int{}
-	next := "/r/" + s.repo + "/log"
+	next := s.repoURL(c) + "/log"
 	for pages := 0; next != "" && pages < 20; pages++ {
 		rec := s.get(next, c)
 		if rec.Code != http.StatusOK {
@@ -396,7 +409,7 @@ func TestListDegradesWithoutDirectory(t *testing.T) {
 	if !strings.Contains(body, "does not list repositories") {
 		t.Errorf("the home screen reads as:\n%s", body)
 	}
-	for name, path := range s.screens() {
+	for name, path := range s.screens(c) {
 		if name == "home" {
 			continue
 		}

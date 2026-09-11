@@ -272,6 +272,22 @@ func (f *fakeOrigo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.record(r)
 	p := r.URL.Path
 
+	// The name mode of the collection route (Origo's spec 026) answers
+	// exactly as the id route does, so it is served as the id route,
+	// per-path overrides included: a test that refuses the repository by
+	// its id refuses it by its name too.
+	if p == "/v1/repos" && r.URL.Query().Get("owner") != "" {
+		f.mu.Lock()
+		owner, slug, id := f.repo.Owner, f.repo.Slug, f.repo.ID
+		f.mu.Unlock()
+		if r.URL.Query().Get("owner") != owner || r.URL.Query().Get("slug") != slug {
+			w.WriteHeader(http.StatusNotFound)
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "repo_not_found"}})
+			return
+		}
+		p = "/v1/repos/" + id
+	}
+
 	f.mu.Lock()
 	maps.Copy(w.Header(), f.headers[p])
 	code := f.status[p]
@@ -568,7 +584,14 @@ func (h *harness) answering(handler http.HandlerFunc) {
 	})
 }
 
-// repoPath is the address of the fixture repository in this interface.
+// repoPath is the address of the fixture repository in this interface: its
+// owner and its name.
 func (h *harness) repoPath(suffix string) string {
+	return "/" + h.fake.repo.Owner + "/" + h.fake.repo.Slug + suffix
+}
+
+// idPath is the address the fixture repository had before names were
+// served, which redirects to repoPath for good.
+func (h *harness) idPath(suffix string) string {
 	return "/r/" + h.fake.repo.ID + suffix
 }

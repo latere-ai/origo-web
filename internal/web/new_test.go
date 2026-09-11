@@ -56,8 +56,8 @@ func TestCreatingARepositoryLandsOnIt(t *testing.T) {
 		t.Fatalf("the row names %q and the repository %q; one creation is one id",
 			written[0].ID, made[0].ID)
 	}
-	if got := rec.Header().Get("Location"); got != "/r/"+made[0].ID {
-		t.Fatalf("lands on %q, want the repository at /r/%s", got, made[0].ID)
+	if got := rec.Header().Get("Location"); got != "/alice/notes" {
+		t.Fatalf("lands on %q, want the repository at /alice/notes", got)
 	}
 	if len(h.registry.Forgotten()) != 0 {
 		t.Fatalf("a successful creation withdrew %v", h.registry.Forgotten())

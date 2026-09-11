@@ -29,6 +29,11 @@ holds what was committed.
   a cluster is one only the cluster can reach.
 - The agent documentation describes the `origo` command and its skill, which
   ship with Origo, in place of a planned MCP server that was never built.
+- Repositories are addressed by owner and name: `/{owner}/{name}` and the
+  screens under it. The old `/r/{id}` addresses redirect there for good, a
+  clone address pasted into the browser lands on the repository, and the
+  box on an installation without a directory takes `owner/name` or an
+  identifier.
 - An administrator can delete a repository from its overview. The page
   says what happens and asks for the name to be typed back. The server
   keeps the content for seven days, within which an administrator can

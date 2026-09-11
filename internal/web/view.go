@@ -96,13 +96,20 @@ type repoView struct {
 	Empty         bool
 }
 
-// URL is where this repository lives in this interface.
+// URL is where this repository lives in this interface: under its owner and
+// its name, which is how a person knows it and how git addresses it.
 //
-// Every repository is addressed by its id. Origo's JSON surface resolves no
-// owner and slug (spec 023), so an owner-and-slug URL could not be served,
-// and an id is what survives a rename in any case. The name is shown; the
-// address is the id.
-func (r repoView) URL() string { return "/r/" + url.PathEscape(r.ID) }
+// Origo resolves the pair through the name mode of its collection route
+// (spec 026), so the address is the name, and the identifier stays what the
+// API and the tokens are keyed by. An address an earlier release wrote, at
+// /r/{id}, is redirected here for good, so a rename moves the address and
+// an old link still lands.
+func (r repoView) URL() string { return nameURL(r.Owner, r.Slug) }
+
+// nameURL is the address of the repository with this owner and this slug.
+func nameURL(owner, slug string) string {
+	return "/" + url.PathEscape(owner) + "/" + url.PathEscape(slug)
+}
 
 // RefQuery carries the current reference to the next screen, and is empty on
 // the default branch so an ordinary URL stays short.

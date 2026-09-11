@@ -150,32 +150,33 @@ func keyScreens(t *testing.T, base config.Config) map[string]*httptest.ResponseR
 // TestScreenCallsAreExact holds each screen to the calls spec 023's screen
 // table lists for it, against a recording installation.
 //
-// The table addresses a repository by owner and slug, through a route Origo
-// does not serve yet; every screen here resolves the repository by its id
-// instead, with GET /v1/repos/{id} of spec 003, which is the same one call in
-// the same place. No screen's call count grows with the number of rows it
-// renders, which the second half of this test measures by rendering a wider
-// page and counting again.
+// The table addresses a repository by owner and slug, and every screen here
+// resolves the pair with the name mode of the collection route, GET
+// /v1/repos?owner=&slug= of Origo's spec 026, which is one call in the
+// same place the id route was. No screen's call count grows with the number
+// of rows it renders, which the second half of this test measures by
+// rendering a wider page and counting again.
 func TestScreenCallsAreExact(t *testing.T) {
 	repo := "/v1/repos/1f2e3d"
+	byName := "/v1/repos?owner&slug"
 	want := map[string][]string{
 		"overview": {
-			repo,
+			byName,
 			repo + "/refs?prefix", repo + "/refs?prefix",
 			repo + "/tree/main",
 			repo + "/commits?limit&ref",
 			repo + "/blob/b1",
 		},
-		"refs": {repo, repo + "/refs?prefix", repo + "/refs?prefix"},
-		"log":  {repo, repo + "/commits?limit&ref"},
+		"refs": {byName, repo + "/refs?prefix", repo + "/refs?prefix"},
+		"log":  {byName, repo + "/commits?limit&ref"},
 		"commit": {
-			repo,
+			byName,
 			repo + "/commits/9f3c1abf20d4e7c8b5a1930fe6d2c4471be08a3d",
 			repo + "/compare/4c02f7e10b4d3a1e8f6b2c9d05a7e3f1b8c4d6e2...9f3c1abf20d4e7c8b5a1930fe6d2c4471be08a3d",
 		},
-		"compare": {repo, repo + "/compare/main...next"},
-		"tree":    {repo, repo + "/tree/main?path"},
-		"file":    {repo, repo + "/tree/main", repo + "/blob/b1"},
+		"compare": {byName, repo + "/compare/main...next"},
+		"tree":    {byName, repo + "/tree/main?path"},
+		"file":    {byName, repo + "/tree/main", repo + "/blob/b1"},
 		// The token screen asks the one question the home screen asks,
 		// and asks nothing about a repository until one is named.
 		"tokens": {"/v1/repos?limit"},
@@ -397,11 +398,16 @@ func TestRoutesAreReadOnly(t *testing.T) {
 		"GET /{$}", "GET /sign-in", "GET /open", "GET /auth/start", "GET /auth/callback",
 		"POST /sign-out", "GET /assets/{file}",
 		"GET /tokens", "POST /tokens", "GET /new", "POST /new", "GET /docs/agents",
+		"GET /{owner}/{slug}", "GET /{owner}/{slug}/refs", "GET /{owner}/{slug}/log",
+		"GET /{owner}/{slug}/commit/{sha}", "GET /{owner}/{slug}/patch/{sha}",
+		"GET /{owner}/{slug}/compare", "GET /{owner}/{slug}/tree/{path...}",
+		"GET /{owner}/{slug}/blob/{path...}", "GET /{owner}/{slug}/raw/{path...}",
+		"GET /{owner}/{slug}/visibility", "POST /{owner}/{slug}/visibility",
+		"GET /{owner}/{slug}/delete", "POST /{owner}/{slug}/delete",
 		"GET /r/{id}", "GET /r/{id}/refs", "GET /r/{id}/log", "GET /r/{id}/commit/{sha}",
 		"GET /r/{id}/patch/{sha}", "GET /r/{id}/compare", "GET /r/{id}/tree/{path...}",
 		"GET /r/{id}/blob/{path...}", "GET /r/{id}/raw/{path...}",
-		"GET /r/{id}/visibility", "POST /r/{id}/visibility",
-		"GET /r/{id}/delete", "POST /r/{id}/delete",
+		"GET /r/{id}/visibility", "GET /r/{id}/delete",
 		"GET /keys", "POST /keys", "GET /keys/{id}/remove", "POST /keys/{id}/remove",
 	}
 	var got []string

@@ -37,7 +37,7 @@ git clone https://x-access-token:$ORIGO_TOKEN@{{.CloneHost}}/&lt;owner&gt;/&lt;n
 # read
 curl -H "Authorization: Bearer $ORIGO_TOKEN" \
   {{.RepoRead}}</pre>
-      <p>API paths start with <code>/v1/repos/</code> followed by the repository <strong>identifier</strong>. The API does not accept owner and name; git clone and push do. The identifier appears in this site's URLs and does not change when a repository is renamed.</p>
+      <p>API paths start with <code>/v1/repos/</code> followed by the repository <strong>identifier</strong>. The API does not accept owner and name; git clone and push do. The identifier is shown beside each repository on the <a href="/tokens">agent tokens</a> page and in a minted token's read line, and does not change when a repository is renamed.</p>
       <p>Send the token as <code>Authorization: Bearer &lt;token&gt;</code>, or as the password in HTTP basic auth with any username. Git uses the second form.</p>
     </section>
 

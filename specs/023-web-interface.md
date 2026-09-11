@@ -321,6 +321,16 @@ serves except the two the section above proposes.
 | delete | `/{owner}/{slug}/delete` | what deleting does, and a form that asks for the name to be typed back; administrators only | the registry's visibility read for who administers; `DELETE /v1/repos/{id}`; the registry's row removal |
 | SSH keys | `/keys` | the signed-in person's public keys with their labels, fingerprints, dates and last use; a two-step add; a removal that asks first | the installation's key store: `GET /me/ssh-keys`, `POST /me/ssh-keys`, `DELETE /me/ssh-keys/{id}`; see below |
 
+An owner name that is one of this interface's own first path segments is
+shadowed by the interface's route, because a literal segment is the more
+specific pattern: `assets` and `r` entirely, and `auth` and `docs` for
+the slugs `start`, `callback` and `agents`. Origo reserves `r` and `v1`
+as owners itself (its create refuses them); the authorizer that hands out
+owner names is where the rest belong, and the README names them. The
+`/r/{id}` address every screen had before names were served is kept as a
+permanent redirect to the name, resolved with the reader's own token so
+an identifier they cannot open is the one refusal.
+
 The archive link on the overview points at
 `/v1/repos/{id}/archive/{sha}.tar.gz` on the Origo installation
 directly, so a large tarball never passes through this service.
@@ -612,7 +622,7 @@ incomplete one.
 | who decides | the installation's authorizer, which is the component that holds the names and the record of who owns what. This interface asks and renders; it holds no ownership model and no second copy of one |
 | what a person may create under | what the authorizer says: their own name, and an organisation they administer. The screen draws the answer and never derives one from a token claim, for the reason the repository list gives at length |
 | the order | the ownership row first, the repository second, which is the authorizer's own rule: the failure that leaves a repository unreachable is preferred to the one that leaves it unguarded |
-| where a person lands | on the repository, at `/r/{id}`, which is also added to the addresses this session has opened |
+| where a person lands | on the repository, at `/{owner}/{slug}`, which is also added to the addresses this session has opened |
 | an installation with no such component | no screen and no affordance. `ORIGOWEB_AUTH_URL` is the address, because the provider that issues the token is the one that holds the names; unset, the creation screen is absent exactly as the key screen is |
 
 The second call is retried, up to three attempts spaced past Origo's own
@@ -663,7 +673,7 @@ the actor, and an event.
 
 | Item | Owner | Blocks |
 |---|---|---|
-| name resolution on Origo's JSON surface, mode 2 above | a new Origo spec | nothing; without it every screen is addressed by id at `/r/{id}` and the `/{owner}/{slug}` URLs and the name box wait for it |
+| name resolution on Origo's JSON surface, mode 2 above | **done**: Origo's spec 026 serves `GET /v1/repos?owner=&slug=`, answering as the id route does. Every screen is addressed at `/{owner}/{slug}`; the `/r/{id}` addresses the screens had before redirect there for good, and the box on an installation with no directory takes either form | nothing |
 | the directory question on the authorizer contract and the collection route, mode 1 above | a new Origo spec, and the authorizer each installation runs | the repository list screen alone; everything else degrades to the name form |
 | the repository `latere-ai/origo-web` | this spec moves into it on its first commit | the build |
 | a key management surface: spec 024 keeps keys out of Origo, behind an operator-run resolver Origo only reads | **done**: auth's spec 075 serves the resolver and the three `/me/ssh-keys` routes; an operator running another provider builds the same three | nothing |
@@ -691,6 +701,14 @@ repository, so they assert against the real read API and not a mock.
   says so in words, so a public repository can never read as private
   because of an outage (`internal/web`,
   `TestAFailedVisibilityCallDoesNotReadAsPrivate`).
+- Every repository screen is addressed by owner and slug and resolved
+  through the name mode of the collection route in one call; no link the
+  interface writes names an identifier address; the identifier address
+  redirects permanently to the name with its path and query kept, and an
+  identifier the reader cannot open is the one refusal; the open box takes
+  either form (`internal/web`, `TestARepositoryIsAddressedByItsName`,
+  `TestTheIdentifierAddressRedirectsToTheName`,
+  `TestOpenTakesANameOrAnIdentifier`).
 - Deleting is offered to an administrator from the overview, asked about
   on a screen that names the repository and says what happens, refused
   until the name is typed back exactly, done at Origo before the

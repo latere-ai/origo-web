@@ -8,7 +8,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -178,7 +177,7 @@ func (s *Server) handleNewPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.sessions.Remember(w, r, repo.ID, repo.Owner+"/"+repo.Slug)
-	http.Redirect(w, r, "/r/"+url.PathEscape(repo.ID), http.StatusSeeOther)
+	http.Redirect(w, r, nameURL(repo.Owner, repo.Slug), http.StatusSeeOther)
 }
 
 // createAtOrigo makes the repository, retrying only the refusal a fresh

@@ -265,7 +265,7 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	// directory, and nothing more: beside a directory it would list some
 	// of the same repositories a second time, so it is not there.
 	if !data.Directory {
-		data.Recent = s.recentRows(r, func(o session.Opened) string { return "/r/" + url.PathEscape(o.ID) })
+		data.Recent = s.recentRows(r, openedURL)
 	}
 	s.render(w, r, http.StatusOK, "home", data)
 }
@@ -280,6 +280,16 @@ func (s *Server) recentRows(r *http.Request, link func(session.Opened) string) [
 		rows = append(rows, listRow{ID: o.ID, Name: cmp.Or(o.Name, o.ID), URL: link(o)})
 	}
 	return rows
+}
+
+// openedURL is the address of a repository this session opened: its name
+// where the cookie carries one, and the identifier address, which redirects
+// to the name, where an earlier release wrote the entry without.
+func openedURL(o session.Opened) string {
+	if owner, slug, ok := strings.Cut(o.Name, "/"); ok {
+		return nameURL(owner, slug)
+	}
+	return "/r/" + url.PathEscape(o.ID)
 }
 
 // matches reports whether a row answers the filter a reader typed. The filter
@@ -316,7 +326,7 @@ func (s *Server) listRow(repo origo.Repo) listRow {
 		ID:            repo.ID,
 		Name:          repo.Slug,
 		Owner:         repo.Owner,
-		URL:           "/r/" + url.PathEscape(repo.ID),
+		URL:           nameURL(repo.Owner, repo.Slug),
 		DefaultBranch: repo.DefaultBranch,
 		Size:          humanSize(repo.SizeBytes),
 	}
@@ -334,6 +344,12 @@ func (s *Server) handleOpen(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.URL.Query().Get("id"))
 	if id == "" {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	// The box takes what a person has: owner/name, or the identifier,
+	// whose address redirects to the name.
+	if owner, slug, ok := strings.Cut(id, "/"); ok {
+		http.Redirect(w, r, nameURL(owner, slug), http.StatusSeeOther)
 		return
 	}
 	http.Redirect(w, r, "/r/"+url.PathEscape(id), http.StatusSeeOther)

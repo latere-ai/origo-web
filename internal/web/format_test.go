@@ -236,12 +236,12 @@ func TestFindReadmePrefersMarkdown(t *testing.T) {
 }
 
 func TestRefQueryIsEmptyOnTheDefaultBranch(t *testing.T) {
-	r := repoView{ID: "r 1", DefaultBranch: "main", Ref: "main"}
+	r := repoView{ID: "r1", Owner: "in fra", Slug: "ori go", DefaultBranch: "main", Ref: "main"}
 	if got := r.RefQuery(); got != "" {
 		t.Errorf("the default branch carried %q", got)
 	}
-	if got := r.URL(); got != "/r/r%201" {
-		t.Errorf("an identifier with a space became %q", got)
+	if got := r.URL(); got != "/in%20fra/ori%20go" {
+		t.Errorf("a name with a space became %q", got)
 	}
 	r.Ref = "release/1.4"
 	if got := r.RefQuery(); got != "?ref=release%2F1.4" {

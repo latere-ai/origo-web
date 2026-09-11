@@ -25,16 +25,17 @@ There is no JavaScript. Every control is a link, a form or a native
 | Sign in | `/sign-in` |
 | Repositories | `/` |
 | New repository | `/new` |
-| Repository overview: clone address, branch picker, root tree, readme | `/r/{id}` |
-| Branches and tags | `/r/{id}/refs` |
-| Commit log, filterable by path | `/r/{id}/log` |
-| Commit: message, parents, diff | `/r/{id}/commit/{sha}` |
-| Patch download | `/r/{id}/patch/{sha}` |
-| Compare two revisions | `/r/{id}/compare?base=&head=` |
-| File tree | `/r/{id}/tree/{path}` |
-| File with line anchors | `/r/{id}/blob/{path}` |
-| Raw file | `/r/{id}/raw/{path}` |
-| Visibility | `/r/{id}/visibility` |
+| Repository overview: clone address, branch picker, root tree, readme | `/{owner}/{name}` |
+| Branches and tags | `/{owner}/{name}/refs` |
+| Commit log, filterable by path | `/{owner}/{name}/log` |
+| Commit: message, parents, diff | `/{owner}/{name}/commit/{sha}` |
+| Patch download | `/{owner}/{name}/patch/{sha}` |
+| Compare two revisions | `/{owner}/{name}/compare?base=&head=` |
+| File tree | `/{owner}/{name}/tree/{path}` |
+| File with line anchors | `/{owner}/{name}/blob/{path}` |
+| Raw file | `/{owner}/{name}/raw/{path}` |
+| Visibility | `/{owner}/{name}/visibility` |
+| Delete | `/{owner}/{name}/delete` |
 | Agent tokens | `/tokens` |
 | SSH keys | `/keys` |
 | Agent documentation | `/docs/agents` |
@@ -42,13 +43,23 @@ There is no JavaScript. Every control is a link, a form or a native
 `?ref=` selects a branch or tag on any repository screen. The branch picker
 on the overview sets it, so every screen at every revision has a URL.
 
-Repositories are addressed by identifier. Origo's API does not resolve
-`owner/name`, and the identifier survives a rename. Owner and name are
-shown on every page.
+Repositories are addressed by owner and name, the way git addresses
+them. Origo resolves the pair, so a rename moves the address. The
+identifier address every screen once had, `/r/{id}`, redirects to the
+name for good, and a clone address pasted into the browser lands on the
+repository. The identifier itself is what the API and agent tokens use;
+it is shown on the agent tokens page.
+
+An owner name that is one of this interface's own first path segments is
+shadowed by the interface: `assets` and `r` entirely, and `auth` and
+`docs` for the names `start`, `callback` and `agents`. Origo reserves `r`
+and `v1` itself. An authorizer that hands out owner names should reserve
+the others.
 
 The repositories page lists what you can see, grouped by owner, when the
-installation can list repositories. Otherwise it offers a box to enter an
-identifier and lists the repositories opened in this session.
+installation can list repositories. Otherwise it offers a box to enter
+`owner/name` or an identifier, and lists the repositories opened in this
+session.
 
 ## Run it
 

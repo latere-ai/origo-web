@@ -25,7 +25,8 @@ type repoContext struct {
 	stale string
 }
 
-// openRepo resolves the repository named in the path.
+// openRepo resolves the repository named in the path, by its owner and its
+// slug, through the name mode of Origo's collection route.
 //
 // The read is issued with the reader's token when there is one and with no
 // Authorization header when there is not, and the answer is rendered as it
@@ -34,9 +35,8 @@ type repoContext struct {
 // the repository.
 func (s *Server) openRepo(w http.ResponseWriter, r *http.Request, section string) (repoContext, bool) {
 	rq := s.begin(w, r, section)
-	id := r.PathValue("id")
 
-	repo, meta, err := s.api.Repo(r.Context(), rq.tok, id)
+	repo, meta, err := s.api.Resolve(r.Context(), rq.tok, r.PathValue("owner"), r.PathValue("slug"))
 	if err != nil {
 		s.readFailed(w, r, rq, err)
 		return repoContext{}, false
@@ -50,6 +50,30 @@ func (s *Server) openRepo(w http.ResponseWriter, r *http.Request, section string
 	rq.v.Title = repo.Owner + "/" + repo.Slug
 	s.sessions.Remember(w, r, repo.ID, repo.Owner+"/"+repo.Slug)
 	return repoContext{req: rq, repo: repo, rv: rv, ref: ref, stale: staleSentence(meta)}, true
+}
+
+// handleByID answers the address a repository had before names were
+// served, /r/{id} and every screen under it, with a permanent redirect to
+// the name address, keeping the rest of the path and the query so an old
+// link lands on the same screen. The identifier is resolved with the
+// reader's own token, so an identifier they cannot open is the one refusal
+// and the redirect tells a stranger nothing about what the identifier names.
+func (s *Server) handleByID(w http.ResponseWriter, r *http.Request) {
+	rq := s.begin(w, r, "")
+	repo, _, err := s.api.Repo(r.Context(), rq.tok, r.PathValue("id"))
+	if err != nil {
+		s.readFailed(w, r, rq, err)
+		return
+	}
+	target := nameURL(repo.Owner, repo.Slug)
+	// The escaped path keeps a file name's own escaping as it was sent.
+	if parts := strings.SplitN(r.URL.EscapedPath(), "/", 4); len(parts) == 4 {
+		target += "/" + parts[3]
+	}
+	if r.URL.RawQuery != "" {
+		target += "?" + r.URL.RawQuery
+	}
+	http.Redirect(w, r, target, http.StatusMovedPermanently)
 }
 
 // readFailed turns a refusal from Origo into the one screen it deserves.
@@ -188,6 +212,12 @@ func refAndCloneQuery(rv *repoView) string {
 }
 
 func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
+	// A clone address pasted into a browser is the repository with .git
+	// on the end, and lands on the repository.
+	if slug := r.PathValue("slug"); strings.HasSuffix(slug, ".git") && len(slug) > len(".git") {
+		http.Redirect(w, r, nameURL(r.PathValue("owner"), strings.TrimSuffix(slug, ".git")), http.StatusMovedPermanently)
+		return
+	}
 	rc, ok := s.openRepo(w, r, "overview")
 	if !ok {
 		return

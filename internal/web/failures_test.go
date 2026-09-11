@@ -162,7 +162,7 @@ func TestListRowReadsARepositoryWithNoPush(t *testing.T) {
 	if row.Pushed != "" || row.PushedExact != "" {
 		t.Errorf("a repository that was never pushed reads as %q", row.Pushed)
 	}
-	if row.URL != "/r/1f2e3d" || row.Size == "" {
+	if row.URL != "/infra/origo" || row.Size == "" {
 		t.Errorf("the row reads as %+v", row)
 	}
 }
