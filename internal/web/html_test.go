@@ -42,6 +42,21 @@ func elements(n *html.Node, tag string) []*html.Node {
 	return out
 }
 
+// classed returns every element wearing the given class. It matches the whole
+// class and never a substring of one, so "inert" does not match "inertia".
+func classed(n *html.Node, class string) []*html.Node {
+	var out []*html.Node
+	find(n, func(e *html.Node) {
+		for f := range strings.FieldsSeq(attr(e, "class")) {
+			if f == class {
+				out = append(out, e)
+				return
+			}
+		}
+	})
+	return out
+}
+
 // attr reads one attribute, empty when it is absent.
 func attr(n *html.Node, name string) string {
 	for _, a := range n.Attr {

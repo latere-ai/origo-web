@@ -708,6 +708,12 @@ repository, so they assert against the real read API and not a mock.
 - The tree, log, and file screens page with Origo's cursors and every
   entry appears exactly once over a repository with a 5 001-entry
   directory and 100 commits (proposed: `test/e2e`, `TestPagingIsExact`).
+- The commit log's pager keeps both halves on every page and offers the one
+  address Origo's cursor can produce. The older link carries the cursor and
+  names how many commits it fetches; the newer half is text, because the
+  walk goes one way and the page before this one has no address. The last
+  page offers no link at all (proposed: `internal/web`,
+  `TestTheLogPagerWalksOneWay`).
 - The reference selector lists branches and tags from `refs` and
   switching one is a form submission that lands on the same screen at
   the new revision (proposed: `internal/web`, `TestReferenceSelector`).

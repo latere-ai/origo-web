@@ -37,8 +37,11 @@
       </table>
     </div>
   </div>
-  {{- if .NextURL}}
-  <nav class="pager" aria-label="Pages"><a href="{{.NextURL}}">Older commits</a></nav>
+  {{- if .Commits}}
+  <nav class="pager" aria-label="Commit log pages">
+    <span class="inert">Newer</span>
+    {{if .NextURL}}<a href="{{.NextURL}}">Older {{.PageSize}}</a>{{else}}<span class="inert">Older</span>{{end}}
+  </nav>
   {{- end}}
 </main>
 {{end}}

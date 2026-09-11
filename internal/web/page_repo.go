@@ -371,8 +371,11 @@ type logData struct {
 	Commits []commitView
 	Path    string
 	NextURL string
-	Stale   string
-	Empty   bool
+	// PageSize is how many commits the older link fetches, so the link
+	// names the size of the step it takes.
+	PageSize int
+	Stale    string
+	Empty    bool
 }
 
 // logPageSize is one screen of history. Origo's own default is the same.
@@ -395,11 +398,12 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := logData{
-		View:  rc.v,
-		Repo:  rc.rv,
-		Path:  path,
-		Stale: firstNonEmpty(rc.stale, staleSentence(page.Meta)),
-		Empty: len(page.Items) == 0,
+		View:     rc.v,
+		Repo:     rc.rv,
+		Path:     path,
+		PageSize: logPageSize,
+		Stale:    firstNonEmpty(rc.stale, staleSentence(page.Meta)),
+		Empty:    len(page.Items) == 0,
 	}
 	for _, c := range page.Items {
 		data.Commits = append(data.Commits, newCommitView(c, rc.rv.URL()))
