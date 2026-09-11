@@ -277,15 +277,16 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 		CloneHTTPS: s.cfg.CloneHTTPS(rc.repo.Owner, rc.repo.Slug),
 		Pin:        newPinView(rc.rv, rc.rv.URL()+"/blob/"+escapePath(path), meta.Commit),
 		Stale:      rc.stale,
+
+		// The permalink comes first: it is the address a citation of this
+		// file should carry, and the one the strip above offers to move to.
+		Copy: copyList(
+			copyItem{Label: "Permalink", Value: permalink(s.cfg, rc.rv, path, meta.Commit)},
+			copyItem{Label: "Commit", Value: meta.Commit},
+			copyItem{Label: "Path", Value: path},
+			copyItem{Label: "Clone address", Value: s.cfg.CloneHTTPS(rc.repo.Owner, rc.repo.Slug)},
+		),
 	}
-	// The permalink comes first: it is the address a citation of this file
-	// should carry, and the one the page above offers to move to.
-	data.Copy = copyList(
-		copyItem{Label: "Permalink", Value: permalink(s.cfg, rc.rv, path, meta.Commit)},
-		copyItem{Label: "Commit", Value: meta.Commit},
-		copyItem{Label: "Path", Value: path},
-		copyItem{Label: "Clone address", Value: s.cfg.CloneHTTPS(rc.repo.Owner, rc.repo.Slug)},
-	)
 	rc.v.Title = entry.Name()
 	data.View = rc.v
 

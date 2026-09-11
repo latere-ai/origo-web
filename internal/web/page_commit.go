@@ -31,9 +31,9 @@ type commitData struct {
 	ExpandURL   string
 	CollapseURL string
 	// Copy is what a reader is likely to quote from this page.
-	Copy []copyItem
-	Truncated   bool
-	Stale       string
+	Copy      []copyItem
+	Truncated bool
+	Stale     string
 }
 
 type parentLink struct {

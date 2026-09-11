@@ -62,15 +62,15 @@ func TestAFileSaysWhetherItsAddressMoves(t *testing.T) {
 // an abbreviation, which also resolves to itself.
 func TestAnObjectIDIsToldFromAName(t *testing.T) {
 	for ref, want := range map[string]bool{
-		"9f3c1ab":  true,
+		"9f3c1ab": true,
 		"9f3c1abf20d4e7c8b5a1930fe6d2c4471be08a3d": true,
-		"main":     false,
-		"v1.4.2":   false,
-		"deadbee":  true,
-		"deadbe":   false,
-		"release":  false,
-		"9F3C1AB":  false,
-		"feature1": false,
+		"main":                  false,
+		"v1.4.2":                false,
+		"deadbee":               true,
+		"deadbe":                false,
+		"release":               false,
+		"9F3C1AB":               false,
+		"feature1":              false,
 		strings.Repeat("a", 65): false,
 	} {
 		if got := isObjectID(ref); got != want {
