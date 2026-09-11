@@ -5,8 +5,8 @@ release. A tag without one is refused at the pre-push and fails the release
 workflow. Write under `Unreleased` as work lands; `lateregate release vX.Y.Z`
 turns that into the tag's section, commits, tags and pushes.
 
-A section says what changed for whoever uses the release, not what was
-committed: the commit log already holds that.
+A section says what changed for whoever uses the release. The commit log
+already holds what was committed.
 
 ## Unreleased
 
@@ -17,28 +17,29 @@ committed: the commit log already holds that.
   not claimed a name yet, the page says so and links you to your account.
   Nothing is imported and no first commit is made. The button appears only
   on an installation that has somewhere to record who owns a repository.
+- The wording on the sign-in page, the repositories page and the agent
+  documentation is shorter. Each line says what to do and stops.
 
 ## v0.5.1 - 2026-09-11
 
-- The signed-out page is one column instead of three cards in a row. The
-  way in comes first and is the only filled button on the page; the clone
-  address and what this software is sit under it, parted by a rule, in
-  the order they matter. The page no longer ends a third of the way down
-  an empty screen.
-- The clone address no longer says cloning needs "the same account" to
-  someone who has not got one yet. It says git asks for the same sign-in
-  this page does.
+- The sign-in page is one column instead of three cards in a row. The
+  sign-in button comes first. The clone address and the link to the
+  project sit below it, separated by rules. The page fills the window
+  instead of ending a third of the way down.
+- The clone address said cloning needs "the same account", which assumed
+  an account you may not have yet. It now says cloning uses the same
+  sign-in.
 
 ## v0.5.0 - 2026-09-11
 
-- The interface has a new look. The page is a warm paper tone instead of
-  near-white, panels and tables sit on it with a rule you can actually
-  see, and one rust accent carries links, focus and the button you are
-  meant to press. Text is set in IBM Plex Sans, and every hash, path,
-  ref, filename and line of code in IBM Plex Mono, so monospace now tells
-  you a string is the machine's. Both themes are measured: the grey that
-  was carrying line numbers, breadcrumbs and column headers was below the
-  readable floor in the light theme and is not any more.
+- The interface has a new look. The page is a warm paper tone. Panels
+  and tables sit on it inside a visible rule. One rust accent marks
+  links, focus and the main button on a screen.
+- Text is set in IBM Plex Sans. Hashes, paths, refs, filenames and code
+  are set in IBM Plex Mono.
+- Grey text is darker in the light theme. Line numbers, breadcrumbs and
+  column headers were below the readable contrast floor and now clear
+  it.
 
 ## v0.4.2 - 2026-09-11
 

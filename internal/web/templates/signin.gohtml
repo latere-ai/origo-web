@@ -4,22 +4,22 @@
   <div class="door">
     <div class="stack">
       <h1 class="heading-page">Sign in to read git repositories</h1>
-      <p class="lead">Branches and tags, the commit log, what a commit changed, and any file.</p>
+      <p class="lead">Read branches, tags, commits, diffs and files.</p>
     </div>
     {{- if .Refused}}
-    <p class="prose"><strong>You are signed out.</strong> The installation did not accept the credential this session held. Sign in again to carry on.</p>
+    <p class="prose"><strong>You are signed out.</strong> The server did not accept the credential this session held. Sign in again.</p>
     {{- end}}
     <a class="button button-primary button-block" href="/auth/start?return_to={{.ReturnTo}}">{{.ButtonLabel}}</a>
-    <p class="hint">This hands you to your identity provider. There is no password and no sign-up: access follows the account your organisation already gave you, and that account decides what you may read.</p>
+    <p class="hint">Sign in with your organisation account. There is no separate password and no sign-up.</p>
     <div class="door-part stack">
       <h2 class="label">Clone address</h2>
       <p class="clone-shape">{{.CloneHTTPS}}{{if .CloneSSH}}
 {{.CloneSSH}}{{end}}</p>
-      <p class="hint">Git asks for the same sign-in this page does. Replace the two names with the repository you want.</p>
+      <p class="hint">Cloning uses the same sign-in. Replace the two names with your repository.</p>
     </div>
     <div class="door-part stack">
       <h2 class="label">Open source</h2>
-      <p class="hint">This is {{if .Hosted}}a hosted installation of {{end}}{{.View.ProjectName}}, an open-source git server. Anyone can read the code, and anyone can run their own.</p>
+      <p class="hint">This is {{if .Hosted}}a hosted installation of {{end}}{{.View.ProjectName}}, an open-source git server. You can read the code and run your own.</p>
       <p><a href="{{.View.ProjectURL}}">The {{.View.ProjectName}} project</a></p>
     </div>
   </div>

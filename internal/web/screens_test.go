@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -838,7 +839,7 @@ func TestAPageWithNothingOnItSaysWhichAccountItIsEmptyFor(t *testing.T) {
 	// The installation that serves no directory at all, which is every
 	// installation today.
 	body := textOutside(elements(doc(t, h.get("/", c).Body.String()), "body")[0], "readme")
-	if !strings.Contains(body, "signed in as aki@example.com") {
+	if !strings.Contains(body, "Signed in as aki@example.com") {
 		t.Errorf("the screen without a directory does not say whose it is: %q", body)
 	}
 
@@ -847,12 +848,12 @@ func TestAPageWithNothingOnItSaysWhichAccountItIsEmptyFor(t *testing.T) {
 		writeJSON(w, map[string]any{"repos": []origo.Repo{}, "next_cursor": ""})
 	})
 	empty := textOutside(elements(doc(t, h.get("/", c).Body.String()), "body")[0], "readme")
-	if !strings.Contains(empty, "signed in as aki@example.com") {
+	if !strings.Contains(empty, "Signed in as aki@example.com") {
 		t.Errorf("the empty directory does not say whose it is: %q", empty)
 	}
 
 	// A signed-out visitor is told nothing about an account.
-	if got := h.get("/sign-in").Body.String(); strings.Contains(got, "signed in as") {
+	if got := h.get("/sign-in").Body.String(); strings.Contains(strings.ToLower(got), "signed in as") {
 		t.Error("the signed-out page claims somebody is signed in")
 	}
 }
@@ -872,6 +873,63 @@ func accountLabels(page *html.Node) []*html.Node {
 // rendered is the page's text, the readme included, which is where a value
 // that must appear nowhere is looked for.
 func rendered(page *html.Node) string { return text(elements(page, "body")[0]) }
+
+// helpRoles are the roles that explain something to a reader in passing: the
+// sentence a screen opens with, the line under a field, the line on a screen
+// with nothing on it, and what one choice means. They are the text that goes
+// mannered first, because each one is short enough to be written for effect.
+var helpRoles = []string{"lead", "hint", "empty", "option-note"}
+
+// TestAHelpLineIsShort holds the interface's help text to a ceiling.
+//
+// Style is not a thing a Go test can read, and this does not try to. It
+// measures the two things that go with prose written to sound considered:
+// length, and sentences that keep going. The line this replaced ran to 182
+// characters and a 30-word sentence to say "sign in with your organisation
+// account, there is no separate password".
+//
+// The ceilings are above what every line on every screen runs to today, so
+// this fails when a line grows rather than the moment anyone edits one.
+func TestAHelpLineIsShort(t *testing.T) {
+	const (
+		maxChars = 160
+		maxWords = 18
+	)
+	h := newHarness(t)
+	for name, rec := range h.everyPage() {
+		page := doc(t, rec.Body.String())
+		find(page, func(e *html.Node) {
+			classes := strings.Fields(attr(e, "class"))
+			if !slices.ContainsFunc(helpRoles, func(r string) bool { return slices.Contains(classes, r) }) {
+				return
+			}
+			line := strings.Join(strings.Fields(text(e)), " ")
+			if len(line) > maxChars {
+				t.Errorf("%s: a help line is %d characters, want %d or fewer: %q", name, len(line), maxChars, line)
+			}
+			for sentence := range strings.SplitSeq(line, ". ") {
+				if n := len(strings.Fields(sentence)); n > maxWords {
+					t.Errorf("%s: a sentence in a help line is %d words, want %d or fewer: %q", name, n, maxWords, sentence)
+				}
+			}
+		})
+	}
+}
+
+// TestNoScreenArguesWithItself bans the one mannered construction that is
+// mechanically visible: "X, not Y". It is a rhetorical shape rather than an
+// instruction, and a reader who wants to know what to do has to work out
+// which half is the instruction. Two plain sentences say the same thing.
+func TestNoScreenArguesWithItself(t *testing.T) {
+	h := newHarness(t)
+	for name, rec := range h.everyPage() {
+		body := text(elements(doc(t, rec.Body.String()), "body")[0])
+		if i := strings.Index(body, ", not "); i >= 0 {
+			t.Errorf("%s: a sentence is built as \"X, not Y\" rather than saying what to do: %q",
+				name, body[max(0, i-60):min(len(body), i+60)])
+		}
+	}
+}
 
 // TestNoScreenCarriesAnEmDash asserts the punctuation rule of every text
 // surface this repository owns: no em dash, anywhere a reader can meet one.

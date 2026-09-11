@@ -712,6 +712,21 @@ repository, so they assert against the real read API and not a mock.
   pads its own content, so a heading and the first line below it start
   together (proposed: `internal/web`,
   `TestOneLeftEdgeHoldsOnEveryScreen`).
+- A help line is short: the sentence a screen opens with, the line under
+  a field, the line on an empty screen and the note under a choice are
+  each 160 characters or fewer, with no sentence over 18 words. No text a
+  reader meets is built as "X, not Y", which is a rhetorical shape and
+  not an instruction (proposed: `internal/web`, `TestAHelpLineIsShort`,
+  `TestNoScreenArguesWithItself`).
+- The measure stays a reading measure, and this is a deliberate departure
+  from the interface specification, recorded so it is not read as an
+  oversight. The specification's `--measure: 1020px` is about 150
+  characters a line at its own body size, which is roughly twice what
+  stays comfortable to read, so running text is held to 78ch as before.
+  The specification's wider figure governs what is not running text: a
+  table, a tree, a diff, a file and a code sample take the shell and
+  scroll inside their own box (proposed: `internal/web`,
+  `TestTheBodyKeepsTheMastheadsEdges`).
 - No text a reader meets carries an em dash, over every rendered screen
   and over the three surfaces the sentences come from: the templates,
   this package's Go strings, and the release notes (proposed:

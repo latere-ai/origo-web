@@ -15,19 +15,19 @@
   </nav>
   <div class="stack">
     <h1 class="heading-page">Driving this git server from an agent</h1>
-    <p class="lead">There is no SDK. An agent talks to this server with git and HTTP, using a token you mint by hand. Everything it needs fits on this page.</p>
+    <p class="lead">There is no SDK. An agent uses git and HTTP with a token you mint here. This page covers everything it needs.</p>
 
     <section id="token" class="stack">
       <h2 class="heading-section">1 · Get a token</h2>
-      <p>Go to <a href="/tokens">agent tokens</a>, name the one repository the agent works in, choose <strong>read</strong> unless it must push, and take the shortest lifetime that covers the job. The token is shown once and is stored nowhere, so copy it there and then.</p>
-      <p>Put it in the agent's environment as <code>ORIGO_TOKEN</code>. Never in a repository, never in a prompt.</p>
-      <p>Minting a token needs administrative access to that repository, and it is something a person does on a screen. An agent cannot mint one: its own token carries no authority to, and there is no API that would let it.</p>
-      <p>A token cannot be withdrawn. Nothing is written when one is minted, so there is nothing to delete and no list to show you. The lifetime is the whole of the protection, and the longest this server will sign is {{.MaxTTL}}.</p>
+      <p>Go to <a href="/tokens">agent tokens</a>, name the one repository the agent works in, choose <strong>read</strong> unless it must push, and pick the shortest lifetime that covers the job. The token is shown once and stored nowhere. Copy it straight away.</p>
+      <p>Put it in the agent's environment as <code>ORIGO_TOKEN</code>. Do not put it in a repository or a prompt.</p>
+      <p>Minting a token needs administrative access to the repository, and a person does it on this site. An agent cannot mint a token. There is no API for it.</p>
+      <p>A token cannot be withdrawn. Minting writes nothing, so there is nothing to delete and no list to show. The lifetime is the only limit. The longest this server signs is {{.MaxTTL}}.</p>
     </section>
 
     <section id="base" class="stack">
       <h2 class="heading-section">2 · Address and credential</h2>
-      <p>Two addresses, and they are not the same one. <strong>These screens are for a browser</strong> and need a browser sign-in; a token opens none of them. <strong>The git server is what an agent talks to</strong>, and it is where the token works.</p>
+      <p>There are two addresses. <strong>These screens need a browser sign-in</strong> and do not accept a token. <strong>The git server accepts the token</strong>.</p>
       <pre class="scroller sample"># the git server
 {{.APIBase}}
 
@@ -37,7 +37,7 @@ git clone https://x-access-token:$ORIGO_TOKEN@{{.CloneHost}}/&lt;owner&gt;/&lt;n
 # read
 curl -H "Authorization: Bearer $ORIGO_TOKEN" \
   {{.RepoRead}}</pre>
-      <p>Every API address starts with <code>/v1/repos/</code> and names a repository by its <strong>identifier</strong>, not by owner and name. The identifier is what survives a rename; it is what these screens put in their own addresses, and it is what your administrator hands you. Owner and name work for git itself, and nowhere else.</p>
+      <p>Every API address starts with <code>/v1/repos/</code> and names a repository by its <strong>identifier</strong>. Owner and name do not work here. The identifier survives a rename. It appears in the addresses of these screens, and your administrator gives it to you. Owner and name work for git itself.</p>
       <p>Both credential forms are accepted: <code>Authorization: Bearer &lt;token&gt;</code>, and ordinary HTTP basic auth with the token as the password and any username, which is the form git itself sends.</p>
     </section>
 
@@ -66,22 +66,22 @@ curl -H "Authorization: Bearer $ORIGO_TOKEN" \
           </tbody>
         </table>
       </div>
-      <p>A file and a directory are addressed by <strong>object id</strong>, not by path: resolve a path through the directory listing first. Every answer names the commit it resolved to in <code>Origo-Commit</code>, so an agent quoting a file can always produce an exact reference rather than a branch name. An answer the server had to cut says so in <code>Origo-Truncated</code>, and it is the only truncation an agent will meet: the line budget that collapses a large file on the commit screens here is this interface's, for a reader, and it never touches what the API sends.</p>
-      <p>Reads are questions about one repository at a time. There is no way to list the repositories you may see, no search across files, and no blame.</p>
+      <p>A file and a directory are addressed by <strong>object id</strong>. Resolve a path through the directory listing first. Every answer names the commit it resolved to in <code>Origo-Commit</code>, so an agent quoting a file can give an exact reference instead of a branch name. An answer the server had to cut says so in <code>Origo-Truncated</code>, This is the only truncation an agent meets. The line budget that collapses a large file on these screens applies to the browser view only.</p>
+      <p>Each read covers one repository. There is no repository listing, no file search and no blame.</p>
     </section>
 
     <section id="limits" class="stack">
       <h2 class="heading-section">4 · Rate limits</h2>
-      <p>One figure, in requests a minute, for each person or agent, counted per server. It is 600 by default, and an installation can set a different figure for a particular caller. There are no tiers: a token is held to the figure of whoever minted it.</p>
-      <p>Every answer carries the figure in force, so an agent can pace itself rather than discover the limit by hitting it:</p>
+      <p>One figure, in requests a minute, for each person or agent, counted per server. The default is 600, and an installation can set a different figure for one caller. There are no tiers. A token is held to the figure of whoever minted it.</p>
+      <p>Every answer carries the figure in force, so an agent can pace itself:</p>
       <pre class="scroller sample">RateLimit-Limit: 600</pre>
-      <p>Past it the answer is <code>429</code> with <code>Retry-After</code> in whole seconds. It is a real number: retrying sooner is refused again and buys nothing. Waiting exactly that long is the whole of the correct behaviour, with no backoff on top.</p>
-      <p>Two other refusals an agent can meet under load, both also <code>429</code>: the server bounds how much git work it runs at once, and a request waits a few seconds for a slot before it is turned away. Retry that one too.</p>
+      <p>Past it the answer is <code>429</code> with <code>Retry-After</code> in whole seconds. Retrying sooner is refused again. Wait exactly that long. Do not add backoff.</p>
+      <p>Under load the server also answers <code>429</code> when it is running as much git work as it allows at once. A request waits a few seconds for a slot first. Retry that one too.</p>
     </section>
 
     <section id="errors" class="stack">
       <h2 class="heading-section">5 · Errors</h2>
-      <p>Every refusal is the same object. <code>code</code> is stable and safe to branch on; <code>message</code> is one sentence for a person; <code>details</code> varies by code and says which reference, which limit, or which reason.</p>
+      <p>Every refusal is the same object. Branch on <code>code</code>, which is stable. <code>message</code> is one sentence for a person. <code>details</code> varies by code and names the reference, the limit or the reason.</p>
       <pre class="scroller sample">{
   "error": {
     "code": "forbidden",
@@ -116,16 +116,16 @@ curl -H "Authorization: Bearer $ORIGO_TOKEN" \
           </tbody>
         </table>
       </div>
-      <p>Most of these are terminal, and that is the point. An agent that retries an expired token learns nothing and spends the budget its replacement will need. No field in the document says whether waiting helps; the table above is the rule, and the refusals worth waiting on carry <code>Retry-After</code>.</p>
-      <p>Every answer, refusal or not, carries <code>Origo-Contract</code>. Its value is the version of everything on this page; it changes only when something here stops being true.</p>
+      <p>Most of these are terminal. Retrying an expired token spends the rate budget its replacement needs. No field says whether waiting helps. Use the table above. The refusals worth waiting on carry <code>Retry-After</code>.</p>
+      <p>Every answer, refusal or not, carries <code>Origo-Contract</code>. Its value is the version of everything on this page. It changes when something here stops being true.</p>
     </section>
 
     <section id="mcp" class="stack">
       <h2 class="heading-section">6 · A tool server for agents</h2>
-      <p><strong>Planned, not built.</strong> There is nothing to install and nothing to configure yet. This section says what is intended so you can tell it apart from what works today, which is everything above it.</p>
-      <p>The intention is a small separate program you run beside an agent, which speaks the Model Context Protocol over standard input and output and turns the reads above into tools an agent can call by name. It would take a token of exactly the kind you mint on this site, hold to the same rate limit, and return the same refusals, so it can do nothing a plain HTTP agent cannot. It is a shape, not a capability.</p>
-      <p>One thing about it is settled: there is no tool for minting a token, and there will not be one. Creating a credential stays a decision a person makes.</p>
-      <p>Until it exists, an agent uses git and the reads in section 3, which are the same thing without the wrapper.</p>
+      <p><strong>This is planned. It is not built.</strong> There is nothing to install and nothing to configure yet. Everything above this section works today.</p>
+      <p>The plan is a small separate program you run beside an agent. It speaks the Model Context Protocol over standard input and output, and turns the reads above into tools an agent calls by name. It would take a token of the kind you mint on this site, hold to the same rate limit, and return the same refusals. It would do nothing a plain HTTP agent cannot.</p>
+      <p>It will have no tool for minting a token. A person creates every credential.</p>
+      <p>Until it exists, an agent uses git and the reads in section 3.</p>
     </section>
   </div>
 

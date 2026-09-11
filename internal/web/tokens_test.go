@@ -404,7 +404,7 @@ func TestTheDocumentationSaysWhatIsBuiltAndWhatIsNot(t *testing.T) {
 	}
 	body := rec.Body.String()
 
-	if !strings.Contains(body, "Planned, not built") {
+	if !strings.Contains(body, "This is planned. It is not built.") {
 		t.Error("the page does not mark the tool server as unbuilt")
 	}
 	for _, wrong := range []string{

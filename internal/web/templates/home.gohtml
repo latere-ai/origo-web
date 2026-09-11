@@ -39,19 +39,19 @@
     </div>
     {{- if .Next}}<nav class="pager" aria-label="Pages"><span class="inert">Newer</span><a href="/?cursor={{.Next}}">More repositories</a></nav>{{end}}
     {{- else}}
-    <div class="panel"><p class="empty">There is nothing here you can read yet.{{if .View.Who}} You are signed in as {{.View.Who}}, and this list is what that account may read.{{end}}</p></div>
+    <div class="panel"><p class="empty">No repositories yet.{{if .View.Who}} Signed in as {{.View.Who}}.{{end}}</p></div>
     {{- end}}
   {{- else}}
   <div class="panel stack">
     <h2 class="heading-section">This installation does not list repositories</h2>
-    <p class="prose">The git server answers questions about one repository at a time and cannot enumerate the ones you may see. Open a repository by its identifier, and the ones you open are kept below for this session.</p>
+    <p class="prose">This server cannot list repositories. Open one by its identifier. Repositories you open appear below for this session.</p>
     {{- if .View.Who}}
-    <p class="hint">You are signed in as {{.View.Who}}. What you can open is decided by that account.</p>
+    <p class="hint">Signed in as {{.View.Who}}.</p>
     {{- end}}
     <form class="inline-form" action="/open" method="get">
       <div class="field">
         <label for="id">Repository identifier</label>
-        <input id="id" name="id" class="mono" size="40" placeholder="the identifier your administrator gave you" required>
+        <input id="id" name="id" class="mono" size="40" placeholder="identifier from your administrator" required>
       </div>
       <button type="submit">Open</button>
     </form>

@@ -170,7 +170,7 @@ func TestTheHomeScreenSaysWhenADirectoryIsEmpty(t *testing.T) {
 	h.server = New(Options{
 		Config: h.cfg, Sessions: mustSessions(t, h.cfg), API: origo.New(mustURL(t, empty.URL), empty.Client()),
 	})
-	if !strings.Contains(h.get("/", h.signedIn("alice")).Body.String(), "nothing here you can read yet") {
+	if !strings.Contains(h.get("/", h.signedIn("alice")).Body.String(), "No repositories yet") {
 		t.Error("an empty directory does not say so")
 	}
 }
@@ -386,7 +386,7 @@ func TestTheSignedOutPageCarriesTheOpenSourceStory(t *testing.T) {
 	for _, want := range []string{
 		"hosted installation of Origo", // which installation this is
 		"open-source git server",       // what the software is
-		"Anyone can read the code, and anyone can run their own.",
+		"You can read the code and run your own.",
 		"Continue with Latere", // the way in
 		"Clone address",        // and the other way in
 	} {
