@@ -3,51 +3,63 @@
  *
  * One stylesheet, served from this binary, fetched from no other host.
  *
- * The tokens are the interface specification's: a warm paper ground, warm
- * near-black ink, two hairline weights, and one rust accent for links, focus
- * and the primary control. Emphasis is weight, surface, rule and that one
- * accent, never a second hue. The diff is the exception, where the two tints
- * below sit under text that keeps its literal + or - sign, so the meaning
- * survives greyscale and a copy into a terminal.
+ * The tokens are Latere Design System v2, transcribed from
+ * latere-ai/frontend/src/styles/tokens.css: a neutral ground, a neutral
+ * surface, a three-step neutral ink ramp, two hairline weights, and the
+ * radii ladder. v2's rule is that the accent is the ink, and a product
+ * colour survives only as a wordmark and never as a page theme.
  *
- * Every pair is measured. Ink and ink-2 hold 7:1 or better on both the page
- * and a panel in both themes; ink-3 holds 4.5:1 on a panel and is the tone
- * for column headers and meta at 11px and up; the accent holds 4.5:1 on
- * both. TestBothThemesMeetTheirContrast computes all of it from these values.
+ * This product takes one accent of its own, the way cella, industria, lux
+ * and topos each do: it redeclares --accent over the neutral base and
+ * changes nothing else. It is deep iris, #4a3b7a, and it appears in three
+ * places only, which are the three its siblings use theirs in: a link, a
+ * focus ring, and the one filled control on a screen. No panel, no heading
+ * and no background takes it.
  *
- * Themes follow prefers-color-scheme alone. There is no switch and no
- * cookie, so there is no script and nothing to flash. */
+ * Two things about the ink ramp are decisions and not transcription.
+ *
+ * The muted tone marks, it does not inform. v2's --text-muted is #a0a0a0,
+ * which is 2.6:1 on a surface, so it cannot carry a line number, a column
+ * header or a timestamp: those are read. It carries the separator in a
+ * path and the inert half of a pager, and nothing a reader has to read.
+ * Everything that informs takes the secondary tone at 5.7:1.
+ *
+ * And the theme follows prefers-color-scheme alone rather than an attribute
+ * on the root element, because an attribute needs a script to set it and
+ * this interface ships none.
+ *
+ * Every pair is measured by TestBothThemesMeetTheirContrast, from these
+ * values, in both themes. */
 
 :root {
   color-scheme: light dark;
 
-  /* Surfaces. The page ground is also the raised tone inside a panel: a
-   * table header, a notice and a code sample are the ground showing through
-   * the surface laid over it, so the interface has two tones and not three. */
-  --bg: #f7f5f1;
-  --surface: #fffefb;
+  /* Surfaces */
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --raised: #f5f5f5;
+  --code: rgba(0, 0, 0, 0.05);
 
   /* Ink ramp */
-  --ink: #1a1917;
-  --ink-2: #55534e;
-  --ink-3: #75726b;
+  --ink: #0a0a0a;
+  --ink-2: #666666;
+  --ink-3: #a0a0a0;
 
-  /* Rules. The hairline separates rows; the frame draws a panel, a table
-   * header and a divider. */
-  --line: #e0dcd3;
-  --line-2: #cec9bd;
+  /* Rules */
+  --line: rgba(0, 0, 0, 0.08);
+  --line-2: rgba(0, 0, 0, 0.12);
 
-  /* The one accent: links, focus and the primary control. */
-  --accent: #95461a;
-  --accent-hover: #7a3813;
-  --accent-ink: #fffefb;
-  --accent-subtle: rgba(149, 70, 26, 0.06);
+  /* This product's one accent: a link, a focus ring, a filled control. */
+  --accent: #4a3b7a;
+  --accent-hover: #3a2e60;
+  --accent-ink: #ffffff;
+  --accent-subtle: rgba(74, 59, 122, 0.06);
 
   /* Diff tints: decoration under a literal sign, never the only signal. */
-  --add: #1c6b41;
-  --add-bg: #e2f0e4;
-  --del: #a2372c;
-  --del-bg: #fbe7e4;
+  --add: #166534;
+  --add-bg: rgba(22, 101, 52, 0.10);
+  --del: #991b1b;
+  --del-bg: rgba(153, 27, 27, 0.09);
 
   /* Type. IBM Plex Sans for chrome and prose, IBM Plex Mono for every hash,
    * path, ref, filename, size and line of code. The rule is absolute, so
@@ -74,8 +86,13 @@
   --s-8: 48px;
   --s-9: 64px;
 
-  /* One radius for everything that has one. */
-  --radius: 3px;
+  /* v2's radii ladder. */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
 
   /* A table row is 28px, so about thirty of them fit a laptop screen. */
   --row: 28px;
@@ -90,25 +107,27 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121110;
-    --surface: #191817;
+    --bg: #09090b;
+    --surface: #111113;
+    --raised: #18181b;
+    --code: rgba(255, 255, 255, 0.06);
 
-    --ink: #eae7e1;
-    --ink-2: #a8a49c;
-    --ink-3: #87837a;
+    --ink: #fafafa;
+    --ink-2: #a1a1aa;
+    --ink-3: #52525b;
 
-    --line: #2b2926;
-    --line-2: #3d3a35;
+    --line: rgba(255, 255, 255, 0.06);
+    --line-2: rgba(255, 255, 255, 0.10);
 
-    --accent: #e0904f;
-    --accent-hover: #efa86d;
-    --accent-ink: #121110;
-    --accent-subtle: rgba(224, 144, 79, 0.08);
+    --accent: #a897e0;
+    --accent-hover: #c3b6ec;
+    --accent-ink: #09090b;
+    --accent-subtle: rgba(168, 151, 224, 0.08);
 
-    --add: #7cc79b;
-    --add-bg: #16271d;
-    --del: #e59289;
-    --del-bg: #2b1a18;
+    --add: #86efac;
+    --add-bg: rgba(134, 239, 172, 0.10);
+    --del: #fca5a5;
+    --del-bg: rgba(252, 165, 165, 0.09);
 
     --focus-outline: 2px solid var(--accent);
   }
@@ -192,7 +211,7 @@ textarea:focus-visible,
 summary:focus-visible {
   outline: var(--focus-outline);
   outline-offset: 2px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-xs);
 }
 
 code, pre, .mono, kbd, samp { font-family: var(--font-mono); font-size: var(--t-12); }
@@ -292,14 +311,14 @@ p { margin: 0; }
 .masthead nav .who {
   min-width: 0;
   overflow-wrap: anywhere;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: var(--t-12);
 }
 
 .crumbs {
   font-family: var(--font-mono);
   font-size: var(--t-12);
-  color: var(--ink-3);
+  color: var(--ink-2);
   overflow-wrap: anywhere;
 }
 .crumbs a { color: var(--ink-2); text-decoration: none; }
@@ -321,10 +340,13 @@ p { margin: 0; }
 
 /* ---- panels ---- */
 
+/* A panel takes the stronger of the two hairlines. The ground and the
+ * surface are a twentieth of a stop apart in this palette, so the frame is
+ * what a reader sees, and the fainter rule is for the rows inside it. */
 .panel {
   background: var(--surface);
   border: 1px solid var(--line-2);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   padding: var(--s-6);
   display: flex;
   flex-direction: column;
@@ -339,7 +361,7 @@ p { margin: 0; }
   flex-wrap: wrap;
   padding: var(--s-4) var(--s-5);
   border-bottom: 1px solid var(--line);
-  background: var(--bg);
+  background: var(--raised);
 }
 .prose, .lead, .notice, .doc p { max-width: var(--measure); }
 .stack { display: flex; flex-direction: column; gap: var(--s-4); }
@@ -349,11 +371,7 @@ p { margin: 0; }
 .muted { color: var(--ink-3); }
 /* The uppercase name of a small block: a group of links, a clone address, a
  * step. It is a heading role as well as a span, because a block that has a
- * name usually deserves a heading element too.
- *
- * Its ink is the secondary one and not the meta one, because this is the one
- * meta role that sits on the page ground rather than on a panel, and the meta
- * ink holds its 4.5:1 floor on a panel only. */
+ * name usually deserves a heading element too. */
 .label, caption {
   font-size: var(--t-11);
   letter-spacing: 0.08em;
@@ -369,8 +387,8 @@ button, .button {
   font-weight: 500;
   padding: var(--s-3) var(--s-5);
   border: 1px solid var(--line-2);
-  border-radius: var(--radius);
-  background: var(--bg);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
   color: var(--ink);
   cursor: pointer;
   text-decoration: none;
@@ -393,7 +411,7 @@ input, textarea {
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--line-2);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   padding: var(--s-3) var(--s-4);
   max-width: 100%;
 }
@@ -443,7 +461,7 @@ label, legend { font-size: var(--t-12); color: var(--ink-2); }
   overflow-y: auto;
   padding: var(--s-3) var(--s-4);
   border: 1px solid var(--line-2);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   background: var(--surface);
 }
 .choice { display: grid; grid-template-columns: auto 1fr; gap: var(--s-3); align-items: start; }
@@ -466,7 +484,7 @@ thead th {
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--ink-2);
   white-space: nowrap;
 }
 tbody th { font-weight: 500; }
@@ -491,8 +509,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 
 .notice {
   border: 1px solid var(--line-2);
-  border-radius: var(--radius);
-  background: var(--bg);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
   padding: var(--s-4) var(--s-5);
   font-size: var(--t-12);
   color: var(--ink-2);
@@ -505,7 +523,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 
 /* ---- diff ---- */
 
-.diff-file { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.diff-file { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); overflow: hidden; }
 .diff-file + .diff-file { margin-top: var(--s-4); }
 .diff-file > summary, .diff-file > .diff-head {
   display: flex;
@@ -513,7 +531,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
   align-items: center;
   flex-wrap: wrap;
   padding: var(--s-3) var(--s-5);
-  background: var(--bg);
+  background: var(--raised);
   cursor: pointer;
   list-style: none;
 }
@@ -531,10 +549,10 @@ table.diff td { border: none; padding: 0 var(--s-3); white-space: pre; }
 table.diff td.gutter {
   width: 1%;
   text-align: right;
-  color: var(--ink-3);
+  color: var(--ink-2);
   user-select: none;
   -webkit-user-select: none;
-  background: var(--bg);
+  background: var(--raised);
   font-size: var(--t-11);
 }
 table.diff td.sign { width: 1%; user-select: none; -webkit-user-select: none; color: var(--ink-2); }
@@ -554,12 +572,12 @@ table.source td.gutter {
   text-align: right;
   user-select: none;
   -webkit-user-select: none;
-  background: var(--bg);
-  color: var(--ink-3);
+  background: var(--raised);
+  color: var(--ink-2);
   font-size: var(--t-11);
 }
 table.source td.gutter a { color: inherit; text-decoration: none; }
-table.source tr:target td { background: var(--bg); }
+table.source tr:target td { background: var(--raised); }
 table.source tr:target td.gutter { color: var(--ink); font-weight: 600; }
 
 /* ---- readme ---- */
@@ -571,11 +589,11 @@ table.source tr:target td.gutter { color: var(--ink); font-weight: 600; }
 .readme h2 { font-size: var(--t-19); }
 .readme h3 { font-size: var(--t-15); }
 .readme p, .readme ul, .readme ol, .readme blockquote { margin: 0 0 var(--s-4); }
-.readme code { background: var(--bg); padding: 1px var(--s-1); border-radius: var(--radius); }
+.readme code { background: var(--code); padding: 1px var(--s-1); border-radius: var(--radius-xs); }
 .readme pre {
-  background: var(--bg);
+  background: var(--code);
   padding: var(--s-4);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   overflow-x: auto;
 }
 .readme pre code { background: none; padding: 0; }
@@ -583,9 +601,9 @@ table.source tr:target td.gutter { color: var(--ink); font-weight: 600; }
 .readme table { margin-bottom: var(--s-4); }
 .readme blockquote {
   padding: var(--s-3) var(--s-4);
-  background: var(--bg);
+  background: var(--raised);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   color: var(--ink-2);
 }
 
@@ -593,7 +611,7 @@ table.source tr:target td.gutter { color: var(--ink); font-weight: 600; }
 
 .commit-message { font-family: var(--font-mono); font-size: var(--t-12); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink-2); }
 dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: var(--s-2) var(--s-5); margin: 0; font-size: var(--t-12); }
-dl.facts dt { color: var(--ink-3); }
+dl.facts dt { color: var(--ink-2); }
 dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere; }
 .diffstat { display: flex; gap: var(--s-4); align-items: center; flex-wrap: wrap; font-size: var(--t-12); }
 
@@ -639,8 +657,8 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
   line-height: 1.7;
   color: var(--ink);
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
   padding: var(--s-3) var(--s-4);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -694,7 +712,7 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
 .picker {
   min-width: 14rem;
   border: 1px solid var(--line-2);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   background: var(--surface);
 }
 .picker > summary {
@@ -717,11 +735,11 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
   flex: 1 1 22rem;
   min-width: 0;
   border: 1px solid var(--line-2);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--surface);
 }
-.clone-tabs { display: flex; background: var(--bg); border-bottom: 1px solid var(--line); }
+.clone-tabs { display: flex; background: var(--raised); border-bottom: 1px solid var(--line); }
 .clone-tabs a {
   padding: var(--s-2) var(--s-4);
   font-size: var(--t-12);
@@ -791,7 +809,7 @@ fieldset.field legend { padding: 0; }
   background: var(--ink);
   color: var(--bg);
   padding: var(--s-6);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
 }
 .secret p { margin: 0; font-size: var(--t-12); line-height: 1.6; }
 .secret .meta, .secret label { color: var(--bg); }
@@ -803,14 +821,14 @@ fieldset.field legend { padding: 0; }
 }
 
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: var(--s-2) var(--s-5); margin: 0; }
-.facts dt { color: var(--ink-3); font-size: var(--t-11); letter-spacing: 0.08em; text-transform: uppercase; }
+.facts dt { color: var(--ink-2); font-size: var(--t-11); letter-spacing: 0.08em; text-transform: uppercase; }
 .facts dd { margin: 0; }
 
 .sample {
   margin: 0;
   padding: var(--s-4) var(--s-5);
-  background: var(--bg);
-  border-radius: var(--radius);
+  background: var(--code);
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: var(--t-12);
   line-height: 1.6;
@@ -824,9 +842,9 @@ fieldset.field legend { padding: 0; }
 .doc code {
   font-family: var(--font-mono);
   font-size: var(--t-12);
-  background: var(--bg);
+  background: var(--code);
   padding: 1px var(--s-1);
-  border-radius: var(--radius);
+  border-radius: var(--radius-xs);
 }
 /* The section list sits beside the words it indexes, and the document takes
  * the rest. Two columns, in that order, for one reason: running text stops at
@@ -859,7 +877,7 @@ fieldset.field legend { padding: 0; }
   .page { padding: var(--s-5) var(--s-4) var(--s-8); gap: var(--s-5); }
   /* A finger, not a pointer: every control is at least a tap target. */
   button, .button, input, textarea { min-height: var(--tap); }
-  .panel { padding: var(--s-5); border-radius: var(--radius); }
+  .panel { padding: var(--s-5); border-radius: var(--radius-md); }
   .heading-page, .heading-path { font-size: var(--t-19); }
   .fields { gap: var(--s-5); }
   .doc-body { grid-template-columns: 1fr; gap: var(--s-5); }
@@ -876,7 +894,7 @@ fieldset.field legend { padding: 0; }
   table.stackable th, table.stackable td { border: none; padding: var(--s-1) 0; }
   table.stackable td[data-label]::before {
     content: attr(data-label) ': ';
-    color: var(--ink-3);
+    color: var(--ink-2);
     font-size: var(--t-11);
   }
   table.stackable td:empty { display: none; }

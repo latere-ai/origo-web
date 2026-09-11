@@ -854,13 +854,29 @@ repository, so they assert against the real read API and not a mock.
   monospace on a heading is the one role whose content is a machine
   string. Rendered Markdown is authored content and is exempt (proposed:
   `internal/web`, `TestAHeadingLooksLikeItsRole`).
+- The palette is Latere Design System v2, transcribed from
+  `latere-ai/frontend/src/styles/tokens.css`: the neutral ground, surface
+  and raised tones, the three-step neutral ink ramp, the two hairlines and
+  the radii ladder. v2's rule is that the accent is the ink and a product
+  colour is a wordmark and never a page theme, so this product redeclares
+  one accent over that base, the way cella, industria, lux and topos each
+  do, and changes nothing else. The accent appears on a link, a focus ring
+  and the one filled control on a screen, and on no panel, heading or
+  background.
+- The muted tone marks and does not inform. v2's muted ink is 2.6:1 on a
+  surface, so nothing a reader has to read is set in it: a line number, a
+  column header, a breadcrumb and a timestamp all take the secondary ink,
+  and the muted tone is left to a path separator, an inert pager half and
+  a disclosure arrow. The rules allowed to read it are enumerated in the
+  test (proposed: `internal/web`, `TestBothThemesMeetTheirContrast`).
 - Every colour pair the interface paints is measured in both themes, from
-  the token values themselves: the body ink holds 7:1 or better on the
-  page and on a panel, the meta ink 4.5:1 on a panel, the accent 4.5:1 on
-  both, the primary control's own pair 4.5:1, the diff tints 4.5:1 under
-  their own ink and under the body ink, and a panel's frame is visible
-  against the panel (proposed: `internal/web`,
-  `TestBothThemesMeetTheirContrast`).
+  the token values themselves, with a translucent token composited over
+  the surface it is painted on: the body ink holds 7:1 on the ground, a
+  panel and a raised tone, the secondary ink 4.5:1 on all three, the
+  accent 4.5:1 on all three, the filled control's own pair 4.5:1, the diff
+  tints 4.5:1 under both their own ink and the body ink, the inverted
+  block 7:1, and a panel's frame is visible against the panel (proposed:
+  `internal/web`, `TestBothThemesMeetTheirContrast`).
 - Every file the stylesheet names is served by this binary: the asset
   route's list is closed, and each `url()` in the stylesheet answers 200
   as its own type (proposed: `internal/web`,

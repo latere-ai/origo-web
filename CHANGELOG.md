@@ -10,6 +10,15 @@ already holds what was committed.
 
 ## Unreleased
 
+- The colours are Latere's. The page is the neutral ground and surface of
+  the Latere design system, with its rounded panels and capsule buttons,
+  and one deep iris accent on links, focus rings and the button you are
+  meant to press. Nothing else is coloured.
+- Grey text that you have to read is darker. Line numbers, column headers,
+  breadcrumbs and timestamps were set in a tone below the readable
+  contrast floor. That tone is now only used for marks such as the
+  separator in a path.
+
 ## v0.5.3 - 2026-09-11
 
 - The repository page puts the name, the counts, the branch picker and the

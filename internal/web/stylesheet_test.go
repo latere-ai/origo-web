@@ -4,6 +4,7 @@
 package web
 
 import (
+	"fmt"
 	"maps"
 	"math"
 	"net/http"
@@ -281,19 +282,36 @@ func luminance(hex string) float64 {
 	return 0.2126*channel(0) + 0.7152*channel(2) + 0.0722*channel(4)
 }
 
+// inkFloors are the contrast a tone has to hold against every surface it is
+// set on. The body ink is held to 7:1 and the secondary ink to the 4.5:1 the
+// guidelines put on ordinary text.
+//
+// The muted tone is not here, and that is the point. Latere v2's --text-muted
+// is #a0a0a0, which is 2.6:1 on a white surface. It cannot carry a line
+// number, a column header, a breadcrumb or a timestamp, because those are
+// read, and the light theme this replaced was doing exactly that. It marks
+// instead: the separator in a path, the inert half of a pager, a disclosure
+// arrow. mutedIsDecoration below holds it to that.
+var inkFloors = map[string]float64{"--ink": 7, "--ink-2": 4.5}
+
+// mutedUses are the rules allowed to read the muted tone. Each one is a mark
+// rather than a word: nothing a reader has to read is in this list.
+var mutedUses = map[string]bool{
+	".muted":                       true,
+	"button:hover":                 true,
+	".button:hover":                true,
+	".diff-file > summary::before": true,
+	".picker > summary::after":     true,
+	".pager .inert":                true,
+}
+
 // TestBothThemesMeetTheirContrast measures the palette instead of trusting it.
 //
-// The light theme this replaced was a near-white page under white panels
-// separated by a hairline at 8% black, and its third ink was #a0a0a0: 2.6:1
-// on a panel, which is under the 4.5:1 floor and was carrying line numbers,
-// crumbs and every column header. Nothing in the suite noticed, because a
-// ratio is not something a page can be eyeballed into having.
-//
-// The floors are the ones the palette claims for itself: body ink at 7:1 or
-// better on both the page and a panel, the meta ink at 4.5:1 on a panel,
-// which is the only surface it is used on, and the accent at 4.5:1 on both,
-// since it carries every link. The primary control is measured as the pair it
-// is actually painted with.
+// A ratio is not something a page can be eyeballed into having, and the light
+// theme went out with its third ink at 2.6:1 on a panel while that ink was
+// carrying every line number, every column header and every breadcrumb.
+// Nothing in the suite noticed. This computes every pair the interface
+// actually paints, in both themes, from the token values themselves.
 func TestBothThemesMeetTheirContrast(t *testing.T) {
 	css := string(mustAsset(t, "app.css"))
 	light, dark := lightBlock.FindStringSubmatch(css), darkBlock.FindStringSubmatch(css)
@@ -301,6 +319,7 @@ func TestBothThemesMeetTheirContrast(t *testing.T) {
 		t.Fatal("the stylesheet has no light block or no dark block")
 	}
 	base := themeValues(light[1])
+	grounds := []string{"--bg", "--surface", "--raised"}
 	for _, theme := range []struct {
 		name   string
 		values map[string]string
@@ -309,55 +328,96 @@ func TestBothThemesMeetTheirContrast(t *testing.T) {
 		{"dark", inherit(base, themeValues(dark[1]))},
 	} {
 		v := theme.values
-		for _, pair := range []struct {
-			fg, bg string
-			min    float64
-		}{
-			{"--ink", "--bg", 7},
-			{"--ink", "--surface", 7},
-			{"--ink-2", "--bg", 7},
-			{"--ink-2", "--surface", 7},
-			{"--ink-3", "--surface", 4.5},
-			{"--accent", "--bg", 4.5},
-			{"--accent", "--surface", 4.5},
-			{"--accent-ink", "--accent", 4.5},
-			{"--add", "--add-bg", 4.5},
-			{"--del", "--del-bg", 4.5},
-			{"--ink", "--add-bg", 4.5},
-			{"--ink", "--del-bg", 4.5},
-			// The red also carries "never used" on the key screen, which
-			// sits on a panel inside a page, so it is measured on both.
-			{"--del", "--surface", 4.5},
-			{"--del", "--bg", 4.5},
-			{"--bg", "--ink", 7},
-		} {
-			fg, bg := v[pair.fg], v[pair.bg]
-			if fg == "" || bg == "" {
-				t.Errorf("%s: %s on %s is not a pair of colours", theme.name, pair.fg, pair.bg)
-				continue
+		measure := func(fg, bg string, min float64) {
+			t.Helper()
+			a, b := solid(v, fg, v["--surface"]), solid(v, bg, v["--surface"])
+			if a == "" || b == "" {
+				t.Errorf("%s: %s on %s is not a pair of colours", theme.name, fg, bg)
+				return
 			}
-			if got := contrast(fg, bg); got < pair.min {
-				t.Errorf("%s: %s on %s is %.2f:1, want %.1f:1 or better", theme.name, pair.fg, pair.bg, got, pair.min)
+			if got := contrast(a, b); got < min {
+				t.Errorf("%s: %s on %s is %.2f:1, want %.1f:1 or better", theme.name, fg, bg, got, min)
 			}
 		}
-		// A panel has to be findable on the page behind it. The answer is
-		// the frame and not the fill: the two surfaces are a tenth of a
-		// stop apart by design, and the rule around them is what a reader
-		// actually sees.
-		if got := contrast(v["--line-2"], v["--surface"]); got < 1.5 {
+		// Every ink on every surface it is ever set on.
+		for ink, floor := range inkFloors {
+			for _, ground := range grounds {
+				measure(ink, ground, floor)
+			}
+		}
+		// The accent carries every link and the one filled control.
+		measure("--accent", "--bg", 4.5)
+		measure("--accent", "--surface", 4.5)
+		measure("--accent", "--raised", 4.5)
+		measure("--accent-ink", "--accent", 4.5)
+		// The diff, where the tint is laid over a panel: its own ink and the
+		// body ink both have to survive it.
+		measure("--add", "--add-bg", 4.5)
+		measure("--del", "--del-bg", 4.5)
+		measure("--ink", "--add-bg", 4.5)
+		measure("--ink", "--del-bg", 4.5)
+		// And the one inverted block, which paints the ground on the ink.
+		measure("--bg", "--ink", 7)
+
+		// A panel has an edge. The two surfaces of this palette are a
+		// twentieth of a stop apart, so the frame is what a reader sees.
+		if got := contrast(solid(v, "--line-2", v["--surface"]), v["--surface"]); got < 1.2 {
 			t.Errorf("%s: the frame is %.2f:1 against a panel, so a panel has no edge", theme.name, got)
 		}
-		if got := contrast(v["--line"], v["--surface"]); got < 1.2 {
-			t.Errorf("%s: the hairline is %.2f:1 against a panel, so rows do not separate", theme.name, got)
+	}
+
+	// The muted tone marks and does not inform, so only the marks read it.
+	for _, rule := range cssRules(outsideMedia(css)) {
+		if !strings.Contains(rule.body, "var(--ink-3)") {
+			continue
+		}
+		for sel := range strings.SplitSeq(rule.selector, ",") {
+			if sel = strings.TrimSpace(sel); !mutedUses[sel] {
+				t.Errorf("%q sets the muted tone, which is 2.6:1 on a panel and cannot carry anything a reader has to read", sel)
+			}
 		}
 	}
 }
 
-// themeValues reads the hex colours a :root block defines.
+// themeValues reads the colours a :root block defines, hex and rgba alike.
 func themeValues(block string) map[string]string {
 	out := map[string]string{}
-	for _, m := range regexp.MustCompile(`(?m)^\s*(--[a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{6})\s*;`).FindAllStringSubmatch(block, -1) {
+	for _, m := range regexp.MustCompile(`(?m)^\s*(--[a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{6}|rgba\([^)]*\))\s*;`).FindAllStringSubmatch(block, -1) {
 		out[m[1]] = m[2]
+	}
+	return out
+}
+
+// solid is a token as a reader sees it: a hex value as itself, and a
+// translucent one composited over the surface it is painted on, because a
+// tint at 10% black is not a colour until something is behind it.
+func solid(v map[string]string, token, over string) string {
+	raw, ok := v[token]
+	if !ok {
+		return ""
+	}
+	if strings.HasPrefix(raw, "#") {
+		return raw
+	}
+	m := regexp.MustCompile(`rgba\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9.]+)\s*\)`).FindStringSubmatch(raw)
+	if m == nil || !strings.HasPrefix(over, "#") {
+		return ""
+	}
+	alpha, err := strconv.ParseFloat(m[4], 64)
+	if err != nil {
+		return ""
+	}
+	out := "#"
+	for i := range 3 {
+		top, err := strconv.ParseUint(m[i+1], 10, 8)
+		if err != nil {
+			return ""
+		}
+		under, err := strconv.ParseUint(strings.TrimPrefix(over, "#")[i*2:i*2+2], 16, 8)
+		if err != nil {
+			return ""
+		}
+		out += fmt.Sprintf("%02x", uint8(alpha*float64(top)+(1-alpha)*float64(under)+0.5))
 	}
 	return out
 }
