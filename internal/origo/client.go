@@ -182,6 +182,17 @@ type Page[T any] struct {
 }
 
 // Repo reads the repository representation.
+// Resolve turns an owner and a slug into the repository, through the name
+// mode of Origo's collection route (its spec 026), which answers exactly as
+// the id route does, refusal included: a name the reader may not see and a
+// name that is not there are one 404.
+func (c *Client) Resolve(ctx context.Context, tok, owner, slug string) (Repo, Meta, error) {
+	var out Repo
+	q := url.Values{"owner": {owner}, "slug": {slug}}
+	meta, err := c.getJSON(ctx, tok, "/v1/repos", q, &out)
+	return out, meta, err
+}
+
 func (c *Client) Repo(ctx context.Context, tok, id string) (Repo, Meta, error) {
 	var out Repo
 	meta, err := c.getJSON(ctx, tok, "/v1/repos/"+url.PathEscape(id), nil, &out)

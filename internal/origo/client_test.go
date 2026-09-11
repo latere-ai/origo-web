@@ -505,3 +505,29 @@ func TestDeleteMarksTheRepositoryAndCarriesTheHold(t *testing.T) {
 		t.Errorf("a refused deletion reads as %v, want the one refusal", err)
 	}
 }
+
+// TestResolveAsksTheCollectionRouteByName asserts the one call a name
+// address costs: the collection route in its name mode, with the token,
+// read into the same representation the id route serves.
+func TestResolveAsksTheCollectionRouteByName(t *testing.T) {
+	var query url.Values
+	s := newServer(t, func(w http.ResponseWriter, r *http.Request) {
+		query = r.URL.Query()
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id": "r1", "owner": "infra", "slug": "origo", "default_branch": "main",
+		})
+	})
+	repo, _, err := s.client(t).Resolve(t.Context(), "abc", "infra", "origo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.paths[0] != "/v1/repos" || query.Get("owner") != "infra" || query.Get("slug") != "origo" {
+		t.Errorf("the name was asked as %s?%s", s.paths[0], query.Encode())
+	}
+	if s.auth[0] != "Bearer abc" {
+		t.Errorf("the call carried %q", s.auth[0])
+	}
+	if repo.ID != "r1" || repo.DefaultBranch != "main" {
+		t.Errorf("the repository read back as %+v", repo)
+	}
+}
