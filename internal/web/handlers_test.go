@@ -595,3 +595,48 @@ func TestTheFrontDoorClaimsNothingItCannotKnow(t *testing.T) {
 		t.Error("the refused credential was left in the browser")
 	}
 }
+
+// TestAnUnknownAddressIsAScreen asserts that an address the interface does
+// not serve answers with a page of its own at 404: the masthead, a heading
+// that says the page is not there, and a way back. Before this the mux's own
+// plain text answered, with no navigation and no name on it. A wrong method
+// on a real address is still the mux's 405, so a form posted to a page that
+// takes no form is not told the page is missing.
+func TestAnUnknownAddressIsAScreen(t *testing.T) {
+	h := newHarness(t)
+	c := h.signedIn("alice")
+	for _, path := range []string{
+		"/no-such-page", "/r", "/docs", "/docs/agents/more",
+		"/assets/nope.css", h.repoPath("/nothing"),
+	} {
+		rec := h.get(path, c)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("GET %s answered %d, want 404", path, rec.Code)
+		}
+		if got := rec.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/html") {
+			t.Errorf("GET %s is %q, want an HTML page", path, got)
+			continue
+		}
+		page := doc(t, rec.Body.String())
+		brand(t, page)
+		if got := text(elements(page, "h1")[0]); got != "Page not found" {
+			t.Errorf("GET %s leads with %q", path, got)
+		}
+		var home bool
+		for _, a := range elements(page, "a") {
+			if attr(a, "href") == "/" {
+				home = true
+			}
+		}
+		if !home {
+			t.Errorf("GET %s offers no way back", path)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/sign-in", nil)
+	rec := httptest.NewRecorder()
+	h.server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Errorf("POST /sign-in answered %d, want 405", rec.Code)
+	}
+}

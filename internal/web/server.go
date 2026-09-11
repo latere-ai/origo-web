@@ -162,11 +162,18 @@ func New(o Options) *Server {
 		s.mux.HandleFunc(pattern, h)
 	}
 
+	// Whatever GET matches nothing above is a page and not the mux's plain
+	// text. It is registered here and not in Routes because it is no screen
+	// of the interface: it is the answer to asking for one that is not there.
+	s.mux.HandleFunc("GET /", s.handleUnknown)
+
 	// The probes and the metric registry go on the same listener, because
 	// this service has one. They are not screens and carry no session.
-	s.mux.Handle("/livez", health.Handler(health.Options{Version: o.Version, Commit: o.Commit, BuildTime: o.BuildTime}))
-	s.mux.Handle("/readyz", health.Handler(health.Options{Version: o.Version, Commit: o.Commit, BuildTime: o.BuildTime}))
-	s.mux.Handle("/version", health.Handler(health.Options{Version: o.Version, Commit: o.Commit, BuildTime: o.BuildTime}))
+	// They name their method so they are more specific than the fallback
+	// above and not in conflict with it.
+	s.mux.Handle("GET /livez", health.Handler(health.Options{Version: o.Version, Commit: o.Commit, BuildTime: o.BuildTime}))
+	s.mux.Handle("GET /readyz", health.Handler(health.Options{Version: o.Version, Commit: o.Commit, BuildTime: o.BuildTime}))
+	s.mux.Handle("GET /version", health.Handler(health.Options{Version: o.Version, Commit: o.Commit, BuildTime: o.BuildTime}))
 	return s
 }
 
@@ -207,12 +214,12 @@ func (s *Server) handleAsset(w http.ResponseWriter, r *http.Request) {
 		"plex-mono-500-latin.woff2",
 		"plex-mono-600-latin.woff2":
 	default:
-		http.NotFound(w, r)
+		s.handleUnknown(w, r)
 		return
 	}
 	body, err := assetFS.ReadFile("assets/" + name)
 	if err != nil {
-		http.NotFound(w, r)
+		s.handleUnknown(w, r)
 		return
 	}
 	if strings.HasSuffix(name, ".css") {

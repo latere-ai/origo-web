@@ -53,6 +53,7 @@ func (h *harness) everyPage() map[string]*httptest.ResponseRecorder {
 		out[name] = h.get(path, c)
 	}
 	out["sign in"] = h.get("/sign-in")
+	out["not found"] = h.get("/no-such-page", c)
 	maps.Copy(out, keyScreens(h.t, h.cfg))
 	maps.Copy(out, visibilityScreens(h.t, h.cfg))
 	return out

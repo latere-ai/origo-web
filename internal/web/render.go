@@ -111,3 +111,19 @@ func (s *Server) broken(w http.ResponseWriter, r *http.Request, v view, err erro
 		Body:    brokenSentence,
 	})
 }
+
+// handleUnknown is the page for an address the interface does not serve.
+// It is a screen like any other, with the masthead and a way back, in place
+// of the mux's own two words of plain text. Every GET that matches no route
+// lands here; a method an address does not take is still refused by the
+// mux with 405.
+func (s *Server) handleUnknown(w http.ResponseWriter, r *http.Request) {
+	rq := s.begin(w, r, "")
+	rq.v.Title = "Page not found"
+	s.render(w, r, http.StatusNotFound, "message", messageData{
+		View:    rq.v,
+		Heading: "Page not found",
+		Body:    "There is no page at this address.",
+		Links:   []crumb{{Name: "Repositories", URL: "/"}},
+	})
+}
