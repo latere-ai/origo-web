@@ -72,9 +72,13 @@ type messageData struct {
 // Each is written for the person reading it: Origo's own message field is
 // written for a developer reading an API, and never reaches a screen.
 const (
-	absentSentence      = "This repository does not exist or you do not have access to it."
-	unavailableSentence = "The server is not responding. Try again in a few minutes."
-	brokenSentence      = "The server returned an unexpected response."
+	absentSentence = "This repository does not exist or you do not have access to it."
+	// absentInRepoSentence is the same refusal for an address inside a
+	// repository the reader has been shown, where the repository is not
+	// what is missing.
+	absentInRepoSentence = "This repository has nothing at this address. The branch, tag, commit or file does not exist or you do not have access to it."
+	unavailableSentence  = "The server is not responding. Try again in a few minutes."
+	brokenSentence       = "The server returned an unexpected response."
 )
 
 // notFound is the answer to both a refusal and an absence.
@@ -88,6 +92,7 @@ func (s *Server) notFound(w http.ResponseWriter, r *http.Request, v view) {
 		View:    v,
 		Heading: "Not found",
 		Body:    absentSentence,
+		Links:   []crumb{{Name: "Repositories", URL: "/"}},
 	})
 }
 

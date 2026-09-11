@@ -63,7 +63,7 @@ func (s *Server) handleCommit(w http.ResponseWriter, r *http.Request) {
 
 	commit, meta, err := s.api.Commit(r.Context(), rc.tok, rc.repo.ID, sha)
 	if err != nil {
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 	rc.v.Title = commit.Subject()
@@ -104,7 +104,7 @@ func (s *Server) handleCommit(w http.ResponseWriter, r *http.Request) {
 	base := commit.Parents[0]
 	text, dm, err := s.api.Compare(r.Context(), rc.tok, rc.repo.ID, base, commit.SHA, data.Single)
 	if err != nil {
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 	budget := diff.DefaultBudget
@@ -201,7 +201,7 @@ func (s *Server) handlePatch(w http.ResponseWriter, r *http.Request) {
 	sha := r.PathValue("sha")
 	commit, _, err := s.api.Commit(r.Context(), rc.tok, rc.repo.ID, sha)
 	if err != nil {
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 	if len(commit.Parents) == 0 {
@@ -210,7 +210,7 @@ func (s *Server) handlePatch(w http.ResponseWriter, r *http.Request) {
 	}
 	text, _, err := s.api.Compare(r.Context(), rc.tok, rc.repo.ID, commit.Parents[0], commit.SHA, "")
 	if err != nil {
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -249,7 +249,7 @@ func (s *Server) handleCompare(w http.ResponseWriter, r *http.Request) {
 
 	text, meta, err := s.api.Compare(r.Context(), rc.tok, rc.repo.ID, base, head, data.Single)
 	if err != nil {
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 	budget := diff.DefaultBudget

@@ -71,6 +71,37 @@ func (s *Server) readFailed(w http.ResponseWriter, r *http.Request, rq req, err 
 	}
 }
 
+// readFailedIn is readFailed for a read inside a repository the reader has
+// already been shown.
+//
+// The repository answered, so the sentence for one that does not exist is
+// false under that repository's own name, and a page with no sections on
+// it is a dead end this interface's own link led to. What is not there, or
+// withheld, is the branch, tag, commit or file the address names; Origo
+// still does not say which, so neither does this. The status and the shape
+// of the sentence stay. The sections stay too, at the default branch, so
+// every one of them leads to a screen that renders whatever was missing.
+func (s *Server) readFailedIn(w http.ResponseWriter, r *http.Request, rc repoContext, err error) {
+	if !origo.Absent(err) {
+		s.readFailed(w, r, rc.req, err)
+		return
+	}
+	rv := *rc.rv
+	rv.Ref = rv.DefaultBranch
+	v := rc.v
+	v.Title = "Not found"
+	s.render(w, r, http.StatusNotFound, "message", messageData{
+		View:    v,
+		Repo:    &rv,
+		Heading: "Not found",
+		Body:    absentInRepoSentence,
+		Links: []crumb{
+			{Name: "Overview", URL: rv.URL()},
+			{Name: "Branches and tags", URL: rv.URL() + "/refs"},
+		},
+	})
+}
+
 // refsFor reads the branches and the tags. Two calls, whatever the
 // repository holds, because spec 009 pages references by prefix and not by
 // row.
@@ -169,7 +200,7 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 
 	branches, tags, _, err := s.refsFor(r, rc.tok, rc.repo.ID)
 	if err != nil {
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 	data.Branches, data.Tags = len(branches), len(tags)
@@ -187,7 +218,7 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 
 	tree, err := s.api.Tree(r.Context(), rc.tok, rc.repo.ID, rc.ref, origo.TreeOptions{})
 	if err != nil {
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 	data.TreeCursor = tree.Next
@@ -198,7 +229,7 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 
 	log, err := s.api.Commits(r.Context(), rc.tok, rc.repo.ID, origo.CommitsOptions{Ref: rc.ref, Limit: 1})
 	if err != nil {
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 	if len(log.Items) > 0 {
@@ -332,7 +363,7 @@ func (s *Server) handleRefs(w http.ResponseWriter, r *http.Request) {
 	}
 	branches, tags, truncated, err := s.refsFor(r, rc.tok, rc.repo.ID)
 	if err != nil {
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 	rc.v.Title = rc.repo.Owner + "/" + rc.repo.Slug + " references"
@@ -393,7 +424,7 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 		Ref: rc.ref, Path: path, Limit: logPageSize, Cursor: q.Get("cursor"),
 	})
 	if err != nil {
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 

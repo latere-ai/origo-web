@@ -75,7 +75,7 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 	if rc.repo.Head == "" {
 		branches, _, _, err := s.refsFor(r, rc.tok, rc.repo.ID)
 		if err != nil {
-			s.readFailed(w, r, rc.req, err)
+			s.readFailedIn(w, r, rc, err)
 			return
 		}
 		if len(branches) == 0 {
@@ -91,7 +91,7 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 		Path: path, Cursor: r.URL.Query().Get("cursor"),
 	})
 	if err != nil {
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 	data.Entries = s.entryViews(rc.rv, page.Items)
@@ -333,7 +333,7 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 			s.render(w, r, http.StatusOK, "blob", data)
 			return
 		}
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 	data.Type = describeType(blob.ContentType, data.Type)
@@ -365,7 +365,7 @@ func (s *Server) findEntry(w http.ResponseWriter, r *http.Request, rc repoContex
 	}
 	page, err := s.api.Tree(r.Context(), rc.tok, rc.repo.ID, rc.ref, origo.TreeOptions{Path: parentPath(path)})
 	if err != nil {
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return origo.Entry{}, origo.Meta{}, false
 	}
 	for _, e := range page.Items {
@@ -458,7 +458,7 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		s.readFailed(w, r, rc.req, err)
+		s.readFailedIn(w, r, rc, err)
 		return
 	}
 	defer func() { _ = resp.Body.Close() }()
