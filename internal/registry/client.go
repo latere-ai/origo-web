@@ -112,6 +112,11 @@ func Unauthenticated(err error) bool { return statusIs(err, http.StatusUnauthori
 // or their account may not create.
 func Refused(err error) bool { return statusIs(err, http.StatusForbidden) }
 
+// NotFound reports a 404. The registry answers it both for a repository
+// that is not there and for one this person holds no role on, so a caller
+// learns nothing about which of the two it was.
+func NotFound(err error) bool { return statusIs(err, http.StatusNotFound) }
+
 // Conflict reports that the name is taken, the owner is at its limit, or the
 // name belongs to a different owner. CodeOf says which.
 func Conflict(err error) bool { return statusIs(err, http.StatusConflict) }
@@ -288,4 +293,56 @@ func readError(resp *http.Response) *Error {
 		e.Code = http.StatusText(resp.StatusCode)
 	}
 	return e
+}
+
+// The two visibilities a repository can have.
+const (
+	Private = "private"
+	Public  = "public"
+)
+
+// Visibility is what the registry says about one repository: whether it is
+// public, and whether this person may change it.
+type Visibility struct {
+	Visibility string `json:"visibility"`
+	CanChange  bool   `json:"can_change"`
+}
+
+// Public reports whether the repository is readable without a credential.
+func (v Visibility) Public() bool { return v.Visibility == Public }
+
+// ReadVisibility asks whether a repository is public. A person with no
+// role on it gets the same answer as an id the registry never heard of, so
+// the error says nothing about whether the repository is there.
+func (c *Client) ReadVisibility(ctx context.Context, tok, id string) (Visibility, error) {
+	if c == nil || c.base == nil {
+		return Visibility{}, ErrNoRegistry
+	}
+	resp, err := c.do(ctx, http.MethodGet, tok, nil, "repositories", id, "visibility")
+	if err != nil {
+		return Visibility{}, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	var out Visibility
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxBody)).Decode(&out); err != nil {
+		return Visibility{}, fmt.Errorf("decode visibility: %w", err)
+	}
+	return out, nil
+}
+
+// SetVisibility makes a repository public or private. The registry refuses
+// a caller without admin on it.
+func (c *Client) SetVisibility(ctx context.Context, tok, id, visibility string) error {
+	if c == nil || c.base == nil {
+		return ErrNoRegistry
+	}
+	body, err := json.Marshal(map[string]string{"visibility": visibility})
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	resp, err := c.do(ctx, http.MethodPut, tok, body, "repositories", id, "visibility")
+	if err != nil {
+		return err
+	}
+	return resp.Body.Close()
 }
