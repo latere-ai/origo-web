@@ -511,12 +511,30 @@ person's own token, beside the create call it already makes there.
 
 Two surfaces, and no more.
 
-- The overview carries a `public` badge when the repository is public,
-  and, for somebody who may change it, one link to the screen below. The
-  read is one extra call on the overview alone and a failure is silence:
-  an installation whose registry has no visibility surface shows the
-  repository without the badge rather than failing a screen over a fact
-  that is not its subject.
+- The overview names the state in the facts row, and there are **three**
+  of them, not two: `public`, `private`, and an answer the registry could
+  not give, which says so in words. A failure must never render as
+  private. If it did, a public repository would read exactly like a
+  private one, and it would be wrong in the direction nobody reports: the
+  screen looks right to the reader, and the person who made it public is
+  not told it stopped saying so. A fourth case renders nothing at all,
+  which is an installation whose registry keeps no visibility, because
+  there the question has no answer rather than an unavailable one. For
+  somebody who may change it there is one link to the screen below.
+- Origo cannot supply the answer. It holds no visibility by the design of
+  its spec 027, so the repository record the overview already fetches
+  cannot carry the field and there is nothing to fold the call into. The
+  call is irreducible, so it is **cached** rather than repeated: keyed by
+  reader and repository, because `can_change` is an answer about a person
+  and one reader's right to change a repository is never served to
+  another, and kept for **30 seconds**. A flip made here is written
+  through to the cache, so the person who made the change sees it at once
+  and the lifetime never applies to them. What the lifetime bounds is a
+  change made in another session or through the registration API: half a
+  minute of a stale badge, stated rather than accidental. No decision is
+  made from the cached value; the registry decides every read and every
+  write, whatever the badge says. The badge is never filled in after the
+  page, because that would need script.
 - `GET /r/{id}/visibility` is the change screen and `POST` applies it. It
   is a screen and not a control on the overview, because the person has
   to read one sentence before they press the button and this interface
@@ -631,11 +649,19 @@ repository, so they assert against the real read API and not a mock.
 
 - The visibility screen says what changes in both directions, an
   administrator flips a repository both ways, a reader gets the one
-  refusal, an unknown value writes nothing, and the overview carries the
-  badge (`internal/web`, `TestVisibilityScreenSaysWhatChanges`,
+  refusal, an unknown value writes nothing, and the overview names the
+  state (`internal/web`, `TestVisibilityScreenSaysWhatChanges`,
   `TestVisibilityChangesBothWays`, `TestVisibilityIsNotForAReader`,
   `TestVisibilityRefusesAValueItDoesNotKnow`,
   `TestOverviewShowsThePublicBadge`).
+- A registry call that fails renders as neither public nor private and
+  says so in words, so a public repository can never read as private
+  because of an outage (`internal/web`,
+  `TestAFailedVisibilityCallDoesNotReadAsPrivate`).
+- The overview asks the registry once per reader per repository rather
+  than once per render, and a flip is visible on the next render without
+  waiting out the lifetime (`internal/web`,
+  `TestVisibilityIsAskedOncePerReader`).
 - Signing in redirects to the issuer with PKCE and a nonce, the callback
   exchanges the code and lands on the originally requested path, and the
   session cookie is `__Host-` prefixed, `HttpOnly`, `Secure`,
