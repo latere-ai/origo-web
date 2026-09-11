@@ -10,6 +10,8 @@ holds what was committed.
 
 ## Unreleased
 
+## v0.6.1 - 2026-09-11
+
 - Every page is denser. Corners are 4px or less, buttons are rectangles,
   headings are one step smaller, and panels, table rows and controls carry
   less padding.
