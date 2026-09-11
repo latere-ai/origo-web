@@ -2,7 +2,7 @@
 {{define "main"}}
 {{template "repohead" .}}
 <main class="stack">
-  <h1>{{.Commit.Subject}}</h1>
+  <h1 class="heading-page">{{.Commit.Subject}}</h1>
   {{template "stale" .Stale}}
   {{- if .Commit.Body}}<pre class="commit-message prose">{{.Commit.Body}}</pre>{{end}}
   <div class="panel stack">

@@ -1,7 +1,7 @@
 {{define "title"}}Agent tokens{{end}}
 {{define "main"}}
 <main class="stack">
-  <h1>Agent tokens</h1>
+  <h1 class="heading-page">Agent tokens</h1>
   <p class="lead">A token lets an agent act as you inside one repository until it expires. It opens no other repository and no screen here. <a href="/docs/agents">How an agent uses one</a>.</p>
 
   {{- if .Error}}
@@ -10,7 +10,7 @@
 
   <form class="panel stack" action="/tokens" method="post">
     <input type="hidden" name="{{.View.CSRFField}}" value="{{.View.CSRF}}">
-    <h2>Mint a token</h2>
+    <h2 class="heading-section">Mint a token</h2>
     <div class="fields">
       {{- if .Directory}}
       <fieldset class="field">
@@ -97,7 +97,7 @@
   </div>
   {{- else}}
   <div class="panel stack">
-    <h2>No list of tokens</h2>
+    <h2 class="heading-section">No list of tokens</h2>
     <p class="prose">A token is signed, not recorded, so this installation has nothing to list and no way to withdraw one. A token ends when its lifetime ends.</p>
     <p class="prose">If one reaches somebody it should not: wait for it to expire, and ask whoever administers this installation to change the repository's access. <a href="/docs/agents">Why it works this way</a>.</p>
   </div>

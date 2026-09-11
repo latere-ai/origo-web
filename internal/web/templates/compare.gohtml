@@ -2,7 +2,7 @@
 {{define "main"}}
 {{template "repohead" .}}
 <main class="stack">
-  <h1>Compare two revisions</h1>
+  <h1 class="heading-page">Compare two revisions</h1>
   {{template "stale" .Stale}}
   <div class="panel stack">
     <form class="inline-form" action="{{.Repo.URL}}/compare" method="get">

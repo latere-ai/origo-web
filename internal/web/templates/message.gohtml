@@ -2,7 +2,7 @@
 {{define "main"}}
 {{- if .Repo}}{{template "repohead" .}}{{end}}
 <main class="panel stack prose">
-  <h1>{{.Heading}}</h1>
+  <h1 class="heading-page">{{.Heading}}</h1>
   <p class="meta">{{.Body}}</p>
   {{- if .Links}}
   <p>{{range .Links}}<a href="{{.URL}}">{{.Name}}</a> {{end}}</p>

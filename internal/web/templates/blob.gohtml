@@ -2,7 +2,7 @@
 {{define "main"}}
 {{template "repohead" .}}
 <main class="stack">
-  <h1 class="path">{{.Name}}</h1>
+  <h1 class="heading-path">{{.Name}}</h1>
   <p class="crumbs"><a href="{{.Repo.URL}}/tree/{{.Repo.RefQuery}}">{{.Repo.Slug}}</a>{{range .Crumbs}} / {{if .URL}}<a href="{{.URL}}">{{.Name}}</a>{{else}}<span class="here">{{.Name}}</span>{{end}}{{end}}</p>
   {{template "stale" .Stale}}
   <div class="panel flush">

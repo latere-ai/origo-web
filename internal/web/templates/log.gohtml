@@ -3,7 +3,7 @@
 {{template "repohead" .}}
 <main class="stack">
   <div class="spread">
-    <h1>Commits on <span class="refname">{{.Repo.Ref}}</span></h1>
+    <h1 class="heading-section">Commits on <span class="refname">{{.Repo.Ref}}</span></h1>
     <form class="inline-form" action="{{.Repo.URL}}/log" method="get">
       {{- if .Repo.RefQueryValue}}<input type="hidden" name="ref" value="{{.Repo.RefQueryValue}}">{{end}}
       <div class="field">

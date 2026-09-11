@@ -2,7 +2,7 @@
 {{define "main"}}
 {{template "repohead" .}}
 <main class="stack">
-  <h1>Branches and tags</h1>
+  <h1 class="heading-page">Branches and tags</h1>
   {{template "stale" .Stale}}
   {{- if .Truncated}}
   <p class="notice"><strong>This list is cut short.</strong> The repository has more references than the installation returns in one answer.</p>

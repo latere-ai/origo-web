@@ -612,6 +612,25 @@ repository, so they assert against the real read API and not a mock.
   no choice marks its title by hand, no field hint is styled by hand,
   and no element on any screen carries an inline style (proposed:
   `internal/web`, `TestTextThatDoesTheSameJobLooksTheSame`).
+- A heading looks like its role and not like its screen. A heading
+  element carries document structure and a role class carries the look;
+  every heading a reader meets wears exactly one role; each role is
+  defined by one rule; no selector reaches a heading through a screen to
+  change its typeface, size, weight, letter-spacing or line-height; and
+  monospace on a heading is the one role whose content is a machine
+  string. Rendered Markdown is authored content and is exempt (proposed:
+  `internal/web`, `TestAHeadingLooksLikeItsRole`).
+- Every colour pair the interface paints is measured in both themes, from
+  the token values themselves: the body ink holds 7:1 or better on the
+  page and on a panel, the meta ink 4.5:1 on a panel, the accent 4.5:1 on
+  both, the primary control's own pair 4.5:1, the diff tints 4.5:1 under
+  their own ink and under the body ink, and a panel's frame is visible
+  against the panel (proposed: `internal/web`,
+  `TestBothThemesMeetTheirContrast`).
+- Every file the stylesheet names is served by this binary: the asset
+  route's list is closed, and each `url()` in the stylesheet answers 200
+  as its own type (proposed: `internal/web`,
+  `TestAssetsComeOutOfTheBinary`).
 - One left edge holds on a screen: no notice sits inside a surface that
   pads its own content, so a heading and the first line below it start
   together (proposed: `internal/web`,

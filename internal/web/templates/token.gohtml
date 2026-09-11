@@ -4,7 +4,7 @@
   <p class="crumbs"><a href="/tokens">agent tokens</a> / <span class="here">new</span></p>
 
   <div class="secret stack prose">
-    <h1>Copy this token now. You will not see it again.</h1>
+    <h1 class="heading-section">Copy this token now. You will not see it again.</h1>
     <p>Nothing here keeps a copy, and neither does the git server: the token is signed, not stored. Nobody can recover this string once you leave this page: not you, not an administrator.</p>
     <div class="field">
       <label for="token">Token value</label>
@@ -19,7 +19,7 @@
       <dt>Scope</dt><dd class="refname">{{.Scope}}</dd>
       <dt>Expires</dt><dd class="when">{{.Expires}}, {{.ExpiresIn}} from now</dd>
     </dl>
-    <h2>Use it</h2>
+    <h2 class="heading-section">Use it</h2>
     <p class="meta">Put it in the agent's environment as <code>ORIGO_TOKEN</code>. Never in a repository, never in a prompt.</p>
     <pre class="scroller sample">{{.CloneLine}}
 

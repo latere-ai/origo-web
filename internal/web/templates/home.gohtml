@@ -1,7 +1,7 @@
 {{define "title"}}Repositories{{end}}
 {{define "main"}}
 <main class="stack">
-  <h1>Repositories</h1>
+  <h1 class="heading-page">Repositories</h1>
   {{template "stale" .Stale}}
   {{- if .Directory}}
     {{- if .Repos}}
@@ -38,7 +38,7 @@
     {{- end}}
   {{- else}}
   <div class="panel stack">
-    <h2>This installation does not list repositories</h2>
+    <h2 class="heading-section">This installation does not list repositories</h2>
     <p class="prose">The git server answers questions about one repository at a time and cannot enumerate the ones you may see. Open a repository by its identifier, and the ones you open are kept below for this session.</p>
     {{- if .View.Who}}
     <p class="hint">You are signed in as {{.View.Who}}. What you can open is decided by that account.</p>

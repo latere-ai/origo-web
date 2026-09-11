@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -287,12 +288,28 @@ func TestAssetsComeOutOfTheBinary(t *testing.T) {
 	if css.Code != http.StatusOK || css.Header().Get("Content-Type") != "text/css; charset=utf-8" {
 		t.Errorf("the stylesheet answered %d as %q", css.Code, css.Header().Get("Content-Type"))
 	}
-	font := h.get("/assets/inter-latin.woff2")
-	if font.Code != http.StatusOK || font.Header().Get("Content-Type") != "font/woff2" {
-		t.Errorf("the font answered %d as %q", font.Code, font.Header().Get("Content-Type"))
+	// Every face the stylesheet names is in the binary beside it: one
+	// variable file for the sans, and the three static weights the mono has
+	// no variable cut for.
+	for _, name := range []string{
+		"plex-sans-latin.woff2",
+		"plex-mono-400-latin.woff2",
+		"plex-mono-500-latin.woff2",
+		"plex-mono-600-latin.woff2",
+	} {
+		font := h.get("/assets/" + name)
+		if font.Code != http.StatusOK || font.Header().Get("Content-Type") != "font/woff2" {
+			t.Errorf("%s answered %d as %q", name, font.Code, font.Header().Get("Content-Type"))
+		}
+		if font.Body.Len() < 1000 {
+			t.Errorf("%s is %d bytes", name, font.Body.Len())
+		}
 	}
-	if font.Body.Len() < 1000 {
-		t.Errorf("the font is %d bytes", font.Body.Len())
+	sheet := string(mustAsset(t, "app.css"))
+	for _, ref := range regexp.MustCompile(`url\('/assets/([^']+)'\)`).FindAllStringSubmatch(sheet, -1) {
+		if rec := h.get("/assets/" + ref[1]); rec.Code != http.StatusOK {
+			t.Errorf("the stylesheet names /assets/%s, which answers %d", ref[1], rec.Code)
+		}
 	}
 	if other := h.get("/assets/../go.mod"); other.Code == http.StatusOK {
 		t.Error("a path outside the assets came out of the binary")

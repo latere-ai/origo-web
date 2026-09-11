@@ -3,11 +3,17 @@
  *
  * One stylesheet, served from this binary, fetched from no other host.
  *
- * The tokens are Latere's, transcribed from latere-ui's tokens.css. Latere's
- * accent is the ink itself, so emphasis here is weight, underline, surface
- * and border, never hue. The single exception is the diff, where the two
- * tints below sit under text that keeps its literal + or - sign, so the
- * meaning survives greyscale and a copy into a terminal.
+ * The tokens are the interface specification's: a warm paper ground, warm
+ * near-black ink, two hairline weights, and one rust accent for links, focus
+ * and the primary control. Emphasis is weight, surface, rule and that one
+ * accent, never a second hue. The diff is the exception, where the two tints
+ * below sit under text that keeps its literal + or - sign, so the meaning
+ * survives greyscale and a copy into a terminal.
+ *
+ * Every pair is measured. Ink and ink-2 hold 7:1 or better on both the page
+ * and a panel in both themes; ink-3 holds 4.5:1 on a panel and is the tone
+ * for column headers and meta at 11px and up; the accent holds 4.5:1 on
+ * both. TestBothThemesMeetTheirContrast computes all of it from these values.
  *
  * Themes follow prefers-color-scheme alone. There is no switch and no
  * cookie, so there is no script and nothing to flash. */
@@ -15,42 +21,40 @@
 :root {
   color-scheme: light dark;
 
-  /* Surfaces */
-  --bg: #fafafa;
-  --bg-surface: #ffffff;
-  --bg-raised: #f5f5f5;
-  --bg-code: rgba(0, 0, 0, 0.05);
+  /* Surfaces. The page ground is also the raised tone inside a panel: a
+   * table header, a notice and a code sample are the ground showing through
+   * the surface laid over it, so the interface has two tones and not three. */
+  --bg: #f7f5f1;
+  --surface: #fffefb;
 
-  /* Ink accent */
-  --accent: #0a0a0a;
-  --accent-hover: #404040;
-  --accent-subtle: rgba(0, 0, 0, 0.04);
+  /* Ink ramp */
+  --ink: #1a1917;
+  --ink-2: #55534e;
+  --ink-3: #75726b;
 
-  /* Foreground ramp */
-  --fg-1: #0a0a0a;
-  --fg-2: #666666;
-  --fg-3: #a0a0a0;
+  /* Rules. The hairline separates rows; the frame draws a panel, a table
+   * header and a divider. */
+  --line: #e0dcd3;
+  --line-2: #cec9bd;
 
-  --border: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.12);
-  --focus-outline: 2px solid var(--accent);
+  /* The one accent: links, focus and the primary control. */
+  --accent: #95461a;
+  --accent-hover: #7a3813;
+  --accent-ink: #fffefb;
+  --accent-subtle: rgba(149, 70, 26, 0.06);
 
-  /* Radii */
-  --radius-xs: 8px;
-  --radius-sm: 12px;
-  --radius-md: 16px;
-  --radius-lg: 22px;
-  --radius-pill: 999px;
+  /* Diff tints: decoration under a literal sign, never the only signal. */
+  --add: #1c6b41;
+  --add-bg: #e2f0e4;
+  --del: #a2372c;
+  --del-bg: #fbe7e4;
 
-  /* Diff tints: decoration over the sign column, never the only signal. */
-  --diff-add-bg: rgba(22, 101, 52, 0.10);
-  --diff-add-line: rgba(22, 101, 52, 0.28);
-  --diff-del-bg: rgba(153, 27, 27, 0.09);
-  --diff-del-line: rgba(153, 27, 27, 0.26);
-
-  /* Type */
-  --font-sans: 'Inter', -apple-system, system-ui, 'PingFang SC', 'Noto Sans CJK SC', sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', 'Fira Code', Menlo, monospace;
+  /* Type. IBM Plex Sans for chrome and prose, IBM Plex Mono for every hash,
+   * path, ref, filename, size and line of code. The rule is absolute, so
+   * monospace is the signal that a string is machine-meaningful and nothing
+   * else. */
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, 'PingFang SC', 'Noto Sans CJK SC', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   --t-30: 30px;
   --t-24: 24px;
   --t-19: 19px;
@@ -70,48 +74,86 @@
   --s-8: 48px;
   --s-9: 64px;
 
+  /* One radius for everything that has one. */
+  --radius: 3px;
+
+  /* A table row is 28px, so about thirty of them fit a laptop screen. */
+  --row: 28px;
+
   /* The longest line of running text the interface sets. It is in ch, so
    * it is a count of characters and not a slice of the screen: it holds at
    * any zoom and in any typeface. It bounds prose and nothing else. */
   --measure: 78ch;
   --tap: 44px;
+  --focus-outline: 2px solid var(--accent);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #09090b;
-    --bg-surface: #111113;
-    --bg-raised: #18181b;
-    --bg-code: rgba(255, 255, 255, 0.06);
+    --bg: #121110;
+    --surface: #191817;
 
-    --accent: #e4e4e7;
-    --accent-hover: #a1a1aa;
-    --accent-subtle: rgba(255, 255, 255, 0.04);
+    --ink: #eae7e1;
+    --ink-2: #a8a49c;
+    --ink-3: #87837a;
 
-    --fg-1: #fafafa;
-    --fg-2: #b6b6bf;
-    --fg-3: #82828c;
+    --line: #2b2926;
+    --line-2: #3d3a35;
 
-    --border: rgba(255, 255, 255, 0.06);
-    --border-strong: rgba(255, 255, 255, 0.10);
+    --accent: #e0904f;
+    --accent-hover: #efa86d;
+    --accent-ink: #121110;
+    --accent-subtle: rgba(224, 144, 79, 0.08);
+
+    --add: #7cc79b;
+    --add-bg: #16271d;
+    --del: #e59289;
+    --del-bg: #2b1a18;
+
     --focus-outline: 2px solid var(--accent);
-
-    --diff-add-bg: rgba(134, 239, 172, 0.10);
-    --diff-add-line: rgba(134, 239, 172, 0.30);
-    --diff-del-bg: rgba(252, 165, 165, 0.09);
-    --diff-del-line: rgba(252, 165, 165, 0.28);
   }
 }
 
-/* Inter, latin, variable weight 400-600. One 48 KB file for the whole
- * range, served from this binary. The stack below it is the system, so a
- * page is readable before the font arrives and if it never does. */
+/* IBM Plex, latin. The sans is one variable file for weights 400 to 600; the
+ * mono has no variable cut, so it is three static weights. All four are
+ * served from this binary. The stack below each is the system, so a page is
+ * readable before the fonts arrive and if they never do. */
 @font-face {
-  font-family: 'Inter';
+  font-family: 'IBM Plex Sans';
   font-style: normal;
   font-weight: 400 600;
   font-display: swap;
-  src: url('/assets/inter-latin.woff2') format('woff2');
+  src: url('/assets/plex-sans-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/plex-mono-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/assets/plex-mono-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/assets/plex-mono-600-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
     U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
@@ -122,22 +164,26 @@
 body {
   margin: 0;
   background: var(--bg);
-  color: var(--fg-1);
+  color: var(--ink);
   font-family: var(--font-sans);
   font-size: var(--t-13);
   line-height: 1.5;
   -webkit-text-size-adjust: 100%;
 }
 
-/* Links carry their meaning in the underline, because the accent is the ink
- * and cannot separate a link from the sentence around it by colour. */
+/* A link is the accent and an underline, both. The accent alone is a 1.2:1
+ * difference against the ink of the sentence it sits in, which is no
+ * difference at all to a reader who cannot separate the two hues, so the
+ * underline carries the meaning and the accent confirms it. Chrome that is
+ * nothing but links, a navigation or a table of names, drops the underline
+ * in its own rule: there is no sentence there to be lost in. */
 a {
-  color: var(--fg-1);
+  color: var(--accent);
   text-decoration: underline;
-  text-decoration-color: var(--border-strong);
+  text-decoration-color: var(--line-2);
   text-underline-offset: 2px;
 }
-a:hover { text-decoration-color: var(--fg-1); }
+a:hover { color: var(--accent-hover); text-decoration-color: currentColor; }
 
 a:focus-visible,
 button:focus-visible,
@@ -146,16 +192,39 @@ textarea:focus-visible,
 summary:focus-visible {
   outline: var(--focus-outline);
   outline-offset: 2px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius);
 }
 
 code, pre, .mono, kbd, samp { font-family: var(--font-mono); font-size: var(--t-12); }
 pre { margin: 0; }
 
-h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
-h1 { font-size: var(--t-24); line-height: 1.25; }
-h2 { font-size: var(--t-19); line-height: 1.3; }
-h3 { font-size: var(--t-15); }
+/* A heading element is document structure: it says what nests under what,
+ * and a screen reader navigates by it. How a heading looks is a role, and
+ * the role is a class. The two are independent, which is why the token
+ * screen can open with a sentence at section size and the repository screen
+ * with an identifier in mono, and neither invents a look of its own.
+ *
+ *   .heading-page      the subject of the screen        --t-24
+ *   .heading-section   the name of a panel or a step    --t-19
+ *   .heading-sub       the name of a block inside one   --t-15
+ *
+ * Rendered Markdown is authored content and not chrome, so `.readme` sets
+ * its own scale and is the one exemption from this. */
+h1, h2, h3, h4 { margin: 0; font-size: inherit; line-height: inherit; font-weight: 600; }
+.heading-page { font-size: var(--t-24); line-height: 1.25; letter-spacing: -0.01em; }
+.heading-section { font-size: var(--t-19); line-height: 1.3; }
+.heading-sub { font-size: var(--t-15); line-height: 1.4; }
+/* The subject of a screen that is a machine string: a repository's owner and
+ * slug, a path in a tree, a filename. It is the page role at the page size
+ * and in mono, because monospace is what says the string is the machine's
+ * and not a sentence. It breaks anywhere, because nobody chose its length. */
+.heading-path {
+  font-family: var(--font-mono);
+  font-size: var(--t-24);
+  font-weight: 500;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
 p { margin: 0; }
 
 /* ---- page frame ---- */
@@ -187,7 +256,7 @@ p { margin: 0; }
   gap: var(--s-4);
   flex-wrap: wrap;
   padding-bottom: var(--s-4);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 .brand {
   display: inline-flex;
@@ -205,11 +274,11 @@ p { margin: 0; }
 .mark { display: block; width: auto; height: 1.35em; }
 .masthead nav { display: flex; gap: var(--s-5); flex-wrap: wrap; align-items: center; }
 .masthead nav a, .masthead nav button {
-  color: var(--fg-2);
+  color: var(--ink-2);
   font-size: var(--t-12);
   text-decoration: none;
 }
-.masthead nav a:hover { color: var(--fg-1); text-decoration: underline; }
+.masthead nav a:hover { color: var(--ink); text-decoration: underline; }
 
 /* Who is signed in, beside the way out. It is not a control, so it is
  * quieter than the links around it.
@@ -223,39 +292,39 @@ p { margin: 0; }
 .masthead nav .who {
   min-width: 0;
   overflow-wrap: anywhere;
-  color: var(--fg-3);
+  color: var(--ink-3);
   font-size: var(--t-12);
 }
 
 .crumbs {
   font-family: var(--font-mono);
   font-size: var(--t-12);
-  color: var(--fg-3);
+  color: var(--ink-3);
   overflow-wrap: anywhere;
 }
-.crumbs a { color: var(--fg-2); text-decoration: none; }
-.crumbs a:hover { color: var(--fg-1); text-decoration: underline; }
-.crumbs .here { color: var(--fg-1); }
+.crumbs a { color: var(--ink-2); text-decoration: none; }
+.crumbs a:hover { color: var(--ink); text-decoration: underline; }
+.crumbs .here { color: var(--ink); }
 
 /* The section nav marks the current screen with ink and a rule under it,
  * so the state reads without colour and at any zoom. */
-.sections { display: flex; gap: var(--s-2); flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+.sections { display: flex; gap: var(--s-2); flex-wrap: wrap; border-bottom: 1px solid var(--line); }
 .sections a {
   padding: var(--s-2) var(--s-4);
-  color: var(--fg-2);
+  color: var(--ink-2);
   text-decoration: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
 }
-.sections a:hover { color: var(--fg-1); }
-.sections a[aria-current='page'] { color: var(--fg-1); font-weight: 600; border-bottom-color: var(--accent); }
+.sections a:hover { color: var(--ink); }
+.sections a[aria-current='page'] { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
 
 /* ---- panels ---- */
 
 .panel {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
   padding: var(--s-6);
   display: flex;
   flex-direction: column;
@@ -269,21 +338,20 @@ p { margin: 0; }
   gap: var(--s-4);
   flex-wrap: wrap;
   padding: var(--s-4) var(--s-5);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-raised);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
 }
 .prose, .lead, .notice, .doc p { max-width: var(--measure); }
 .stack { display: flex; flex-direction: column; gap: var(--s-4); }
 .row { display: flex; gap: var(--s-4); align-items: center; flex-wrap: wrap; }
 .spread { display: flex; gap: var(--s-5); align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
-.meta { color: var(--fg-2); font-size: var(--t-12); }
-.muted { color: var(--fg-3); }
+.meta { color: var(--ink-2); font-size: var(--t-12); }
+.muted { color: var(--ink-3); }
 .label {
-  font-family: var(--font-mono);
   font-size: var(--t-11);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--fg-3);
+  color: var(--ink-3);
 }
 
 /* ---- controls ---- */
@@ -292,36 +360,34 @@ button, .button {
   font: inherit;
   font-size: var(--t-12);
   font-weight: 500;
-  padding: var(--s-2) var(--s-5);
-  min-height: var(--tap);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  background: var(--bg-surface);
-  color: var(--fg-1);
+  padding: var(--s-3) var(--s-5);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--ink);
   cursor: pointer;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-button:hover, .button:hover { background: var(--bg-raised); }
+button:hover, .button:hover { background: var(--surface); border-color: var(--ink-3); }
 .button-primary {
   background: var(--accent);
-  color: var(--bg-surface);
+  color: var(--accent-ink);
   border-color: var(--accent);
-  font-weight: 600;
+  font-weight: 500;
 }
-.button-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.button-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--accent-ink); }
 
 input, textarea {
   font: inherit;
   font-size: var(--t-12);
-  color: var(--fg-1);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  padding: var(--s-2) var(--s-4);
-  min-height: var(--tap);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  padding: var(--s-3) var(--s-4);
   max-width: 100%;
 }
 input.mono, textarea.mono { font-family: var(--font-mono); }
@@ -347,10 +413,10 @@ form { margin: 0; }
  *
  * An option is a title and a note as two elements, never one string joined by
  * punctuation, so the pair lays out the same when a note is missing. */
-label, legend { font-size: var(--t-12); color: var(--fg-2); }
-.hint { font-size: var(--t-12); color: var(--fg-2); }
-.option-title { font-family: var(--font-mono); font-size: var(--t-12); color: var(--fg-1); }
-.option-note { font-size: var(--t-12); color: var(--fg-2); }
+label, legend { font-size: var(--t-12); color: var(--ink-2); }
+.hint { font-size: var(--t-12); color: var(--ink-2); }
+.option-title { font-family: var(--font-mono); font-size: var(--t-12); color: var(--ink); }
+.option-note { font-size: var(--t-12); color: var(--ink-2); }
 
 /* An option carries names nobody chose the length of: a repository
  * identifier is opaque and runs to 128 characters, and a branch name has no
@@ -369,9 +435,9 @@ label, legend { font-size: var(--t-12); color: var(--fg-2); }
   max-height: 16rem;
   overflow-y: auto;
   padding: var(--s-3) var(--s-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 .choice { display: grid; grid-template-columns: auto 1fr; gap: var(--s-3); align-items: start; }
 .choice input { min-height: 0; margin: 3px 0 0; }
@@ -385,18 +451,18 @@ caption {
   text-align: left;
   padding: var(--s-4) var(--s-5);
   font-size: var(--t-12);
-  color: var(--fg-2);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-raised);
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
 }
-th, td { text-align: left; padding: var(--s-2) var(--s-4); border-bottom: 1px solid var(--border); }
+th, td { text-align: left; padding: var(--s-2) var(--s-4); border-bottom: 1px solid var(--line); }
+thead th { border-bottom: 1px solid var(--line-2); }
 thead th {
-  font-family: var(--font-mono);
   font-size: var(--t-11);
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--fg-3);
+  color: var(--ink-3);
   white-space: nowrap;
 }
 tbody th { font-weight: 500; }
@@ -405,7 +471,7 @@ tbody tr:hover { background: var(--accent-subtle); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .nowrap { white-space: nowrap; }
 .path, .sha, .size, .when, .refname { font-family: var(--font-mono); font-size: var(--t-12); }
-.sha { color: var(--fg-2); }
+.sha { color: var(--ink-2); }
 
 /* ---- notices ---- */
 
@@ -413,22 +479,22 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
  * their border, and never by a bar down one edge. */
 
 .notice {
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--bg-raised);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--bg);
   padding: var(--s-4) var(--s-5);
   font-size: var(--t-12);
-  color: var(--fg-2);
+  color: var(--ink-2);
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
 }
-.notice strong { color: var(--fg-1); }
-.empty { padding: var(--s-7) var(--s-5); text-align: center; color: var(--fg-2); }
+.notice strong { color: var(--ink); }
+.empty { padding: var(--s-7) var(--s-5); text-align: center; color: var(--ink-2); }
 
 /* ---- diff ---- */
 
-.diff-file { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-surface); overflow: hidden; }
+.diff-file { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
 .diff-file + .diff-file { margin-top: var(--s-4); }
 .diff-file > summary, .diff-file > .diff-head {
   display: flex;
@@ -436,13 +502,13 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
   align-items: center;
   flex-wrap: wrap;
   padding: var(--s-3) var(--s-5);
-  background: var(--bg-raised);
+  background: var(--bg);
   cursor: pointer;
   list-style: none;
 }
 .diff-file > .diff-head { cursor: default; }
 .diff-file > summary::-webkit-details-marker { display: none; }
-.diff-file > summary::before { content: '▸'; color: var(--fg-3); font-size: var(--t-11); }
+.diff-file > summary::before { content: '▸'; color: var(--ink-3); font-size: var(--t-11); }
 .diff-file[open] > summary::before { content: '▾'; }
 .diff-file .diff-path { font-family: var(--font-mono); font-size: var(--t-12); font-weight: 500; overflow-wrap: anywhere; }
 .count-add, .count-del { font-family: var(--font-mono); font-size: var(--t-11); }
@@ -454,18 +520,18 @@ table.diff td { border: none; padding: 0 var(--s-3); white-space: pre; }
 table.diff td.gutter {
   width: 1%;
   text-align: right;
-  color: var(--fg-3);
+  color: var(--ink-3);
   user-select: none;
   -webkit-user-select: none;
-  background: var(--bg-raised);
+  background: var(--bg);
   font-size: var(--t-11);
 }
-table.diff td.sign { width: 1%; user-select: none; -webkit-user-select: none; color: var(--fg-2); }
-table.diff tr.add td { background: var(--diff-add-bg); }
-table.diff tr.add td.sign { box-shadow: inset 2px 0 0 var(--diff-add-line); }
-table.diff tr.del td { background: var(--diff-del-bg); }
-table.diff tr.del td.sign { box-shadow: inset 2px 0 0 var(--diff-del-line); }
-table.diff tr.hunk td { background: var(--bg-code); color: var(--fg-2); padding-top: var(--s-2); padding-bottom: var(--s-2); }
+table.diff td.sign { width: 1%; user-select: none; -webkit-user-select: none; color: var(--ink-2); }
+table.diff tr.add td { background: var(--add-bg); }
+table.diff tr.add td.sign { box-shadow: inset 2px 0 0 var(--add); }
+table.diff tr.del td { background: var(--del-bg); }
+table.diff tr.del td.sign { box-shadow: inset 2px 0 0 var(--del); }
+table.diff tr.hunk td { background: var(--bg); color: var(--ink-2); padding-top: var(--s-2); padding-bottom: var(--s-2); }
 table.diff tr:hover td { filter: brightness(0.985); }
 
 /* ---- file view ---- */
@@ -477,13 +543,13 @@ table.source td.gutter {
   text-align: right;
   user-select: none;
   -webkit-user-select: none;
-  background: var(--bg-raised);
-  color: var(--fg-3);
+  background: var(--bg);
+  color: var(--ink-3);
   font-size: var(--t-11);
 }
 table.source td.gutter a { color: inherit; text-decoration: none; }
-table.source tr:target td { background: var(--bg-code); }
-table.source tr:target td.gutter { color: var(--fg-1); font-weight: 600; }
+table.source tr:target td { background: var(--bg); }
+table.source tr:target td.gutter { color: var(--ink); font-weight: 600; }
 
 /* ---- readme ---- */
 
@@ -494,11 +560,11 @@ table.source tr:target td.gutter { color: var(--fg-1); font-weight: 600; }
 .readme h2 { font-size: var(--t-19); }
 .readme h3 { font-size: var(--t-15); }
 .readme p, .readme ul, .readme ol, .readme blockquote { margin: 0 0 var(--s-4); }
-.readme code { background: var(--bg-code); padding: 1px var(--s-1); border-radius: var(--radius-xs); }
+.readme code { background: var(--bg); padding: 1px var(--s-1); border-radius: var(--radius); }
 .readme pre {
-  background: var(--bg-code);
+  background: var(--bg);
   padding: var(--s-4);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   overflow-x: auto;
 }
 .readme pre code { background: none; padding: 0; }
@@ -506,17 +572,17 @@ table.source tr:target td.gutter { color: var(--fg-1); font-weight: 600; }
 .readme table { margin-bottom: var(--s-4); }
 .readme blockquote {
   padding: var(--s-3) var(--s-4);
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--fg-2);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink-2);
 }
 
 /* ---- commit header ---- */
 
-.commit-message { font-family: var(--font-mono); font-size: var(--t-12); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg-2); }
+.commit-message { font-family: var(--font-mono); font-size: var(--t-12); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink-2); }
 dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: var(--s-2) var(--s-5); margin: 0; font-size: var(--t-12); }
-dl.facts dt { color: var(--fg-3); }
+dl.facts dt { color: var(--ink-3); }
 dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere; }
 .diffstat { display: flex; gap: var(--s-4); align-items: center; flex-wrap: wrap; font-size: var(--t-12); }
 
@@ -531,26 +597,25 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
   gap: var(--s-6);
   align-items: start;
 }
-.gate h1 { font-family: var(--font-mono); font-size: var(--t-24); }
-.clone-shape { font-family: var(--font-mono); font-size: var(--t-12); color: var(--fg-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.clone-shape { font-family: var(--font-mono); font-size: var(--t-12); color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* ---- pager ---- */
 
 .pager { display: flex; gap: var(--s-5); align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: var(--t-12); }
-.pager .inert { color: var(--fg-3); }
+.pager .inert { color: var(--ink-3); }
 
 /* ---- agent screens ---- */
 
 /* The masthead marks where you are the way the repository sections do:
  * weight and an ink rule, never a hue. */
 .masthead nav a[aria-current='page'] {
-  color: var(--fg-1);
+  color: var(--ink);
   font-weight: 600;
   border-bottom: 2px solid var(--accent);
   padding-bottom: 1px;
 }
 
-.lead { margin: 0; color: var(--fg-2); font-size: var(--t-13); line-height: 1.6; }
+.lead { margin: 0; color: var(--ink-2); font-size: var(--t-13); line-height: 1.6; }
 
 /* A row of fields is a grid that fills its panel: a field takes the width the
  * row gives it, so nothing is cut off inside a control that was pinned to a
@@ -570,30 +635,29 @@ fieldset.field legend { padding: 0; }
  * read as an ornament, and inverted ink is the strongest mark available
  * that borrows no colour: full ink, edge to edge, no card. */
 .secret {
-  background: var(--fg-1);
+  background: var(--ink);
   color: var(--bg);
   padding: var(--s-6);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
 }
-.secret h1 { font-size: var(--t-19); margin: 0; }
 .secret p { margin: 0; font-size: var(--t-12); line-height: 1.6; }
-.secret .meta, .secret label { color: var(--bg-raised); }
+.secret .meta, .secret label { color: var(--bg); }
 .secret input {
-  background: var(--bg-surface);
-  color: var(--fg-1);
-  border-color: var(--fg-1);
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--ink);
   width: 100%;
 }
 
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: var(--s-2) var(--s-5); margin: 0; }
-.facts dt { color: var(--fg-3); font-size: var(--t-11); letter-spacing: 0.08em; text-transform: uppercase; }
+.facts dt { color: var(--ink-3); font-size: var(--t-11); letter-spacing: 0.08em; text-transform: uppercase; }
 .facts dd { margin: 0; }
 
 .sample {
   margin: 0;
   padding: var(--s-4) var(--s-5);
-  background: var(--bg-code);
-  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border-radius: var(--radius);
   font-family: var(--font-mono);
   font-size: var(--t-12);
   line-height: 1.6;
@@ -601,15 +665,15 @@ fieldset.field legend { padding: 0; }
 
 /* ---- documentation ---- */
 
-.doc h2 { font-size: var(--t-19); margin: var(--s-5) 0 0; padding-top: var(--s-5); border-top: 1px solid var(--border); }
-.doc p { margin: 0; font-size: var(--t-13); line-height: 1.65; color: var(--fg-2); }
-.doc p strong { color: var(--fg-1); }
+.doc .heading-section { margin: var(--s-5) 0 0; padding-top: var(--s-5); border-top: 1px solid var(--line); }
+.doc p { margin: 0; font-size: var(--t-13); line-height: 1.65; color: var(--ink-2); }
+.doc p strong { color: var(--ink); }
 .doc code {
   font-family: var(--font-mono);
   font-size: var(--t-12);
-  background: var(--bg-code);
+  background: var(--bg);
   padding: 1px var(--s-1);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius);
 }
 /* The section list sits beside the words it indexes, and the document takes
  * the rest. Two columns, in that order, for one reason: running text stops at
@@ -633,15 +697,17 @@ fieldset.field legend { padding: 0; }
   gap: var(--s-2);
   font-size: var(--t-12);
 }
-.toc a { color: var(--fg-2); text-decoration: none; border-bottom: 1px solid var(--border-strong); }
-.toc a:hover { color: var(--fg-1); border-bottom-color: var(--accent); }
+.toc a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--line-2); }
+.toc a:hover { color: var(--ink); border-bottom-color: var(--accent); }
 
 /* ---- narrow ---- */
 
 @media (max-width: 640px) {
   .page { padding: var(--s-5) var(--s-4) var(--s-8); gap: var(--s-5); }
-  .panel { padding: var(--s-5); border-radius: var(--radius-md); }
-  h1 { font-size: var(--t-19); }
+  /* A finger, not a pointer: every control is at least a tap target. */
+  button, .button, input, textarea { min-height: var(--tap); }
+  .panel { padding: var(--s-5); border-radius: var(--radius); }
+  .heading-page, .heading-path { font-size: var(--t-19); }
   .fields { gap: var(--s-5); }
   .doc-body { grid-template-columns: 1fr; gap: var(--s-5); }
   .toc { position: static; }
@@ -653,11 +719,11 @@ fieldset.field legend { padding: 0; }
    * a wrapped line of source is a lie about the file. */
   table.stackable, table.stackable tbody, table.stackable tr, table.stackable th, table.stackable td { display: block; width: auto; }
   table.stackable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  table.stackable tr { padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--border); }
+  table.stackable tr { padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--line); }
   table.stackable th, table.stackable td { border: none; padding: var(--s-1) 0; }
   table.stackable td[data-label]::before {
     content: attr(data-label) ': ';
-    color: var(--fg-3);
+    color: var(--ink-3);
     font-size: var(--t-11);
   }
   table.stackable td:empty { display: none; }

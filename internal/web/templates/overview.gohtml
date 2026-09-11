@@ -4,7 +4,7 @@
 <main class="stack">
   <div class="spread">
     <div class="stack">
-      <h1 class="path">{{.Repo.Owner}} <span class="muted">/</span> {{.Repo.Slug}}</h1>
+      <h1 class="heading-path">{{.Repo.Owner}} <span class="muted">/</span> {{.Repo.Slug}}</h1>
       <p class="meta">
         <a href="{{.Repo.URL}}/log{{.Repo.RefQuery}}">commit log</a> ·
         <a href="{{.Repo.URL}}/refs">{{.Branches}} branches</a> ·
@@ -18,7 +18,7 @@
   {{template "stale" .Stale}}
 
   <div class="panel stack">
-    <h2>Clone</h2>
+    <h2 class="heading-section">Clone</h2>
     <div class="field">
       <label for="clone-https">HTTPS</label>
       <input id="clone-https" class="mono" readonly size="52" value="{{.CloneHTTPS}}">
@@ -41,7 +41,7 @@
   {{- else}}
 
   <div class="panel stack">
-    <h2>Reference</h2>
+    <h2 class="heading-section">Reference</h2>
     {{- if .Selector.Empty}}
     <p class="meta">This repository has no branches or tags.</p>
     {{- else}}
@@ -73,7 +73,7 @@
 
   {{- with .Last}}
   <div class="panel stack">
-    <h2>Last commit</h2>
+    <h2 class="heading-section">Last commit</h2>
     <p><a class="sha" href="{{.URL}}">{{.Short}}</a> {{.Subject}}</p>
     <p class="meta">{{.Author}} · <span title="{{.WhenExact}}">{{.When}}</span></p>
   </div>

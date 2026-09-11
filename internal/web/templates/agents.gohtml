@@ -14,11 +14,11 @@
     <a href="#mcp">6 · A tool server for agents</a>
   </nav>
   <div class="stack">
-    <h1>Driving this git server from an agent</h1>
+    <h1 class="heading-page">Driving this git server from an agent</h1>
     <p class="lead">There is no SDK. An agent talks to this server with git and HTTP, using a token you mint by hand. Everything it needs fits on this page.</p>
 
     <section id="token" class="stack">
-      <h2>1 · Get a token</h2>
+      <h2 class="heading-section">1 · Get a token</h2>
       <p>Go to <a href="/tokens">agent tokens</a>, name the one repository the agent works in, choose <strong>read</strong> unless it must push, and take the shortest lifetime that covers the job. The token is shown once and is stored nowhere, so copy it there and then.</p>
       <p>Put it in the agent's environment as <code>ORIGO_TOKEN</code>. Never in a repository, never in a prompt.</p>
       <p>Minting a token needs administrative access to that repository, and it is something a person does on a screen. An agent cannot mint one: its own token carries no authority to, and there is no API that would let it.</p>
@@ -26,7 +26,7 @@
     </section>
 
     <section id="base" class="stack">
-      <h2>2 · Address and credential</h2>
+      <h2 class="heading-section">2 · Address and credential</h2>
       <p>Two addresses, and they are not the same one. <strong>These screens are for a browser</strong> and need a browser sign-in; a token opens none of them. <strong>The git server is what an agent talks to</strong>, and it is where the token works.</p>
       <pre class="scroller sample"># the git server
 {{.APIBase}}
@@ -42,7 +42,7 @@ curl -H "Authorization: Bearer $ORIGO_TOKEN" \
     </section>
 
     <section id="read" class="stack">
-      <h2>3 · What an agent can read</h2>
+      <h2 class="heading-section">3 · What an agent can read</h2>
       <p>Reads are JSON, except three that are the bytes themselves: a comparison is a unified diff, a file is its own content, and an archive is a gzipped tar.</p>
       <div class="scroller">
         <table class="stackable">
@@ -71,7 +71,7 @@ curl -H "Authorization: Bearer $ORIGO_TOKEN" \
     </section>
 
     <section id="limits" class="stack">
-      <h2>4 · Rate limits</h2>
+      <h2 class="heading-section">4 · Rate limits</h2>
       <p>One figure, in requests a minute, for each person or agent, counted per server. It is 600 by default, and an installation can set a different figure for a particular caller. There are no tiers: a token is held to the figure of whoever minted it.</p>
       <p>Every answer carries the figure in force, so an agent can pace itself rather than discover the limit by hitting it:</p>
       <pre class="scroller sample">RateLimit-Limit: 600</pre>
@@ -80,7 +80,7 @@ curl -H "Authorization: Bearer $ORIGO_TOKEN" \
     </section>
 
     <section id="errors" class="stack">
-      <h2>5 · Errors</h2>
+      <h2 class="heading-section">5 · Errors</h2>
       <p>Every refusal is the same object. <code>code</code> is stable and safe to branch on; <code>message</code> is one sentence for a person; <code>details</code> varies by code and says which reference, which limit, or which reason.</p>
       <pre class="scroller sample">{
   "error": {
@@ -121,7 +121,7 @@ curl -H "Authorization: Bearer $ORIGO_TOKEN" \
     </section>
 
     <section id="mcp" class="stack">
-      <h2>6 · A tool server for agents</h2>
+      <h2 class="heading-section">6 · A tool server for agents</h2>
       <p><strong>Planned, not built.</strong> There is nothing to install and nothing to configure yet. This section says what is intended so you can tell it apart from what works today, which is everything above it.</p>
       <p>The intention is a small separate program you run beside an agent, which speaks the Model Context Protocol over standard input and output and turns the reads above into tools an agent can call by name. It would take a token of exactly the kind you mint on this site, hold to the same rate limit, and return the same refusals, so it can do nothing a plain HTTP agent cannot. It is a shape, not a capability.</p>
       <p>One thing about it is settled: there is no tool for minting a token, and there will not be one. Creating a credential stays a decision a person makes.</p>

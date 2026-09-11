@@ -4,9 +4,12 @@
 package web
 
 import (
+	"maps"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -75,13 +78,260 @@ func TestBothThemesAreComplete(t *testing.T) {
 
 // isColour reports whether a token names a colour rather than a size, a
 // radius, or a typeface.
+//
+// It names the families that are not colours and treats everything else as
+// one, rather than the other way round. A list of colour names goes quietly
+// out of date the moment the palette is renamed, and a token that has dropped
+// off it is a token no longer held to having a value in both themes, which is
+// the failure this whole test exists to catch.
 func isColour(token string) bool {
-	for _, part := range []string{"bg", "fg", "accent", "border", "diff", "focus"} {
-		if strings.Contains(token, part) {
+	for _, notColour := range []string{"--font-", "--t-", "--s-", "--radius", "--row", "--measure", "--tap"} {
+		if strings.HasPrefix(token, notColour) {
+			return false
+		}
+	}
+	return true
+}
+
+// headingRoles are the roles a heading element may wear, with the typeface
+// each is set in. Monospace is on this list exactly once, for the role whose
+// content is a machine string: a repository's owner and slug, a path, a
+// filename. A sentence never wears it.
+var headingRoles = map[string]string{
+	".heading-page":    "sans",
+	".heading-section": "sans",
+	".heading-sub":     "sans",
+	".heading-path":    "mono",
+}
+
+// TestAHeadingLooksLikeItsRole asserts the half of the role system the class
+// rules alone do not cover: a heading element carries document structure, a
+// role class carries the look, and no screen reaches in to change the look of
+// a heading it happens to hold.
+//
+// This is the assertion that was missing. The role test below held the role
+// classes to one rule each, so the classes could not drift, but a heading was
+// styled by its element name and any screen could override that with a
+// descendant selector. `.gate h1` did exactly that: it set the sign-in
+// heading in monospace at twice the size of the two headings beside it, all
+// three of them naming a panel, and every existing assertion passed because
+// none of them looked at a heading at all.
+func TestAHeadingLooksLikeItsRole(t *testing.T) {
+	css := string(mustAsset(t, "app.css"))
+
+	// One rule gives a role its treatment, and it is the rule whose whole
+	// selector is that role.
+	for role := range headingRoles {
+		var defined int
+		for _, rule := range cssRules(css) {
+			if rule.selector == role {
+				defined++
+			}
+		}
+		if defined != 1 {
+			t.Errorf("%s is styled by %d rules of its own, want the one rule the role has", role, defined)
+		}
+	}
+
+	// Nothing else sets how a heading looks. A bare element selector is the
+	// shared baseline and a width breakpoint may step a role, but a selector
+	// that reaches a heading through a screen is the defect above. Rendered
+	// Markdown is authored content rather than chrome and sets its own scale.
+	looks := []string{"font-family", "font-size", "font-weight", "letter-spacing", "line-height"}
+	for _, rule := range cssRules(css) {
+		for sel := range strings.SplitSeq(rule.selector, ",") {
+			sel = strings.TrimSpace(sel)
+			if !headingSelector(sel) || strings.HasPrefix(sel, ".readme") {
+				continue
+			}
+			if _, isRole := headingRoles[sel]; isRole || bareElements(sel) {
+				continue
+			}
+			for _, look := range looks {
+				if strings.Contains(rule.body, look+":") {
+					t.Errorf("%q sets %s on a heading, so a heading looks one way on that screen and another everywhere else: %s",
+						sel, look, strings.TrimSpace(rule.body))
+				}
+			}
+		}
+	}
+
+	// Monospace on a heading is the machine-string role and nothing else.
+	for _, rule := range cssRules(css) {
+		if !strings.Contains(rule.body, "var(--font-mono)") {
+			continue
+		}
+		for sel := range strings.SplitSeq(rule.selector, ",") {
+			sel = strings.TrimSpace(sel)
+			if headingRoles[sel] == "mono" || strings.HasPrefix(sel, ".readme") {
+				continue
+			}
+			if headingSelector(sel) {
+				t.Errorf("%q sets a heading in monospace, which is the interface's signal that a string is a hash, a path or a filename", sel)
+			}
+		}
+	}
+
+	// And every heading a reader meets wears exactly one of the roles, so
+	// none of them falls back to a size nobody chose.
+	h := newHarness(t)
+	for name, rec := range h.everyPage() {
+		page := doc(t, rec.Body.String())
+		for _, tag := range []string{"h1", "h2", "h3", "h4"} {
+			for _, e := range elements(page, tag) {
+				if within(e, "readme") {
+					continue
+				}
+				var worn int
+				for class := range strings.FieldsSeq(attr(e, "class")) {
+					if _, ok := headingRoles["."+class]; ok {
+						worn++
+					}
+				}
+				if worn != 1 {
+					t.Errorf("%s: <%s>%s</%s> wears %d heading roles, want one", name, tag, text(e), tag, worn)
+				}
+			}
+		}
+	}
+}
+
+// headingSelector reports whether a selector reaches a heading element.
+func headingSelector(sel string) bool {
+	for _, tag := range []string{"h1", "h2", "h3", "h4"} {
+		for part := range strings.FieldsSeq(strings.ReplaceAll(sel, ">", " ")) {
+			if part == tag || strings.HasPrefix(part, tag+":") || strings.HasPrefix(part, tag+".") {
+				return true
+			}
+		}
+	}
+	for role := range headingRoles {
+		if sel == role {
 			return true
 		}
 	}
 	return false
+}
+
+// bareElements reports whether a selector names element types and nothing
+// else, which is the interface's shared baseline rather than one screen's
+// opinion of a heading.
+func bareElements(sel string) bool {
+	if strings.ContainsAny(sel, ".#[:>") {
+		return false
+	}
+	return len(strings.Fields(sel)) == 1
+}
+
+// contrast is the WCAG 2.1 ratio between two sRGB hex colours.
+func contrast(a, b string) float64 {
+	la, lb := luminance(a), luminance(b)
+	if la < lb {
+		la, lb = lb, la
+	}
+	return (la + 0.05) / (lb + 0.05)
+}
+
+func luminance(hex string) float64 {
+	v := strings.TrimPrefix(hex, "#")
+	channel := func(i int) float64 {
+		n, err := strconv.ParseUint(v[i:i+2], 16, 8)
+		if err != nil {
+			return 0
+		}
+		c := float64(n) / 255
+		if c <= 0.04045 {
+			return c / 12.92
+		}
+		return math.Pow((c+0.055)/1.055, 2.4)
+	}
+	return 0.2126*channel(0) + 0.7152*channel(2) + 0.0722*channel(4)
+}
+
+// TestBothThemesMeetTheirContrast measures the palette instead of trusting it.
+//
+// The light theme this replaced was a near-white page under white panels
+// separated by a hairline at 8% black, and its third ink was #a0a0a0: 2.6:1
+// on a panel, which is under the 4.5:1 floor and was carrying line numbers,
+// crumbs and every column header. Nothing in the suite noticed, because a
+// ratio is not something a page can be eyeballed into having.
+//
+// The floors are the ones the palette claims for itself: body ink at 7:1 or
+// better on both the page and a panel, the meta ink at 4.5:1 on a panel,
+// which is the only surface it is used on, and the accent at 4.5:1 on both,
+// since it carries every link. The primary control is measured as the pair it
+// is actually painted with.
+func TestBothThemesMeetTheirContrast(t *testing.T) {
+	css := string(mustAsset(t, "app.css"))
+	light, dark := lightBlock.FindStringSubmatch(css), darkBlock.FindStringSubmatch(css)
+	if light == nil || dark == nil {
+		t.Fatal("the stylesheet has no light block or no dark block")
+	}
+	base := themeValues(light[1])
+	for _, theme := range []struct {
+		name   string
+		values map[string]string
+	}{
+		{"light", base},
+		{"dark", inherit(base, themeValues(dark[1]))},
+	} {
+		v := theme.values
+		for _, pair := range []struct {
+			fg, bg string
+			min    float64
+		}{
+			{"--ink", "--bg", 7},
+			{"--ink", "--surface", 7},
+			{"--ink-2", "--bg", 7},
+			{"--ink-2", "--surface", 7},
+			{"--ink-3", "--surface", 4.5},
+			{"--accent", "--bg", 4.5},
+			{"--accent", "--surface", 4.5},
+			{"--accent-ink", "--accent", 4.5},
+			{"--add", "--add-bg", 4.5},
+			{"--del", "--del-bg", 4.5},
+			{"--ink", "--add-bg", 4.5},
+			{"--ink", "--del-bg", 4.5},
+			{"--bg", "--ink", 7},
+		} {
+			fg, bg := v[pair.fg], v[pair.bg]
+			if fg == "" || bg == "" {
+				t.Errorf("%s: %s on %s is not a pair of colours", theme.name, pair.fg, pair.bg)
+				continue
+			}
+			if got := contrast(fg, bg); got < pair.min {
+				t.Errorf("%s: %s on %s is %.2f:1, want %.1f:1 or better", theme.name, pair.fg, pair.bg, got, pair.min)
+			}
+		}
+		// A panel has to be findable on the page behind it. The answer is
+		// the frame and not the fill: the two surfaces are a tenth of a
+		// stop apart by design, and the rule around them is what a reader
+		// actually sees.
+		if got := contrast(v["--line-2"], v["--surface"]); got < 1.5 {
+			t.Errorf("%s: the frame is %.2f:1 against a panel, so a panel has no edge", theme.name, got)
+		}
+		if got := contrast(v["--line"], v["--surface"]); got < 1.2 {
+			t.Errorf("%s: the hairline is %.2f:1 against a panel, so rows do not separate", theme.name, got)
+		}
+	}
+}
+
+// themeValues reads the hex colours a :root block defines.
+func themeValues(block string) map[string]string {
+	out := map[string]string{}
+	for _, m := range regexp.MustCompile(`(?m)^\s*(--[a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{6})\s*;`).FindAllStringSubmatch(block, -1) {
+		out[m[1]] = m[2]
+	}
+	return out
+}
+
+// inherit is the dark theme as a browser reads it: the light block's values
+// with the dark block's laid over them.
+func inherit(base, over map[string]string) map[string]string {
+	out := map[string]string{}
+	maps.Copy(out, base)
+	maps.Copy(out, over)
+	return out
 }
 
 // TestTheNarrowRulesAreThere asserts the structural half of the narrow-width
@@ -143,13 +393,32 @@ func TestNoBlockIsMarkedByALeftRule(t *testing.T) {
 	}
 
 	// Every block that reads as a notice keeps a surface and a full border,
-	// so removing the rule did not leave it undistinguishable.
-	for _, rule := range []string{
-		".notice {\n  border: 1px solid var(--border-strong);\n  border-radius: var(--radius-sm);\n  background: var(--bg-raised);",
-		".readme blockquote {\n  padding: var(--s-3) var(--s-4);\n  background: var(--bg-raised);\n  border: 1px solid var(--border);",
-	} {
-		if !strings.Contains(css, rule) {
-			t.Errorf("a block lost the surface and border that distinguish it:\n%s", rule)
+	// so removing the rule did not leave it undistinguishable. The assertion
+	// is the treatment and not the exact declarations: a token may be renamed
+	// and the radius scale may collapse to one value, and a block that lost
+	// its surface or grew a partial border must still fail here.
+	for _, role := range []string{".notice", ".readme blockquote"} {
+		var found bool
+		for _, rule := range cssRules(css) {
+			if strings.TrimSpace(rule.selector) != role {
+				continue
+			}
+			found = true
+			for _, want := range []string{"background:", "border:"} {
+				if !strings.Contains(rule.body, want) {
+					t.Errorf("%s has no %s, so nothing but a rule would set it apart:\n%s",
+						role, strings.TrimSuffix(want, ":"), rule.body)
+				}
+			}
+			for decl := range strings.SplitSeq(rule.body, ";") {
+				name, _, _ := strings.Cut(strings.TrimSpace(decl), ":")
+				if n := strings.TrimSpace(name); strings.HasPrefix(n, "border-") && n != "border-radius" {
+					t.Errorf("%s draws %s, so its border is not on all four edges", role, n)
+				}
+			}
+		}
+		if !found {
+			t.Errorf("%s is not styled at all", role)
 		}
 	}
 

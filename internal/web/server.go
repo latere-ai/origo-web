@@ -148,13 +148,18 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
-// handleAsset serves the stylesheet and the font out of the binary. They are
+// handleAsset serves the stylesheet and the fonts out of the binary. They are
 // this service's own bytes, the same for every reader, and nothing else is
-// served from here.
+// served from here: the list is closed, so an asset directory that grows a
+// file does not grow a route.
 func (s *Server) handleAsset(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("file")
 	switch name {
-	case "app.css", "inter-latin.woff2":
+	case "app.css",
+		"plex-sans-latin.woff2",
+		"plex-mono-400-latin.woff2",
+		"plex-mono-500-latin.woff2",
+		"plex-mono-600-latin.woff2":
 	default:
 		http.NotFound(w, r)
 		return

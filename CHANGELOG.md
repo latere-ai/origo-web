@@ -10,6 +10,15 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+- The interface has a new look. The page is a warm paper tone instead of
+  near-white, panels and tables sit on it with a rule you can actually
+  see, and one rust accent carries links, focus and the button you are
+  meant to press. Text is set in IBM Plex Sans, and every hash, path,
+  ref, filename and line of code in IBM Plex Mono, so monospace now tells
+  you a string is the machine's. Both themes are measured: the grey that
+  was carrying line numbers, breadcrumbs and column headers was below the
+  readable floor in the light theme and is not any more.
+
 ## v0.4.2 - 2026-09-11
 
 - The section list on the documentation screen sits beside the words it
