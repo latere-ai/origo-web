@@ -95,6 +95,8 @@ func Routes(keys bool) []Route {
 		{"GET", "/r/{id}/tree/{path...}"},
 		{"GET", "/r/{id}/blob/{path...}"},
 		{"GET", "/r/{id}/raw/{path...}"},
+		{"GET", "/r/{id}/visibility"},
+		{"POST", "/r/{id}/visibility"},
 	}
 	if keys {
 		rs = append(rs,
@@ -136,6 +138,8 @@ func New(o Options) *Server {
 		"GET /r/{id}/tree/{path...}": s.handleTree,
 		"GET /r/{id}/blob/{path...}": s.handleBlob,
 		"GET /r/{id}/raw/{path...}":  s.handleRaw,
+		"GET /r/{id}/visibility":     s.handleVisibility,
+		"POST /r/{id}/visibility":    s.handleVisibilityPost,
 		"GET /keys":                  s.handleKeys,
 		"POST /keys":                 s.handleKeysPost,
 		"GET /keys/{id}/remove":      s.handleKeyRemove,

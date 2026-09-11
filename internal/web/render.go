@@ -22,6 +22,7 @@ var assetFS embed.FS
 var pageNames = []string{
 	"home", "signin", "overview", "refs", "log", "commit",
 	"tree", "blob", "keys", "message", "compare", "tokens", "token", "agents", "new",
+	"visibility",
 }
 
 var pages = func() map[string]*template.Template {

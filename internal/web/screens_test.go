@@ -354,6 +354,7 @@ func TestRoutesAreReadOnly(t *testing.T) {
 		"GET /r/{id}", "GET /r/{id}/refs", "GET /r/{id}/log", "GET /r/{id}/commit/{sha}",
 		"GET /r/{id}/patch/{sha}", "GET /r/{id}/compare", "GET /r/{id}/tree/{path...}",
 		"GET /r/{id}/blob/{path...}", "GET /r/{id}/raw/{path...}",
+		"GET /r/{id}/visibility", "POST /r/{id}/visibility",
 		"GET /keys", "POST /keys", "GET /keys/{id}/remove", "POST /keys/{id}/remove",
 	}
 	var got []string
@@ -371,7 +372,7 @@ func TestRoutesAreReadOnly(t *testing.T) {
 
 	// Every form refuses a submission with no token.
 	h := newHarness(t, func(c *config.Config) { c.KeysURL = mustURL(t, "https://keys.example") })
-	for _, path := range []string{"/sign-out", "/keys", "/tokens", "/new"} {
+	for _, path := range []string{"/sign-out", "/keys", "/tokens", "/new", h.repoPath("/visibility")} {
 		req := httptest.NewRequest(http.MethodPost, path, nil)
 		req.AddCookie(h.signedIn("alice"))
 		rec := httptest.NewRecorder()
@@ -392,12 +393,13 @@ func TestRoutesAreReadOnly(t *testing.T) {
 		h.repoPath("/log"), h.repoPath("/commit/9f3c1abf20d4e7c8b5a1930fe6d2c4471be08a3d"),
 		h.repoPath("/patch/9f3c1abf20d4e7c8b5a1930fe6d2c4471be08a3d"), h.repoPath("/compare"),
 		h.repoPath("/tree/internal"), h.repoPath("/blob/README.md"), h.repoPath("/raw/README.md"),
+		h.repoPath("/visibility"),
 		"/livez", "/readyz", "/version",
 	}
 	for _, address := range addresses {
 		for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
 			if method == http.MethodPost && (address == "/sign-out" || address == "/keys" ||
-				address == "/tokens" || address == "/new") {
+				address == "/tokens" || address == "/new" || address == h.repoPath("/visibility")) {
 				continue
 			}
 			req := httptest.NewRequest(method, address, nil)

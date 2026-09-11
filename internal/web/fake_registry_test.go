@@ -42,6 +42,15 @@ type fakeRegistry struct {
 	// absent makes every route answer 404, which is an installation whose
 	// authorizer keeps no registry at all.
 	absent bool
+
+	// visibility is what the registry says about a repository, and
+	// canChange whether this person may write it. visibilityStatus
+	// overrides the answer, so a test can drive each refusal.
+	visibility       string
+	canChange        bool
+	visibilityStatus int
+	// visibilityWrites is every value the screen wrote, in order.
+	visibilityWrites []string
 }
 
 // newFakeRegistry returns a registry holding one namespace, which is the
@@ -103,6 +112,34 @@ func (f *fakeRegistry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f.mu.Unlock()
 		w.WriteHeader(http.StatusCreated)
 		writeJSON(w, row)
+	case strings.HasSuffix(r.URL.Path, "/visibility") &&
+		(r.Method == http.MethodGet || r.Method == http.MethodPut):
+		f.mu.Lock()
+		status, current, can := f.visibilityStatus, f.visibility, f.canChange
+		f.mu.Unlock()
+		if status != 0 {
+			writeRegistryError(w, status, "refused")
+			return
+		}
+		if r.Method == http.MethodGet {
+			if current == "" {
+				current = registry.Private
+			}
+			writeJSON(w, registry.Visibility{Visibility: current, CanChange: can})
+			return
+		}
+		var body struct {
+			Visibility string `json:"visibility"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			writeRegistryError(w, http.StatusBadRequest, "invalid_request")
+			return
+		}
+		f.mu.Lock()
+		f.visibility = body.Visibility
+		f.visibilityWrites = append(f.visibilityWrites, body.Visibility)
+		f.mu.Unlock()
+		w.WriteHeader(http.StatusNoContent)
 	case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/repositories/"):
 		f.mu.Lock()
 		f.forgotten = append(f.forgotten, strings.TrimPrefix(r.URL.Path, "/repositories/"))
@@ -130,6 +167,13 @@ func (f *fakeRegistry) Calls() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]string(nil), f.calls...)
+}
+
+// VisibilityWrites is every visibility the screen wrote, in order.
+func (f *fakeRegistry) VisibilityWrites() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.visibilityWrites...)
 }
 
 // Tokens is the credential every call carried.
