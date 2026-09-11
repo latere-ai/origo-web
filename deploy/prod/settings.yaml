@@ -4,11 +4,11 @@
 # reads that never leave the cluster. ORIGOWEB_CLONE_HOST is the public
 # hostname, which is the same one this interface answers on: a reader copies
 # the clone line from a page served by the host they clone from.
-# ORIGOWEB_SSH_CLONE_HOST is where port 22 reaches origod-ssh: Origo's
-# production overlay publishes SSH on a load balancer of its own
-# (deploy/prod/ssh-service.yaml there), which has an address of its own,
-# so it is a name of its own, pointed at that address. It turns the SSH
-# tab of the clone box on, so it must resolve before this ships.
+# ORIGOWEB_SSH_CLONE_HOST is the same hostname again: one host for the
+# site, HTTPS clones and SSH clones. Port 22 on it reaches origod-ssh
+# through the ingress controller's TCP passthrough, so people clone with
+# git@code.latere.ai:owner/name.git. It turns the SSH tab of the clone
+# box on, so port 22 must answer before this ships.
 #
 # This installation is Latere's, so it carries Latere's name and Latere's
 # mark. Both are settings and neither has a default: an installation nobody
@@ -34,7 +34,7 @@ spec:
             - name: ORIGOWEB_CLONE_HOST
               value: https://code.latere.ai
             - name: ORIGOWEB_SSH_CLONE_HOST
-              value: ssh.code.latere.ai
+              value: code.latere.ai
             - name: ORIGOWEB_ISSUER_NAME
               value: Latere
             - name: ORIGOWEB_PRODUCT_NAME
