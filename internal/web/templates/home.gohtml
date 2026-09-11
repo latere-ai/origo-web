@@ -9,17 +9,29 @@
   </div>
   {{template "stale" .Stale}}
   {{- if .Directory}}
-    {{- if .Repos}}
+    {{- if .Owners}}
+    <div class="spread">
+      <p class="hint">{{.Count}} {{if eq .Count 1}}repository{{else}}repositories{{end}} across {{len .Owners}} {{if eq (len .Owners) 1}}owner{{else}}owners{{end}}.</p>
+      {{- if .CanFilter}}
+      <form class="inline-form" action="/" method="get">
+        <div class="field">
+          <label for="q">Filter by name</label>
+          <input id="q" name="q" type="search" class="mono" value="{{.Query}}" placeholder="name or owner">
+        </div>
+        <button type="submit">Filter</button>
+      </form>
+      {{- end}}
+    </div>
+    {{- range .Owners}}
     <div class="panel flush">
       <div class="scroller">
         <table class="stackable">
-          <caption>Repositories you can read</caption>
+          <caption>{{.Owner}}, {{len .Repos}} {{if eq (len .Repos) 1}}repository{{else}}repositories{{end}}</caption>
           <thead>
             <tr>
               <th scope="col">Name</th>
-              <th scope="col">Owner</th>
               <th scope="col">Last pushed</th>
-              <th scope="col">Size</th>
+              <th scope="col" class="num">Size</th>
               <th scope="col">Default branch</th>
             </tr>
           </thead>
@@ -27,9 +39,8 @@
           {{- range .Repos}}
             <tr>
               <th scope="row" class="path"><a href="{{.URL}}">{{.Name}}</a></th>
-              <td data-label="Owner" class="path">{{.Owner}}</td>
               <td data-label="Last pushed" class="when"><span title="{{.PushedExact}}">{{.Pushed}}</span></td>
-              <td data-label="Size" class="size">{{.Size}}</td>
+              <td data-label="Size" class="size num">{{.Size}}</td>
               <td data-label="Default branch" class="refname">{{.DefaultBranch}}</td>
             </tr>
           {{- end}}
@@ -37,7 +48,10 @@
         </table>
       </div>
     </div>
+    {{- end}}
     {{- if .Next}}<nav class="pager" aria-label="Pages"><span class="inert">Newer</span><a href="/?cursor={{.Next}}">More repositories</a></nav>{{end}}
+    {{- else if .Query}}
+    <div class="panel"><p class="empty">No repository matches {{.Query}}. <a href="/">Show all</a></p></div>
     {{- else}}
     <div class="panel"><p class="empty">No repositories yet.{{if .View.Who}} Signed in as {{.View.Who}}.{{end}}</p></div>
     {{- end}}

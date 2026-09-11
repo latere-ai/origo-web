@@ -168,12 +168,29 @@ func safeReturn(p string) string {
 // one, and the way in without it when it cannot.
 type homeData struct {
 	View      view
-	Repos     []listRow
+	Owners    []ownerGroup
+	Count     int
 	Next      string
 	Directory bool
 	Recent    []listRow
 	Query     string
 	Stale     string
+
+	// CanFilter says the whole directory arrived in this one answer, so a
+	// filter over it covers everything the reader may see. Origo has no
+	// filter parameter and no way to ask a question across pages, so a
+	// filter offered beside a cursor would search one page and look like
+	// it had searched the directory. It is offered when it is complete
+	// and withheld when it is not.
+	CanFilter bool
+}
+
+// ownerGroup is one owner's repositories. The directory is grouped because
+// a name is unique under an owner and not across the server, so a flat list
+// repeats the owner on every row to say which `origo` a row means.
+type ownerGroup struct {
+	Owner string
+	Repos []listRow
 }
 
 type listRow struct {
@@ -201,16 +218,24 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	rq := s.begin(w, r, "")
 	rq.v.Title = "Repositories"
 
-	data := homeData{View: rq.v, Query: r.URL.Query().Get("q")}
+	data := homeData{View: rq.v, Query: strings.TrimSpace(r.URL.Query().Get("q"))}
 	page, err := s.api.List(r.Context(), rq.tok, r.URL.Query().Get("cursor"), 50)
 	switch {
 	case err == nil:
 		data.Directory = true
 		data.Next = page.Next
 		data.Stale = staleSentence(page.Meta)
+		data.CanFilter = page.Next == "" && r.URL.Query().Get("cursor") == ""
+		rows := make([]listRow, 0, len(page.Items))
 		for _, repo := range page.Items {
-			data.Repos = append(data.Repos, s.listRow(repo))
+			row := s.listRow(repo)
+			if data.CanFilter && !matches(row, data.Query) {
+				continue
+			}
+			rows = append(rows, row)
 		}
+		data.Count = len(rows)
+		data.Owners = groupByOwner(rows)
 	case origo.Unauthenticated(err):
 		// A credential the installation turned away is a dead one, so
 		// it goes. A visitor who presented none has nothing to clear
@@ -231,6 +256,35 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		data.Recent = append(data.Recent, listRow{ID: id, Name: id, URL: "/r/" + url.PathEscape(id)})
 	}
 	s.render(w, r, http.StatusOK, "home", data)
+}
+
+// matches reports whether a row answers the filter a reader typed. The filter
+// is one string against the owner and the name, folded for case, because that
+// is the whole of what a reader can see to type.
+func matches(row listRow, q string) bool {
+	if q == "" {
+		return true
+	}
+	q = strings.ToLower(q)
+	return strings.Contains(strings.ToLower(row.Name), q) ||
+		strings.Contains(strings.ToLower(row.Owner), q)
+}
+
+// groupByOwner gathers rows under their owner, keeping the order Origo sent
+// and the order each owner first appeared in it.
+func groupByOwner(rows []listRow) []ownerGroup {
+	var out []ownerGroup
+	at := map[string]int{}
+	for _, row := range rows {
+		i, seen := at[row.Owner]
+		if !seen {
+			at[row.Owner] = len(out)
+			out = append(out, ownerGroup{Owner: row.Owner})
+			i = len(out) - 1
+		}
+		out[i].Repos = append(out[i].Repos, row)
+	}
+	return out
 }
 
 func (s *Server) listRow(repo origo.Repo) listRow {

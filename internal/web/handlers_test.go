@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -154,10 +155,101 @@ func TestTheHomeScreenShowsADirectoryWhenThereIsOne(t *testing.T) {
 	})
 
 	body := h.get("/", h.signedIn("alice")).Body.String()
-	for _, want := range []string{"Repositories you can read", "origo", "2.0 KB", "main", "cursor=r1"} {
+	for _, want := range []string{"infra, 1 repository", "origo", "2.0 KB", "main", "cursor=r1"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the directory does not show %q:\n%s", want, body)
 		}
+	}
+}
+
+// directoryOf answers the collection route with the repositories given and
+// the cursor given, and everything else from the ordinary fake.
+func directoryOf(t *testing.T, h *harness, next string, repos ...origo.Repo) {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/repos" {
+			writeJSON(w, map[string]any{"repos": repos, "next_cursor": next})
+			return
+		}
+		h.fake.ServeHTTP(w, r)
+	}))
+	t.Cleanup(srv.Close)
+	h.server = New(Options{
+		Config: h.cfg, Sessions: mustSessions(t, h.cfg), API: origo.New(mustURL(t, srv.URL), srv.Client()),
+	})
+}
+
+// TestTheDirectoryIsGroupedByOwnerAndFilteredWhenItIsWhole asserts the two
+// things the repository list does with what Origo sends.
+//
+// It groups by owner, because a name is unique under an owner and not across
+// the server: a flat list has to repeat the owner on every row to say which
+// `origo` a row means, and the owner is then the same word forty times.
+//
+// And it offers a filter only when the whole directory arrived in one answer.
+// Origo has no filter parameter and no question that crosses a page, so a
+// filter beside a cursor would search one page of fifty and look to a reader
+// like it had searched everything they can see. A control that cannot answer
+// the question it appears to ask is worse than no control.
+func TestTheDirectoryIsGroupedByOwnerAndFilteredWhenItIsWhole(t *testing.T) {
+	repos := []origo.Repo{
+		{ID: "r1", Owner: "infra", Slug: "origo", DefaultBranch: "main", SizeBytes: 2048},
+		{ID: "r2", Owner: "infra", Slug: "runner", DefaultBranch: "main", SizeBytes: 1024},
+		{ID: "r3", Owner: "web", Slug: "origo-web", DefaultBranch: "main", SizeBytes: 512},
+	}
+
+	h := newHarness(t)
+	directoryOf(t, h, "", repos...)
+	page := doc(t, h.get("/", h.signedIn("alice")).Body.String())
+	body := text(elements(page, "body")[0])
+
+	if !strings.Contains(body, "3 repositories across 2 owners") {
+		t.Errorf("the directory does not count itself:\n%s", body)
+	}
+	var captions []string
+	for _, c := range elements(page, "caption") {
+		captions = append(captions, text(c))
+	}
+	want := []string{"infra, 2 repositories", "web, 1 repository"}
+	if !slices.Equal(captions, want) {
+		t.Errorf("the directory is grouped as %q, want %q", captions, want)
+	}
+	// The owner is the group and has left the row, so it is written twice
+	// on this screen and not five times.
+	if n := strings.Count(body, "infra"); n != 1 {
+		t.Errorf("the owner `infra` appears %d times, want once as its group", n)
+	}
+	if len(elements(page, "form")) == 0 {
+		t.Error("a whole directory offers no filter")
+	}
+
+	// The filter is a GET form and it filters.
+	filtered := doc(t, h.get("/?q=RUN", h.signedIn("alice")).Body.String())
+	ftext := text(elements(filtered, "body")[0])
+	if !strings.Contains(ftext, "runner") || strings.Contains(ftext, "origo-web") {
+		t.Errorf("the filter did not narrow the directory:\n%s", ftext)
+	}
+	if !strings.Contains(ftext, "1 repository across 1 owner") {
+		t.Errorf("the filtered directory does not count what it shows:\n%s", ftext)
+	}
+
+	// A filter that matches nothing says so and offers the way back.
+	none := text(elements(doc(t, h.get("/?q=zzz", h.signedIn("alice")).Body.String()), "body")[0])
+	if !strings.Contains(none, "No repository matches zzz") {
+		t.Errorf("a filter matching nothing does not say so:\n%s", none)
+	}
+
+	// And a directory that arrived in pages offers no filter at all.
+	paged := newHarness(t)
+	directoryOf(t, paged, "r2", repos[0])
+	pagedPage := doc(t, paged.get("/", paged.signedIn("alice")).Body.String())
+	for _, f := range elements(pagedPage, "form") {
+		if attr(f, "action") == "/" {
+			t.Error("a directory that came in pages offers a filter over one page of it")
+		}
+	}
+	if !strings.Contains(paged.get("/", paged.signedIn("alice")).Body.String(), "cursor=r2") {
+		t.Error("a directory that came in pages does not offer the next one")
 	}
 }
 

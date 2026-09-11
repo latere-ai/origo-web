@@ -643,6 +643,14 @@ repository, so they assert against the real read API and not a mock.
 - With the key surface unconfigured, the key screen and its navigation
   entry are absent and every other screen is unchanged (proposed:
   `internal/web`, `TestKeyScreenIsOptional`).
+- The repository list groups by owner, with one table and one caption an
+  owner, so the owner is written once as its group rather than on every
+  row. A filter over the list is offered only when the whole directory
+  arrived in one answer: Origo has no filter parameter and no question
+  that crosses a page, so a filter beside a cursor would search one page
+  of fifty and look like it had searched everything the reader may see
+  (proposed: `internal/web`,
+  `TestTheDirectoryIsGroupedByOwnerAndFilteredWhenItIsWhole`).
 - With the collection read of `/v1/repos` absent or answering 501, the
   home page is the
   name form and the recently-opened list, and the rest of the interface

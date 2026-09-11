@@ -10,6 +10,10 @@ already holds what was committed.
 
 ## Unreleased
 
+- The repositories page groups repositories by owner, one table an owner,
+  and counts what it shows. When the whole list fits one page, a filter
+  box narrows it by name or owner.
+
 - You can create a repository. **New repository** on the repositories page
   asks for a name to put it under and a name for it, and lands you on the
   empty repository with the commands to push to it. What you may put it
