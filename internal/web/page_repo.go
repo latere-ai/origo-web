@@ -4,6 +4,7 @@
 package web
 
 import (
+	"errors"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -11,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/latere-ai/origo-web/internal/origo"
+	"github.com/latere-ai/origo-web/internal/registry"
 )
 
 // repoContext is what every repository screen resolves first: the
@@ -110,10 +112,20 @@ type overviewData struct {
 	CloneIsSSH  bool
 	CloneSSHURL string
 
-	// Public says the repository is readable without an account, and
-	// VisibilityURL is where an administrator changes that. Both are
-	// empty on an installation whose registry has no visibility surface.
-	Public        bool
+	// Visibility is what the screen says about who can read this
+	// repository: "public", "private", "unknown", or empty on an
+	// installation whose registry has no visibility surface, where the
+	// question has no answer and the row is absent.
+	//
+	// "unknown" is a state and not the absence of one. If a failed
+	// registry call rendered as private, a public repository would read
+	// exactly like a private one, and it would be wrong in the direction
+	// nobody reports: the reader sees a plausible screen and the person
+	// who made it public is not told. So the screen says it does not
+	// know, in words.
+	Visibility string
+	// VisibilityURL is where an administrator changes it, empty for
+	// everybody else.
 	VisibilityURL string
 
 	ArchiveURL string
@@ -153,7 +165,7 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 	}
 	data.CloneIsSSH = data.CloneSSH != "" && r.URL.Query().Get("clone") == "ssh"
 	data.CloneSSHURL = rc.rv.URL() + refAndCloneQuery(rc.rv)
-	data.Public, data.VisibilityURL = s.visibilityOf(r, rc)
+	data.Visibility, data.VisibilityURL = s.visibilityOf(r, rc)
 
 	branches, tags, _, err := s.refsFor(r, rc.tok, rc.repo.ID)
 	if err != nil {
@@ -200,27 +212,56 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, http.StatusOK, "overview", data)
 }
 
-// visibilityOf reads whether the repository is public and, for somebody
-// who may change it, where the control is.
+// The three things the overview can say about who may read a repository,
+// plus the empty string for an installation that has no answer to give.
+const (
+	visibilityPublic  = "public"
+	visibilityPrivate = "private"
+	visibilityUnknown = "unknown"
+)
+
+// visibilityOf answers what the overview says about who can read this
+// repository, and where an administrator changes it.
 //
-// It is one extra call on the overview alone, and a failure is silence: an
-// installation whose registry has no visibility surface, or a registry
-// that is not answering, shows the repository without the badge rather
-// than failing the screen over a fact that is not the screen's subject.
-// A signed-out reader has no token and asks nothing.
-func (s *Server) visibilityOf(r *http.Request, rc repoContext) (bool, string) {
+// Three outcomes, not two. A registry that answers gives public or
+// private. A registry that is reachable but has no visibility surface
+// gives the empty string, and the screen says nothing, because on such an
+// installation there is nothing to say. A registry that should have
+// answered and did not gives "unknown", and the screen says so: rendering
+// a failed call as private would make a public repository look private,
+// which is a wrong answer rather than a missing one, and the reader would
+// have no way to tell.
+//
+// A signed-out reader asks nothing and is told nothing.
+func (s *Server) visibilityOf(r *http.Request, rc repoContext) (string, string) {
 	if rc.tok == "" {
-		return false, ""
+		return "", ""
 	}
-	v, err := s.registry.ReadVisibility(r.Context(), rc.tok, rc.repo.ID)
-	if err != nil {
-		return false, ""
+	key := visibilityKey(rc.v.Who, rc.repo.ID)
+	current, ok := s.visibility.Get(key)
+	if !ok {
+		var err error
+		current, err = s.registry.ReadVisibility(r.Context(), rc.tok, rc.repo.ID)
+		switch {
+		case err == nil:
+			s.visibility.Set(key, current)
+		case errors.Is(err, registry.ErrNoRegistry), registry.NotFound(err):
+			// The installation keeps no visibility, or this reader may
+			// not ask about this repository. Neither is a failure and
+			// neither has anything to report.
+			return "", ""
+		default:
+			return visibilityUnknown, ""
+		}
 	}
 	url := ""
-	if v.CanChange {
+	if current.CanChange {
 		url = rc.rv.URL() + "/visibility"
 	}
-	return v.Public(), url
+	if current.Public() {
+		return visibilityPublic, url
+	}
+	return visibilityPrivate, url
 }
 
 // findReadme picks the root readme, preferring the Markdown form. The tree

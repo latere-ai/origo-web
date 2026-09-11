@@ -675,6 +675,16 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
   letter-spacing: 0.02em;
 }
 
+/* The states that are not news. A private repository is the ordinary one,
+   and an answer the registry could not give is a state the reader has to
+   see without it shouting. Both take the line colour instead of the
+   accent, so only "public" is drawn in the colour that means something
+   changed. */
+.badge-quiet {
+  border-color: var(--line);
+  color: var(--ink-2);
+}
+
 .repo-controls { display: flex; gap: var(--s-5); align-items: flex-start; flex-wrap: wrap; }
 
 /* The reference picker is a native details element. It is one line until a

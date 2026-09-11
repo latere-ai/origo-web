@@ -126,22 +126,32 @@ func TestVisibilityIsAbsentWithoutARegistry(t *testing.T) {
 }
 
 // TestOverviewShowsThePublicBadge is what a person reads at a glance.
+//
+// Each state gets a harness of its own, because the answer is cached per
+// reader and per repository: changing the registry under a live session
+// is a change made elsewhere, and the overview is entitled to its cached
+// answer until visibilityTTL runs out.
 func TestOverviewShowsThePublicBadge(t *testing.T) {
-	h := newHarness(t)
-	h.registry.canChange = true
-	c := h.signedIn("alice")
+	overview := func(t *testing.T, current string) (string, *harness) {
+		t.Helper()
+		h := newHarness(t)
+		h.registry.canChange = true
+		h.registry.visibility = current
+		return h.get(h.repoPath(""), h.signedIn("alice")).Body.String(), h
+	}
 
-	h.registry.visibility = "private"
-	body := h.get(h.repoPath(""), c).Body.String()
+	body, h := overview(t, "private")
 	if strings.Contains(body, ">public<") {
 		t.Error("a private repository carries the public badge")
+	}
+	if !strings.Contains(body, ">private<") {
+		t.Error("a private repository does not say so")
 	}
 	if !strings.Contains(body, h.repoPath("/visibility")) {
 		t.Error("an administrator is not offered the control")
 	}
 
-	h.registry.visibility = "public"
-	body = h.get(h.repoPath(""), c).Body.String()
+	body, _ = overview(t, "public")
 	if !strings.Contains(body, ">public<") {
 		t.Error("a public repository carries no badge")
 	}
@@ -158,5 +168,99 @@ func TestVisibilitySendsThePersonsOwnToken(t *testing.T) {
 		if tok == "" || !strings.HasPrefix(tok, "Bearer ") {
 			t.Errorf("the registry was called with %q, want the reader's bearer", tok)
 		}
+	}
+}
+
+// TestAFailedVisibilityCallDoesNotReadAsPrivate is the defect this three
+// state answer exists for.
+//
+// If a failed registry call rendered as private, a public repository would
+// render exactly like a private one. That is a wrong answer rather than a
+// missing one, and it is wrong in the direction nobody reports: the screen
+// looks fine to the reader, and the person who made the repository public
+// is not told that it stopped saying so.
+//
+// So the test does not assert that the badge is absent. It renders the
+// same repository three ways and asserts the failure is distinguishable
+// from both answers.
+func TestAFailedVisibilityCallDoesNotReadAsPrivate(t *testing.T) {
+	render := func(t *testing.T, set func(*fakeRegistry)) string {
+		t.Helper()
+		h := newHarness(t)
+		h.registry.canChange = true
+		set(h.registry)
+		rec := h.get(h.repoPath(""), h.signedIn("alice"))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("the overview = %d, want 200 whatever the registry did", rec.Code)
+		}
+		return rec.Body.String()
+	}
+
+	public := render(t, func(f *fakeRegistry) { f.visibility = "public" })
+	private := render(t, func(f *fakeRegistry) { f.visibility = "private" })
+	// The registry is reachable and refuses to answer. Not a 404, which
+	// is an installation with no visibility surface and has nothing to
+	// report, but a failure that should have produced an answer.
+	broken := render(t, func(f *fakeRegistry) { f.visibilityStatus = http.StatusBadGateway })
+
+	if broken == private {
+		t.Fatal("a failed registry call renders exactly like a private repository; a public one would read as private and nobody would be told")
+	}
+	if broken == public {
+		t.Fatal("a failed registry call renders exactly like a public repository")
+	}
+	if !strings.Contains(broken, "unavailable") {
+		t.Errorf("the failure does not say so in words: the reader sees an absence and concludes private")
+	}
+	// And the two real answers stay distinguishable from each other.
+	if public == private {
+		t.Fatal("a public repository renders exactly like a private one")
+	}
+	if !strings.Contains(public, ">public<") || !strings.Contains(private, ">private<") {
+		t.Error("the two answers are not each named on the screen")
+	}
+}
+
+// TestVisibilityIsAskedOncePerReader pins the call the overview makes. The
+// answer is cached per reader and per repository, so a second render of
+// the same screen asks nothing, and a flip is written through so the
+// person who made it sees it at once rather than after the lifetime.
+func TestVisibilityIsAskedOncePerReader(t *testing.T) {
+	h := newHarness(t)
+	h.registry.canChange = true
+	h.registry.visibility = "private"
+	c := h.signedIn("alice")
+
+	asks := func() int {
+		n := 0
+		for _, call := range h.registry.Calls() {
+			if strings.HasPrefix(call, "GET ") && strings.HasSuffix(call, "/visibility") {
+				n++
+			}
+		}
+		return n
+	}
+
+	h.get(h.repoPath(""), c)
+	first := asks()
+	if first != 1 {
+		t.Fatalf("the first overview asked %d times, want once", first)
+	}
+	for range 4 {
+		h.get(h.repoPath(""), c)
+	}
+	if got := asks(); got != first {
+		t.Errorf("five renders asked %d times, want the one", got)
+	}
+
+	// A flip is written through, so the overview it redirects to shows
+	// what was chosen without asking again and without waiting out the
+	// lifetime.
+	if rec := h.post(h.repoPath("/visibility"), map[string][]string{"visibility": {"public"}}, c); rec.Code != http.StatusSeeOther {
+		t.Fatalf("the flip = %d, want 303", rec.Code)
+	}
+	body := h.get(h.repoPath(""), c).Body.String()
+	if !strings.Contains(body, ">public<") {
+		t.Error("the overview after a flip does not show what was just chosen")
 	}
 }
