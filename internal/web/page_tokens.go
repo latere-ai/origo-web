@@ -33,9 +33,9 @@ type lifetime struct {
 // server refuses, and there is no unbounded entry because there is no
 // unbounded token.
 var lifetimes = []lifetime{
-	{Seconds: 300, Label: "5 minutes", Note: "one command"},
-	{Seconds: 900, Label: "15 minutes", Note: "a clone and a few reads"},
-	{Seconds: int(origo.MaxTokenTTL.Seconds()), Label: "1 hour", Note: "the longest this installation signs", Default: true},
+	{Seconds: 300, Label: "5 minutes", Note: "a single command"},
+	{Seconds: 900, Label: "15 minutes", Note: "a clone and some reads"},
+	{Seconds: int(origo.MaxTokenTTL.Seconds()), Label: "1 hour", Note: "the longest allowed", Default: true},
 }
 
 // tokensData is the token screen: the form that works, and the plain account
@@ -95,9 +95,8 @@ const (
 	// Minting needs administrative access, and the installation refuses a
 	// repository you cannot administer and a repository that is not there
 	// in the same breath, so this page does too.
-	tokenRefusedSentence = "No such repository, or you cannot mint tokens for it. Minting needs " +
-		"administrative access to that one repository. Ask whoever administers this " +
-		"installation for it, or for a token."
+	tokenRefusedSentence = "This repository does not exist or you do not have admin access to it. " +
+		"Creating a token requires admin access."
 	tokenFormSentence = "Choose a repository, a scope, and a lifetime."
 )
 
@@ -234,7 +233,7 @@ func (s *Server) handleTokensPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rq.v.Title = "Your new token"
+	rq.v.Title = "New token"
 	view := newRepoView(repo, "")
 	s.render(w, r, http.StatusOK, "token", tokenData{
 		View:      rq.v,

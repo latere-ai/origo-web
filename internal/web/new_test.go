@@ -140,7 +140,7 @@ func TestACreationThatFailsKeepsNothing(t *testing.T) {
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("a creation the authorizer never allowed answers %d, want 409", rec.Code)
 	}
-	if !strings.Contains(rec.Body.String(), "the name is free") {
+	if !strings.Contains(rec.Body.String(), "was not created") {
 		t.Errorf("the screen does not say the name is free again: %s", rec.Body.String())
 	}
 	written := h.registry.Written()
@@ -163,9 +163,9 @@ func TestEveryRefusalIsItsOwnSentence(t *testing.T) {
 		want   int
 		says   string
 	}{
-		{"a name that is not yours", http.StatusForbidden, "forbidden", http.StatusForbidden, "not yours to create under"},
-		{"a name already taken", http.StatusConflict, "conflict", http.StatusConflict, "already a repository with that name"},
-		{"an owner at its limit", http.StatusConflict, registry.CodeAtTheLimit, http.StatusConflict, "as many repositories as it may"},
+		{"a name that is not yours", http.StatusForbidden, "forbidden", http.StatusForbidden, "cannot create repositories under that owner"},
+		{"a name already taken", http.StatusConflict, "conflict", http.StatusConflict, "already exists under that owner"},
+		{"an owner at its limit", http.StatusConflict, registry.CodeAtTheLimit, http.StatusConflict, "reached its repository limit"},
 		{"a request the registry will not read", http.StatusBadRequest, "invalid_request", http.StatusBadRequest, "Choose an owner and a name"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -227,7 +227,7 @@ func TestAPersonWithNoNameIsToldWhatToDo(t *testing.T) {
 	if strings.Contains(body, "Create repository") {
 		t.Error("a form is offered to somebody who has no name to create under")
 	}
-	for _, want := range []string{"no name to create under", "Go to your account"} {
+	for _, want := range []string{"No owner available", "Go to your account"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the screen does not say %q: %s", want, body)
 		}

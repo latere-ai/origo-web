@@ -252,18 +252,18 @@ func (s *Server) refuseKey(w http.ResponseWriter, r *http.Request, rq req, paste
 	var sentence string
 	switch {
 	case keys.Code(err) == keys.CodeAlreadyYours:
-		sentence = "You have already added this key. It is in the table above."
+		sentence = "This key is already on your account. It is in the table above."
 		status = http.StatusConflict
 	case keys.Code(err) == keys.CodeAlreadyTaken:
-		sentence = "That key is registered to another account. Add a different one."
+		sentence = "This key is registered to another account. Add a different one."
 		status = http.StatusConflict
 	case keys.Code(err) == keys.CodeInvalidKey:
-		sentence = "That is not a public key this installation accepts. Paste one line from a .pub file."
+		sentence = "Invalid public key. Paste one line from a .pub file."
 	case keys.Forbidden(err):
 		// The installation's own configuration, not anything the person
 		// did, so the sentence does not ask them to fix it.
 		slog.ErrorContext(r.Context(), "origoweb: the key store refused this client", "error", err)
-		sentence = "This interface is not allowed to manage keys on this installation. Tell whoever administers it."
+		sentence = "Key management is not enabled for this interface. Contact your administrator."
 		status = http.StatusBadGateway
 	default:
 		slog.ErrorContext(r.Context(), "origoweb: adding a key failed", "error", err)

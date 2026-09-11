@@ -321,9 +321,9 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 			s.render(w, r, http.StatusOK, "message", messageData{
 				View:    rc.v,
 				Repo:    rc.rv,
-				Heading: "Too large to serve",
-				Body:    "This file is larger than the installation will send in one response. Clone the repository to read it.",
-				Links:   []crumb{{Name: "Back to the file", URL: rc.rv.URL() + "/blob/" + escapePath(path) + rc.rv.RefQuery()}},
+				Heading: "File too large",
+				Body:    "This file exceeds the size the server sends in one response. Clone the repository to read it.",
+				Links:   []crumb{{Name: "Back", URL: rc.rv.URL() + "/blob/" + escapePath(path) + rc.rv.RefQuery()}},
 			})
 			return
 		}

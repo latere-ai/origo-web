@@ -27,7 +27,7 @@ func TestFileViewLimits(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("status %d", rec.Code)
 		}
-		for _, want := range []string{"not a text file", "48 KB", "image/png", "/raw/logo.png"} {
+		for _, want := range []string{"Binary file", "48 KB", "image/png", "/raw/logo.png"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("the page does not say %q:\n%s", want, body)
 			}
@@ -132,7 +132,7 @@ func TestTruncatedDiffRenders(t *testing.T) {
 
 	rec := h.get(h.repoPath("/commit/9f3c1abf20d4e7c8b5a1930fe6d2c4471be08a3d"), c)
 	body := rec.Body.String()
-	if !strings.Contains(body, "cut this diff short") {
+	if !strings.Contains(body, "diff is truncated") {
 		t.Errorf("no truncation notice:\n%s", body)
 	}
 	for _, want := range []string{"generated.go", "second.go"} {

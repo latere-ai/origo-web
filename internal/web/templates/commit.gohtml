@@ -11,17 +11,17 @@
       <dt>Commit</dt><dd>{{.Commit.SHA}}</dd>
       {{- if .Parents}}
       <dt>{{if gt (len .Parents) 1}}Parents{{else}}Parent{{end}}</dt>
-      <dd>{{range .Parents}}<a href="{{.URL}}">{{.Short}}</a> {{end}}{{if gt (len .Parents) 1}}<span class="meta">this is a merge; the diff below is against the first parent</span>{{end}}</dd>
+      <dd>{{range .Parents}}<a href="{{.URL}}">{{.Short}}</a> {{end}}{{if gt (len .Parents) 1}}<span class="meta">merge commit; the diff is against the first parent</span>{{end}}</dd>
       {{- end}}
       {{- range .Trailers}}
       <dt>{{.Key}}</dt><dd>{{.Value}}</dd>
       {{- end}}
     </dl>
-    <p class="meta"><a href="{{.TreeURL}}">Browse the tree at this commit</a> · <a href="{{.PatchURL}}">Download the patch</a></p>
+    <p class="meta"><a href="{{.TreeURL}}">Browse tree</a> · <a href="{{.PatchURL}}">Download patch</a></p>
   </div>
 
   {{- if .Root}}
-  <div class="panel"><p class="empty">This is the first commit in the repository, so there is nothing to compare it against. <a href="{{.TreeURL}}">Browse its tree</a>.</p></div>
+  <div class="panel"><p class="empty">This is the first commit in the repository. There is no diff. <a href="{{.TreeURL}}">Browse tree</a>.</p></div>
   {{- else}}
   <div class="panel stack">
     <div class="diffstat">
@@ -30,13 +30,13 @@
       <span class="count-add">{{.Additions}}</span>
       <span class="count-del">{{.Deletions}}</span>
       {{- end}}
-      {{- if .Patch.OverBudget}}<span class="meta">{{.Patch.OverBudget}} of them are too large to render here</span>{{end}}
+      {{- if .Patch.OverBudget}}<span class="meta">{{.Patch.OverBudget}} too large to render inline</span>{{end}}
     </div>
     {{- if .Single}}
-    <p class="notice"><p>Showing one file of this commit. <a href="{{.Commit.URL}}">Show the whole diff</a>.</p></p>
+    <p class="notice">Showing one file. <a href="{{.Commit.URL}}">Show the full diff</a>.</p>
     {{- end}}
     {{- if .Truncated}}
-    <p class="notice"><strong>The installation cut this diff short.</strong> The files below are the ones it sent, in order; the rest are not on this page. Open a file on its own with the link on its row, or download the patch.</p>
+    <p class="notice"><strong>This diff is truncated.</strong> Open a file on its own from its row, or download the patch.</p>
     {{- end}}
   </div>
   {{template "difffiles" .Files}}

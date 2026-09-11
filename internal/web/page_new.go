@@ -81,12 +81,12 @@ type newRepoForm struct {
 // The sentences this screen refuses with. Each is one thing that went wrong,
 // in the words of the person it happened to.
 const (
-	newNameSentence  = "Choose an owner and a name. A name is letters, digits, and the characters . _ - up to 64 of them."
-	newOwnerSentence = "That owner is not yours to create under. Choose one of the names below."
-	newTakenSentence = "There is already a repository with that name under that owner. Choose another name."
-	newLimitSentence = "That owner holds as many repositories as it may. Remove one first, or ask whoever administers this installation for more."
-	newSlowSentence  = "The repository was not created. Nothing was kept, so the name is free. Try again."
-	newNoneSentence  = "This installation does not create repositories from here."
+	newNameSentence  = "Choose an owner and a name. Names use letters, digits, . _ and -, up to 64 characters."
+	newOwnerSentence = "You cannot create repositories under that owner. Choose one of the names below."
+	newTakenSentence = "A repository with that name already exists under that owner. Choose another name."
+	newLimitSentence = "That owner has reached its repository limit. Remove one first, or ask your administrator to raise it."
+	newSlowSentence  = "The repository was not created. Try again."
+	newNoneSentence  = "Repository creation is not available on this installation."
 )
 
 // handleNew renders the creation screen.
@@ -282,7 +282,7 @@ func (s *Server) noCreation(w http.ResponseWriter, r *http.Request, v view) {
 	v.Title = "New repository"
 	s.render(w, r, http.StatusNotFound, "message", messageData{
 		View:    v,
-		Heading: "Repositories are not created here",
+		Heading: "Not available",
 		Body:    newNoneSentence,
 	})
 }

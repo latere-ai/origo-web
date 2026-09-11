@@ -73,7 +73,7 @@ func (s *Server) signInPage(rq req, returnTo string) signInData {
 	v.Title = "Sign in"
 	v.SignedIn = false
 	v.Who = ""
-	label := "Continue to sign in"
+	label := "Sign in"
 	if s.cfg.IssuerName != "" {
 		label = "Continue with " + s.cfg.IssuerName
 	}

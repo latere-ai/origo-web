@@ -8,7 +8,7 @@
   <div class="panel flush">
     <div class="scroller">
       <table class="stackable">
-        <caption>{{if .Path}}{{.Path}}{{else}}The root{{end}} at {{.Repo.Ref}}</caption>
+        <caption>{{if .Path}}{{.Path}}{{else}}Root{{end}} at {{.Repo.Ref}}</caption>
         <thead>
           <tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col" class="num">Size</th></tr>
         </thead>
@@ -23,14 +23,14 @@
             <td data-label="Size" class="num size">{{.Size}}</td>
           </tr>
         {{- else}}
-          <tr><td colspan="3" class="empty">There is nothing in this directory at {{$.Repo.Ref}}.</td></tr>
+          <tr><td colspan="3" class="empty">Empty directory.</td></tr>
         {{- end}}
         </tbody>
       </table>
     </div>
   </div>
   <nav class="pager" aria-label="Pages">
-    <a href="{{.History}}">History of this directory</a>
+    <a href="{{.History}}">History</a>
     {{- if .NextURL}}<a href="{{.NextURL}}">More entries</a>{{end}}
   </nav>
 </main>

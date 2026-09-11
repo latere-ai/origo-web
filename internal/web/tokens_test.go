@@ -121,10 +121,10 @@ func TestTheTokenScreenSaysThereIsNoRegistry(t *testing.T) {
 		t.Fatalf("the screen answered %d", rec.Code)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "No list of tokens") {
+	if !strings.Contains(body, "Tokens are not listed") {
 		t.Errorf("the screen does not say it keeps no list:\n%s", body)
 	}
-	if !strings.Contains(body, "no way to withdraw one") {
+	if !strings.Contains(body, "cannot be listed or revoked") {
 		t.Error("the screen does not say a token cannot be withdrawn")
 	}
 
@@ -235,7 +235,7 @@ func TestMintingIsRefusedInTheOneSentence(t *testing.T) {
 			t.Errorf("a %d from the mint answered %d, want 404", status, rec.Code)
 		}
 		body := rec.Body.String()
-		if !strings.Contains(body, "cannot mint tokens for it") {
+		if !strings.Contains(body, "do not have admin access") {
 			t.Errorf("a %d is not the one sentence:\n%s", status, body)
 		}
 		// The choice is kept, so nothing is retyped.
@@ -293,7 +293,7 @@ func TestAnUnreachableInstallationDoesNotMint(t *testing.T) {
 	if rec.Code != http.StatusBadGateway {
 		t.Errorf("an installation that is not answering gave %d", rec.Code)
 	}
-	if !strings.Contains(rec.Body.String(), "not answering right now") {
+	if !strings.Contains(rec.Body.String(), "not responding") {
 		t.Errorf("the sentence is not the one every other screen uses:\n%s", rec.Body.String())
 	}
 
@@ -377,9 +377,6 @@ func TestTheSecretPanelCarriesNoControlThatNeedsAScript(t *testing.T) {
 	if !field {
 		t.Error("the token is not in a field that can be selected and copied")
 	}
-	if !strings.Contains(rec.Body.String(), "no copy button") {
-		t.Error("the page does not say why there is no copy button")
-	}
 	// The one page that renders a secret is the one page no cache in front
 	// of this service may keep.
 	if got := rec.Header().Get("Cache-Control"); got != "private, no-store" {
@@ -404,7 +401,7 @@ func TestTheDocumentationSaysWhatIsBuiltAndWhatIsNot(t *testing.T) {
 	}
 	body := rec.Body.String()
 
-	if !strings.Contains(body, "This is planned. It is not built.") {
+	if !strings.Contains(body, "Not yet available.") {
 		t.Error("the page does not mark the tool server as unbuilt")
 	}
 	for _, wrong := range []string{

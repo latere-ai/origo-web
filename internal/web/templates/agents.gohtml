@@ -1,4 +1,4 @@
-{{define "title"}}Driving this git server from an agent{{end}}
+{{define "title"}}Agent access{{end}}
 {{define "main"}}
 <main class="doc stack">
   <p class="crumbs"><a href="/">repositories</a> / <span class="here">docs / agents</span></p>
@@ -7,27 +7,27 @@
   <nav class="toc" aria-label="On this page">
     <span class="label">On this page</span>
     <a href="#token">1 · Get a token</a>
-    <a href="#base">2 · Address and credential</a>
-    <a href="#read">3 · What an agent can read</a>
+    <a href="#base">2 · Addresses and authentication</a>
+    <a href="#read">3 · Read endpoints</a>
     <a href="#limits">4 · Rate limits</a>
     <a href="#errors">5 · Errors</a>
-    <a href="#mcp">6 · A tool server for agents</a>
+    <a href="#mcp">6 · MCP server</a>
   </nav>
   <div class="stack">
-    <h1 class="heading-page">Driving this git server from an agent</h1>
-    <p class="lead">There is no SDK. An agent uses git and HTTP with a token you mint here. This page covers everything it needs.</p>
+    <h1 class="heading-page">Agent access</h1>
+    <p class="lead">Agents use git and HTTP with a token created on this site. There is no SDK.</p>
 
     <section id="token" class="stack">
       <h2 class="heading-section">1 · Get a token</h2>
-      <p>Go to <a href="/tokens">agent tokens</a>, name the one repository the agent works in, choose <strong>read</strong> unless it must push, and pick the shortest lifetime that covers the job. The token is shown once and stored nowhere. Copy it straight away.</p>
-      <p>Put it in the agent's environment as <code>ORIGO_TOKEN</code>. Do not put it in a repository or a prompt.</p>
-      <p>Minting a token needs administrative access to the repository, and a person does it on this site. An agent cannot mint a token. There is no API for it.</p>
-      <p>A token cannot be withdrawn. Minting writes nothing, so there is nothing to delete and no list to show. The lifetime is the only limit. The longest this server signs is {{.MaxTTL}}.</p>
+      <p>Go to <a href="/tokens">agent tokens</a>. Choose the repository, the scope (<strong>read</strong> unless the agent must push) and the shortest lifetime that fits. The token is shown once. Copy it immediately.</p>
+      <p>Set it as <code>ORIGO_TOKEN</code> in the agent's environment. Do not commit it or put it in a prompt.</p>
+      <p>Creating a token requires admin access to the repository and is done in the browser. There is no API for it.</p>
+      <p>Tokens cannot be revoked. The server does not store them, so there is no list and nothing to delete. A token is valid until its lifetime ends. The maximum lifetime is {{.MaxTTL}}.</p>
     </section>
 
     <section id="base" class="stack">
-      <h2 class="heading-section">2 · Address and credential</h2>
-      <p>There are two addresses. <strong>These screens need a browser sign-in</strong> and do not accept a token. <strong>The git server accepts the token</strong>.</p>
+      <h2 class="heading-section">2 · Addresses and authentication</h2>
+      <p>This web interface requires a browser sign-in and does not accept tokens. The git server accepts tokens.</p>
       <pre class="scroller sample"># the git server
 {{.APIBase}}
 
@@ -37,51 +37,51 @@ git clone https://x-access-token:$ORIGO_TOKEN@{{.CloneHost}}/&lt;owner&gt;/&lt;n
 # read
 curl -H "Authorization: Bearer $ORIGO_TOKEN" \
   {{.RepoRead}}</pre>
-      <p>Every API address starts with <code>/v1/repos/</code> and names a repository by its <strong>identifier</strong>. Owner and name do not work here. The identifier survives a rename. It appears in the addresses of these screens, and your administrator gives it to you. Owner and name work for git itself.</p>
-      <p>Both credential forms are accepted: <code>Authorization: Bearer &lt;token&gt;</code>, and ordinary HTTP basic auth with the token as the password and any username, which is the form git itself sends.</p>
+      <p>API paths start with <code>/v1/repos/</code> followed by the repository <strong>identifier</strong>. The API does not accept owner and name; git clone and push do. The identifier appears in this site's URLs and does not change when a repository is renamed.</p>
+      <p>Send the token as <code>Authorization: Bearer &lt;token&gt;</code>, or as the password in HTTP basic auth with any username. Git uses the second form.</p>
     </section>
 
     <section id="read" class="stack">
-      <h2 class="heading-section">3 · What an agent can read</h2>
-      <p>Reads are JSON, except three that are the bytes themselves: a comparison is a unified diff, a file is its own content, and an archive is a gzipped tar.</p>
+      <h2 class="heading-section">3 · Read endpoints</h2>
+      <p>Responses are JSON, with three exceptions: a comparison returns a unified diff, a file returns its raw content, and an archive returns a gzipped tar.</p>
       <div class="scroller">
         <table class="stackable">
-          <caption>Every read an agent can make</caption>
+          <caption>Read endpoints</caption>
           <thead>
             <tr>
-              <th scope="col">What you want</th>
-              <th scope="col">Address, after <code>/v1/repos/&lt;id&gt;</code></th>
-              <th scope="col">What comes back</th>
+              <th scope="col">Resource</th>
+              <th scope="col">Path, after <code>/v1/repos/&lt;id&gt;</code></th>
+              <th scope="col">Response</th>
             </tr>
           </thead>
           <tbody>
-            <tr><th scope="row">the repository</th><td data-label="Address" class="path">(nothing)</td><td data-label="Answer">owner, name, default branch, head, size, when it was last pushed</td></tr>
-            <tr><th scope="row">branches and tags</th><td data-label="Address" class="path">/refs?prefix=refs/heads/</td><td data-label="Answer">name, object id, and a tag's target; at most 10,000</td></tr>
-            <tr><th scope="row">the commit log</th><td data-label="Address" class="path">/commits?ref=&amp;path=&amp;limit=&amp;cursor=</td><td data-label="Answer">newest first, 50 a page and at most 200; page on with the cursor</td></tr>
-            <tr><th scope="row">one commit</th><td data-label="Address" class="path">/commits/&lt;sha&gt;</td><td data-label="Answer">its message, parents, trailers, and file and line counts</td></tr>
-            <tr><th scope="row">a comparison</th><td data-label="Address" class="path">/compare/&lt;base&gt;...&lt;head&gt;?path=</td><td data-label="Answer">a unified diff, cut at 1 MiB on a file boundary</td></tr>
-            <tr><th scope="row">a directory</th><td data-label="Address" class="path">/tree/&lt;sha&gt;?path=&amp;cursor=</td><td data-label="Answer">one level, 5,000 entries a page</td></tr>
-            <tr><th scope="row">a file</th><td data-label="Address" class="path">/blob/&lt;sha&gt;</td><td data-label="Answer">the bytes; past 50 MiB you must ask for a range</td></tr>
-            <tr><th scope="row">a snapshot</th><td data-label="Address" class="path">/archive/&lt;sha&gt;.tar.gz</td><td data-label="Answer">the whole tree at that commit</td></tr>
+            <tr><th scope="row">repository</th><td data-label="Path" class="path">(none)</td><td data-label="Response">owner, name, default branch, head, size, last push time</td></tr>
+            <tr><th scope="row">branches and tags</th><td data-label="Path" class="path">/refs?prefix=refs/heads/</td><td data-label="Response">name, object id and tag target; at most 10,000</td></tr>
+            <tr><th scope="row">commit log</th><td data-label="Path" class="path">/commits?ref=&amp;path=&amp;limit=&amp;cursor=</td><td data-label="Response">newest first, 50 per page, up to 200; use the cursor for the next page</td></tr>
+            <tr><th scope="row">one commit</th><td data-label="Path" class="path">/commits/&lt;sha&gt;</td><td data-label="Response">message, parents, trailers, file and line counts</td></tr>
+            <tr><th scope="row">comparison</th><td data-label="Path" class="path">/compare/&lt;base&gt;...&lt;head&gt;?path=</td><td data-label="Response">unified diff, truncated at 1 MiB on a file boundary</td></tr>
+            <tr><th scope="row">directory</th><td data-label="Path" class="path">/tree/&lt;sha&gt;?path=&amp;cursor=</td><td data-label="Response">one level, 5,000 entries per page</td></tr>
+            <tr><th scope="row">file</th><td data-label="Path" class="path">/blob/&lt;sha&gt;</td><td data-label="Response">raw bytes; files over 50 MiB require a Range header</td></tr>
+            <tr><th scope="row">archive</th><td data-label="Path" class="path">/archive/&lt;sha&gt;.tar.gz</td><td data-label="Response">the tree at that commit</td></tr>
           </tbody>
         </table>
       </div>
-      <p>A file and a directory are addressed by <strong>object id</strong>. Resolve a path through the directory listing first. Every answer names the commit it resolved to in <code>Origo-Commit</code>, so an agent quoting a file can give an exact reference instead of a branch name. An answer the server had to cut says so in <code>Origo-Truncated</code>, This is the only truncation an agent meets. The line budget that collapses a large file on these screens applies to the browser view only.</p>
-      <p>Each read covers one repository. There is no repository listing, no file search and no blame.</p>
+      <p>Files and directories are addressed by <strong>object id</strong>. Resolve a path through the directory listing first. Every response names the resolved commit in the <code>Origo-Commit</code> header. A truncated response sets <code>Origo-Truncated</code>. The line limit that collapses a large file in this web interface does not apply to the API.</p>
+      <p>Each endpoint covers one repository. There is no repository listing, file search or blame.</p>
     </section>
 
     <section id="limits" class="stack">
       <h2 class="heading-section">4 · Rate limits</h2>
-      <p>One figure, in requests a minute, for each person or agent, counted per server. The default is 600, and an installation can set a different figure for one caller. There are no tiers. A token is held to the figure of whoever minted it.</p>
-      <p>Every answer carries the figure in force, so an agent can pace itself:</p>
+      <p>Requests per minute are limited per user or agent, per server. The default is 600. An installation can set a different limit for one caller. A token shares the limit of the user who created it.</p>
+      <p>Every response carries the current limit:</p>
       <pre class="scroller sample">RateLimit-Limit: 600</pre>
-      <p>Past it the answer is <code>429</code> with <code>Retry-After</code> in whole seconds. Retrying sooner is refused again. Wait exactly that long. Do not add backoff.</p>
-      <p>Under load the server also answers <code>429</code> when it is running as much git work as it allows at once. A request waits a few seconds for a slot first. Retry that one too.</p>
+      <p>Over the limit, the server returns <code>429</code> with <code>Retry-After</code> in seconds. Wait that long before retrying. No additional backoff is needed.</p>
+      <p>The server also returns <code>429</code> when its git worker pool is full, after waiting a few seconds for a slot. Retry those the same way.</p>
     </section>
 
     <section id="errors" class="stack">
       <h2 class="heading-section">5 · Errors</h2>
-      <p>Every refusal is the same object. Branch on <code>code</code>, which is stable. <code>message</code> is one sentence for a person. <code>details</code> varies by code and names the reference, the limit or the reason.</p>
+      <p>All errors use the same JSON shape. Branch on <code>code</code>, which is stable. <code>message</code> is human-readable. <code>details</code> depends on the code.</p>
       <pre class="scroller sample">{
   "error": {
     "code": "forbidden",
@@ -91,41 +91,41 @@ curl -H "Authorization: Bearer $ORIGO_TOKEN" \
 }</pre>
       <div class="scroller">
         <table class="stackable">
-          <caption>The refusals an agent meets, and what to do about each</caption>
+          <caption>Error codes</caption>
           <thead>
             <tr>
               <th scope="col">Status</th>
               <th scope="col">code</th>
-              <th scope="col">Does waiting help?</th>
-              <th scope="col">What the agent should do</th>
+              <th scope="col">Retry</th>
+              <th scope="col">Action</th>
             </tr>
           </thead>
           <tbody>
-            <tr><th scope="row">400</th><td data-label="code" class="refname">invalid_request</td><td data-label="Waiting">no</td><td data-label="Do">The request is wrong. Fix it or stop; do not repeat it.</td></tr>
-            <tr><th scope="row">401</th><td data-label="code" class="refname">unauthenticated</td><td data-label="Waiting">no</td><td data-label="Do">The token is missing, malformed, or past its expiry. Stop and tell the person: only a person can mint another.</td></tr>
-            <tr><th scope="row">403</th><td data-label="code" class="refname">forbidden</td><td data-label="Waiting">no</td><td data-label="Do">Stop. Report the reason in <code>details</code>; a scope too narrow and another repository both land here.</td></tr>
-            <tr><th scope="row">404</th><td data-label="code" class="refname">repo_not_found</td><td data-label="Waiting">no</td><td data-label="Do">The repository is not there, or you may not see it. The server will not say which.</td></tr>
-            <tr><th scope="row">404</th><td data-label="code" class="refname">ref_not_found</td><td data-label="Waiting">no</td><td data-label="Do">The reference or object id is wrong, or it has been collected.</td></tr>
-            <tr><th scope="row">409</th><td data-label="code" class="refname">non_fast_forward</td><td data-label="Waiting">once</td><td data-label="Do">Fetch, rebase, push once more. Then stop.</td></tr>
-            <tr><th scope="row">413</th><td data-label="code" class="refname">over_quota</td><td data-label="Waiting">no</td><td data-label="Do">The repository is at its storage limit. Stop and tell the person.</td></tr>
-            <tr><th scope="row">413</th><td data-label="code" class="refname">blob_too_large</td><td data-label="Waiting">no</td><td data-label="Do">Ask for the file in ranges of at most 50 MiB.</td></tr>
-            <tr><th scope="row">429</th><td data-label="code" class="refname">rate_limited</td><td data-label="Waiting">yes</td><td data-label="Do">Sleep exactly <code>Retry-After</code>. No backoff needed.</td></tr>
-            <tr><th scope="row">503</th><td data-label="code" class="refname">storage_unavailable</td><td data-label="Waiting">yes</td><td data-label="Do">Nothing was lost. Retry after the header, or in a few minutes.</td></tr>
-            <tr><th scope="row">503</th><td data-label="code" class="refname">authorizer_unavailable</td><td data-label="Waiting">yes</td><td data-label="Do">Permissions cannot be checked right now. Retry in a few minutes.</td></tr>
-            <tr><th scope="row">504</th><td data-label="code" class="refname">operation_timeout</td><td data-label="Waiting">no</td><td data-label="Do">The operation took too long and changed nothing. Ask for less.</td></tr>
+            <tr><th scope="row">400</th><td data-label="code" class="refname">invalid_request</td><td data-label="Retry">no</td><td data-label="Action">Fix the request. Do not repeat it as is.</td></tr>
+            <tr><th scope="row">401</th><td data-label="code" class="refname">unauthenticated</td><td data-label="Retry">no</td><td data-label="Action">Token missing, malformed or expired. Stop and ask a user for a new token.</td></tr>
+            <tr><th scope="row">403</th><td data-label="code" class="refname">forbidden</td><td data-label="Retry">no</td><td data-label="Action">Stop and report <code>details.reason</code>. Covers insufficient scope and the wrong repository.</td></tr>
+            <tr><th scope="row">404</th><td data-label="code" class="refname">repo_not_found</td><td data-label="Retry">no</td><td data-label="Action">The repository does not exist or is not visible to this token.</td></tr>
+            <tr><th scope="row">404</th><td data-label="code" class="refname">ref_not_found</td><td data-label="Retry">no</td><td data-label="Action">Unknown reference or object id.</td></tr>
+            <tr><th scope="row">409</th><td data-label="code" class="refname">non_fast_forward</td><td data-label="Retry">once</td><td data-label="Action">Fetch, rebase and push once more. Then stop.</td></tr>
+            <tr><th scope="row">413</th><td data-label="code" class="refname">over_quota</td><td data-label="Retry">no</td><td data-label="Action">The repository is at its storage limit. Stop and report.</td></tr>
+            <tr><th scope="row">413</th><td data-label="code" class="refname">blob_too_large</td><td data-label="Retry">no</td><td data-label="Action">Request the file in ranges of at most 50 MiB.</td></tr>
+            <tr><th scope="row">429</th><td data-label="code" class="refname">rate_limited</td><td data-label="Retry">yes</td><td data-label="Action">Wait <code>Retry-After</code> seconds, then retry.</td></tr>
+            <tr><th scope="row">503</th><td data-label="code" class="refname">storage_unavailable</td><td data-label="Retry">yes</td><td data-label="Action">Retry after <code>Retry-After</code>, or in a few minutes.</td></tr>
+            <tr><th scope="row">503</th><td data-label="code" class="refname">authorizer_unavailable</td><td data-label="Retry">yes</td><td data-label="Action">Retry in a few minutes.</td></tr>
+            <tr><th scope="row">504</th><td data-label="code" class="refname">operation_timeout</td><td data-label="Retry">no</td><td data-label="Action">Timed out. Nothing changed. Request less.</td></tr>
           </tbody>
         </table>
       </div>
-      <p>Most of these are terminal. Retrying an expired token spends the rate budget its replacement needs. No field says whether waiting helps. Use the table above. The refusals worth waiting on carry <code>Retry-After</code>.</p>
-      <p>Every answer, refusal or not, carries <code>Origo-Contract</code>. Its value is the version of everything on this page. It changes when something here stops being true.</p>
+      <p>Only errors with <code>Retry-After</code> are worth retrying. Retrying an expired token wastes rate limit budget.</p>
+      <p>Every response carries the <code>Origo-Contract</code> header. Its value is the API contract version and changes when this page changes.</p>
     </section>
 
     <section id="mcp" class="stack">
-      <h2 class="heading-section">6 · A tool server for agents</h2>
-      <p><strong>This is planned. It is not built.</strong> There is nothing to install and nothing to configure yet. Everything above this section works today.</p>
-      <p>The plan is a small separate program you run beside an agent. It speaks the Model Context Protocol over standard input and output, and turns the reads above into tools an agent calls by name. It would take a token of the kind you mint on this site, hold to the same rate limit, and return the same refusals. It would do nothing a plain HTTP agent cannot.</p>
-      <p>It will have no tool for minting a token. A person creates every credential.</p>
-      <p>Until it exists, an agent uses git and the reads in section 3.</p>
+      <h2 class="heading-section">6 · MCP server</h2>
+      <p><strong>Not yet available.</strong> Everything above this section works today.</p>
+      <p>A planned Model Context Protocol server will run beside an agent over standard input and output and expose the endpoints above as tools. It will use the same tokens, rate limits and errors.</p>
+      <p>It will not create tokens.</p>
+      <p>Until then, use git and the endpoints in section 3.</p>
     </section>
   </div>
 

@@ -99,7 +99,7 @@ func TestAFrozenRepositorySaysSo(t *testing.T) {
 	at := h.fake.repo.PushedAt
 	h.fake.repo.FrozenAt = at
 	body := h.get(h.repoPath(""), h.signedIn("alice")).Body.String()
-	if !strings.Contains(body, "accepts no pushes") {
+	if !strings.Contains(body, "frozen, read-only") {
 		t.Error("a frozen repository does not say so")
 	}
 }
@@ -111,7 +111,7 @@ func TestAnUnreachableInstallationIsOneSentence(t *testing.T) {
 	if rec.Code != http.StatusBadGateway {
 		t.Errorf("a degraded installation answered %d", rec.Code)
 	}
-	if !strings.Contains(rec.Body.String(), "not answering right now") {
+	if !strings.Contains(rec.Body.String(), "not responding") {
 		t.Errorf("the sentence is:\n%s", rec.Body.String())
 	}
 }
@@ -366,7 +366,7 @@ func TestSignInScreenNamesTheIssuerWhenItIsConfigured(t *testing.T) {
 		t.Errorf("an installation with an SSH surface offers no SSH clone line:\n%s", body)
 	}
 	plain := newHarness(t).get("/sign-in").Body.String()
-	if !strings.Contains(plain, "Continue to sign in") {
+	if !strings.Contains(plain, ">Sign in</a>") {
 		t.Error("an installation that does not name its issuer has no button")
 	}
 	if strings.Contains(plain, "git@") {
@@ -476,11 +476,10 @@ func TestTheSignedOutPageCarriesTheOpenSourceStory(t *testing.T) {
 	body := text(elements(page, "main")[0])
 
 	for _, want := range []string{
-		"hosted installation of Origo", // which installation this is
+		"This installation runs Origo", // which installation this is
 		"open-source git server",       // what the software is
-		"You can read the code and run your own.",
-		"Continue with Latere", // the way in
-		"Clone address",        // and the other way in
+		"Continue with Latere",         // the way in
+		"Clone address",                // and the other way in
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the signed-out page does not say %q:\n%s", want, body)
@@ -490,7 +489,7 @@ func TestTheSignedOutPageCarriesTheOpenSourceStory(t *testing.T) {
 	// It leads with what a reader can do here. Which installation this is
 	// comes from the masthead above, which is on every screen, so the card
 	// does not restate the name.
-	if got := text(elements(page, "h1")[0]); got != "Sign in to read git repositories" {
+	if got := text(elements(page, "h1")[0]); got != "Sign in" {
 		t.Errorf("the signed-out page leads with %q", got)
 	}
 	if strings.Contains(body, "Latere Code") {
@@ -524,7 +523,7 @@ func TestTheSignedOutPageCarriesTheOpenSourceStory(t *testing.T) {
 	if !strings.Contains(plain, "This is Origo, an open-source git server.") {
 		t.Errorf("an unnamed installation says:\n%s", plain)
 	}
-	if strings.Contains(plain, "hosted installation") {
+	if strings.Contains(plain, "This installation runs") {
 		t.Error("an unnamed installation claims to be a hosted one")
 	}
 }
@@ -539,7 +538,7 @@ func TestTheSignedOutPageCarriesTheOpenSourceStory(t *testing.T) {
 // Only a session that actually held a credential and was turned away reads the
 // refusal, and that one is the 401.
 func TestTheFrontDoorClaimsNothingItCannotKnow(t *testing.T) {
-	const refusal = "did not accept the credential"
+	const refusal = "You are signed out"
 
 	// One: nobody has signed in, and the installation refuses a read that
 	// carries no credential, which is what every installation does today.

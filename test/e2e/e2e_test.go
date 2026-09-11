@@ -212,7 +212,7 @@ func TestMintingAgainstARealInstallation(t *testing.T) {
 			}
 		}
 	case http.StatusNotFound:
-		if !strings.Contains(body, "cannot mint tokens for it") {
+		if !strings.Contains(body, "do not have admin access") {
 			t.Errorf("a refusal is not the one sentence:\n%s", body)
 		}
 	default:

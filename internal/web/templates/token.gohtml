@@ -1,16 +1,15 @@
-{{define "title"}}Your new token{{end}}
+{{define "title"}}New token{{end}}
 {{define "main"}}
 <main class="stack">
   <p class="crumbs"><a href="/tokens">agent tokens</a> / <span class="here">new</span></p>
 
   <div class="secret stack prose">
     <h1 class="heading-section">Copy this token now. You will not see it again.</h1>
-    <p>This server signs the token and does not store it. No copy is kept here or anywhere else. Once you leave this page, nobody can recover this string, including an administrator.</p>
+    <p>The token is not stored. It cannot be recovered after you leave this page.</p>
     <div class="field">
-      <label for="token">Token value</label>
+      <label for="token">Token</label>
       <input id="token" class="mono" readonly value="{{.Token}}" size="48">
     </div>
-    <p class="meta">Tab to the field and copy it. There is no copy button here, because there is no script on any page of this interface and a button that cannot work is worse than none.</p>
   </div>
 
   <div class="panel stack">
@@ -19,12 +18,12 @@
       <dt>Scope</dt><dd class="refname">{{.Scope}}</dd>
       <dt>Expires</dt><dd class="when">{{.Expires}}, {{.ExpiresIn}} from now</dd>
     </dl>
-    <h2 class="heading-section">Use it</h2>
-    <p class="meta">Put it in the agent's environment as <code>ORIGO_TOKEN</code>. Never in a repository, never in a prompt.</p>
+    <h2 class="heading-section">Usage</h2>
+    <p class="meta">Set it as <code>ORIGO_TOKEN</code> in the agent's environment. Do not commit it or put it in a prompt.</p>
     <pre class="scroller sample">{{.CloneLine}}
 
 {{.ReadLine}}</pre>
-    <p><a class="button" href="{{.BackURL}}">I have stored it</a> <span class="meta">Leaving this page any other way has the same effect.</span></p>
+    <p><a class="button" href="{{.BackURL}}">Done</a></p>
   </div>
 </main>
 {{end}}

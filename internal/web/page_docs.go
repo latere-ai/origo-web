@@ -26,7 +26,7 @@ type docsData struct {
 // still has to read how to get a token.
 func (s *Server) handleAgentDocs(w http.ResponseWriter, r *http.Request) {
 	rq := s.begin(w, r, "docs")
-	rq.v.Title = "Driving this git server from an agent"
+	rq.v.Title = "Agent access"
 	s.render(w, r, http.StatusOK, "agents", docsData{
 		View:       rq.v,
 		APIBase:    strings.TrimRight(s.cfg.OrigoURL.String(), "/"),

@@ -532,7 +532,7 @@ func TestNoBlockIsMarkedByALeftRule(t *testing.T) {
 		Config: h.cfg, Sessions: mustSessions(t, h.cfg), API: origo.New(mustURL(t, refuse.URL), refuse.Client()),
 	})
 	page := doc(t, h.get("/", h.signedIn("alice")).Body.String())
-	if !strings.Contains(text(elements(page, "body")[0]), "did not accept the credential") {
+	if !strings.Contains(text(elements(page, "body")[0]), "You are signed out") {
 		t.Error("a refused reader is not told their credential was refused")
 	}
 	find(page, func(e *html.Node) {

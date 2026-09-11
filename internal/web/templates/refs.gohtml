@@ -5,7 +5,7 @@
   <h1 class="heading-page">Branches and tags</h1>
   {{template "stale" .Stale}}
   {{- if .Truncated}}
-  <p class="notice"><strong>This list is cut short.</strong> The repository has more references than the installation returns in one answer.</p>
+  <p class="notice"><strong>This list is truncated.</strong> The repository has more references than the server returns at once.</p>
   {{- end}}
   <div class="panel flush">
     <div class="scroller">
@@ -20,7 +20,7 @@
             <td data-label="Browse"><a href="{{.Tree}}">tree</a> · <a href="{{.Log}}">log</a></td>
           </tr>
         {{- else}}
-          <tr><td colspan="3" class="empty">This repository has no branches.</td></tr>
+          <tr><td colspan="3" class="empty">No branches.</td></tr>
         {{- end}}
         </tbody>
       </table>
@@ -39,7 +39,7 @@
             <td data-label="Browse"><a href="{{.Tree}}">tree</a> · <a href="{{.Log}}">log</a></td>
           </tr>
         {{- else}}
-          <tr><td colspan="3" class="empty">This repository has no tags.</td></tr>
+          <tr><td colspan="3" class="empty">No tags.</td></tr>
         {{- end}}
         </tbody>
       </table>

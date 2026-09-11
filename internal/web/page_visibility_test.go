@@ -26,9 +26,9 @@ func TestVisibilityScreenSaysWhatChanges(t *testing.T) {
 	body := h.get(h.repoPath("/visibility"), c).Body.String()
 	for _, want := range []string{
 		"This repository is private.",
-		"Anyone can read and clone this repository. They do not need an account.",
-		"The code, every branch, every tag, and the full history become readable.",
-		"It does not appear in any list.",
+		"Anyone can read and clone it without an account.",
+		"All branches, tags and history become readable.",
+		"The repository is not listed publicly.",
 		"Make public",
 	} {
 		if !strings.Contains(body, want) {
@@ -40,8 +40,8 @@ func TestVisibilityScreenSaysWhatChanges(t *testing.T) {
 	body = h.get(h.repoPath("/visibility"), c).Body.String()
 	for _, want := range []string{
 		"This repository is public.",
-		"Only people you have given access can read this repository.",
-		"Copies that were already cloned stay where they are. Making it private does not delete them.",
+		"Only people with access can read it.",
+		"Existing clones are not affected.",
 		"Make private",
 	} {
 		if !strings.Contains(body, want) {

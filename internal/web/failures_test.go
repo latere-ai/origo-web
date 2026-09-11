@@ -42,7 +42,7 @@ func TestASecondReadThatFailsIsStillOneSentence(t *testing.T) {
 		if rec.Code != http.StatusNotFound {
 			t.Errorf("%s with %s refused answered %d, want the one refusal", tc.screen, tc.fail, rec.Code)
 		}
-		if !strings.Contains(rec.Body.String(), "No such repository, or you cannot see it") {
+		if !strings.Contains(rec.Body.String(), "does not exist or you do not have access") {
 			t.Errorf("%s with %s refused reads as:\n%s", tc.screen, tc.fail, rec.Body.String())
 		}
 	}
@@ -84,7 +84,7 @@ func TestAnAnswerThatIsNotTheContractIsAnError(t *testing.T) {
 	if rec.Code != http.StatusBadGateway {
 		t.Fatalf("an unreadable answer became %d", rec.Code)
 	}
-	if !strings.Contains(rec.Body.String(), "could not be read") {
+	if !strings.Contains(rec.Body.String(), "unexpected response") {
 		t.Errorf("it reads as:\n%s", rec.Body.String())
 	}
 }

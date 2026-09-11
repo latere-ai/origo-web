@@ -12,19 +12,19 @@
     </div>
     {{- if .TooLarge}}
     <div class="notice">
-      <p><strong>This file is too large to show here.</strong> It is {{.Size}}, and a browser is not where a file that size is read.</p>
-      <p><a href="{{.RawURL}}">Download the bytes</a>, or clone the repository: <span class="mono">git clone {{.CloneHTTPS}}</span></p>
+      <p><strong>This file is too large to show here.</strong> It is {{.Size}}.</p>
+      <p><a href="{{.RawURL}}">Download it</a> or clone the repository: <span class="mono">git clone {{.CloneHTTPS}}</span></p>
     </div>
     {{- else if .Binary}}
     <div class="notice">
-      <p><strong>This is not a text file.</strong> It is {{.Size}} of {{.Type}}, so it is not shown as text.</p>
-      <p><a href="{{.RawURL}}">Download it</a> · <a href="{{.HistoryURL}}">History of this file</a></p>
+      <p><strong>Binary file.</strong> {{.Size}}, {{.Type}}.</p>
+      <p><a href="{{.RawURL}}">Download it</a> · <a href="{{.HistoryURL}}">History</a></p>
     </div>
     {{- else}}
       {{- if .Truncated}}
       <div class="notice">
-        <p><strong>Only the first part of this file is shown.</strong> It is {{.Size}}, and the rest was not requested and not sent.</p>
-        <p><a href="{{.RawURL}}">Download the whole file</a>, or clone the repository: <span class="mono">git clone {{.CloneHTTPS}}</span></p>
+        <p><strong>Only the first part of this file is shown.</strong> The whole file is {{.Size}}.</p>
+        <p><a href="{{.RawURL}}">Download the whole file</a> or clone the repository: <span class="mono">git clone {{.CloneHTTPS}}</span></p>
       </div>
       {{- end}}
       {{- if .Lines}}

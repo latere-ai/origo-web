@@ -126,7 +126,7 @@ func TestARefusedPasteKeepsWhatWasTyped(t *testing.T) {
 		t.Fatalf("a refused paste answered %d", rec.Code)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "not a public key this installation accepts") {
+	if !strings.Contains(body, "Invalid public key") {
 		t.Errorf("the refusal does not say what was wrong:\n%s", body)
 	}
 	if !strings.Contains(body, typed) {
@@ -150,7 +150,7 @@ func TestADuplicateSaysWhichKindItIs(t *testing.T) {
 	for _, c := range []struct {
 		name, code, want string
 	}{
-		{"already yours", keys.CodeAlreadyYours, "already added this key"},
+		{"already yours", keys.CodeAlreadyYours, "already on your account"},
 		{"someone else's", keys.CodeAlreadyTaken, "registered to another account"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -225,10 +225,10 @@ func TestAnOutageSaysSoAndOffersNoForm(t *testing.T) {
 		t.Fatalf("the screen answered %d with the store down", rec.Code)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "key store is not answering") {
+	if !strings.Contains(body, "key store is unavailable") {
 		t.Errorf("the page does not say the store is down:\n%s", body)
 	}
-	if !strings.Contains(body, "Your keys keep working") {
+	if !strings.Contains(body, "Existing keys still work") {
 		t.Error("the page does not say that access is unaffected")
 	}
 	if strings.Contains(body, "Add a key") {
@@ -244,7 +244,7 @@ func TestTheStoreRefusingThisClientIsAnOperatorProblem(t *testing.T) {
 	h.keys.forbid = true
 
 	body := h.post("/keys", url.Values{"key": {samplePaste}}, c).Body.String()
-	if !strings.Contains(body, "not allowed to manage keys on this installation") {
+	if !strings.Contains(body, "not enabled for this interface") {
 		t.Errorf("the sentence does not name the installation's own problem:\n%s", body)
 	}
 	if strings.Contains(body, "Try a different") || strings.Contains(body, "Paste one line") {

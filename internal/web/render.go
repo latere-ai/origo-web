@@ -72,11 +72,9 @@ type messageData struct {
 // Each is written for the person reading it: Origo's own message field is
 // written for a developer reading an API, and never reaches a screen.
 const (
-	absentSentence = "No such repository, or you cannot see it. If you expected to find " +
-		"something here, ask whoever administers this installation for access."
-	unavailableSentence = "This installation is not answering right now. Nothing was lost. " +
-		"Try again in a few minutes."
-	brokenSentence = "Something went wrong reading this from the installation."
+	absentSentence      = "This repository does not exist or you do not have access to it."
+	unavailableSentence = "The server is not responding. Try again in a few minutes."
+	brokenSentence      = "The server returned an unexpected response."
 )
 
 // notFound is the answer to both a refusal and an absence.
@@ -97,7 +95,7 @@ func (s *Server) unavailable(w http.ResponseWriter, r *http.Request, v view) {
 	v.Title = "Unavailable"
 	s.render(w, r, http.StatusBadGateway, "message", messageData{
 		View:    v,
-		Heading: "The installation is not answering",
+		Heading: "Server unavailable",
 		Body:    unavailableSentence,
 	})
 }
@@ -107,7 +105,7 @@ func (s *Server) broken(w http.ResponseWriter, r *http.Request, v view, err erro
 	v.Title = "Error"
 	s.render(w, r, http.StatusBadGateway, "message", messageData{
 		View:    v,
-		Heading: "This page could not be read",
+		Heading: "Error",
 		Body:    brokenSentence,
 	})
 }

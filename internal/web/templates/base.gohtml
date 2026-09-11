@@ -55,7 +55,7 @@
 {{- end -}}
 
 {{- define "stale" -}}
-{{if .}}<p class="notice"><strong>This view may be a few minutes behind.</strong> The installation served it without checking for newer history: its last check was {{.}} before this page.</p>{{end}}
+{{if .}}<p class="notice"><strong>This page may be out of date.</strong> The data was last refreshed {{.}} ago.</p>{{end}}
 {{- end -}}
 
 {{- define "repohead" -}}
@@ -100,8 +100,8 @@
   <div class="diff-file">
     <div class="diff-head">
       <span class="diff-path">{{.Path}}</span>
-      <span class="meta">binary file, changed</span>
-      <a href="{{.OnlyURL}}">only this file</a>
+      <span class="meta">binary</span>
+      <a href="{{.OnlyURL}}">this file only</a>
       {{if .BlobURL}}<a href="{{.BlobURL}}">view file</a>{{end}}
     </div>
   </div>
@@ -113,8 +113,8 @@
       <span class="count-del">{{.Deletions}}</span>
     </div>
     <div class="notice">
-      <p>This file changed by {{.Changed}} lines, which is more than one page renders at once. Nothing is hidden: choose how to read it.</p>
-      <p><a href="{{.OnlyURL}}">Render this file on its own</a> · {{if .BlobURL}}<a href="{{.BlobURL}}">View the whole file</a> · {{end}}<a href="{{.LogURL}}">History of this file</a></p>
+      <p>{{.Changed}} changed lines. Too large to render inline.</p>
+      <p><a href="{{.OnlyURL}}">Show this file only</a> · {{if .BlobURL}}<a href="{{.BlobURL}}">View file</a> · {{end}}<a href="{{.LogURL}}">History</a></p>
     </div>
   </div>
 {{- else}}
@@ -124,7 +124,7 @@
       <span class="count-add">{{.Additions}}</span>
       <span class="count-del">{{.Deletions}}</span>
       <span class="meta">{{.Status}}</span>
-      <a href="{{.OnlyURL}}">only this file</a>
+      <a href="{{.OnlyURL}}">this file only</a>
     </summary>
     {{template "diffbody" .}}
   </details>

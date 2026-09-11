@@ -3,24 +3,24 @@
 <main class="gate">
   <div class="door">
     <div class="stack">
-      <h1 class="heading-page">Sign in to read git repositories</h1>
-      <p class="lead">Read branches, tags, commits, diffs and files.</p>
+      <h1 class="heading-page">Sign in</h1>
+      <p class="lead">Browse repositories, branches, commits, diffs and files.</p>
     </div>
     {{- if .Refused}}
-    <p class="prose"><strong>You are signed out.</strong> The server did not accept the credential this session held. Sign in again.</p>
+    <p class="prose"><strong>You are signed out.</strong> Your session was rejected. Sign in again.</p>
     {{- end}}
     <a class="button button-primary button-block" href="/auth/start?return_to={{.ReturnTo}}">{{.ButtonLabel}}</a>
-    <p class="hint">Sign in with your organisation account. There is no separate password and no sign-up.</p>
+    <p class="hint">Use your organisation account. There is no separate password.</p>
     <div class="door-part stack">
       <h2 class="label">Clone address</h2>
       <p class="clone-shape">{{.CloneHTTPS}}{{if .CloneSSH}}
 {{.CloneSSH}}{{end}}</p>
-      <p class="hint">Cloning uses the same sign-in. Replace the two names with your repository.</p>
+      <p class="hint">Cloning uses the same account. Replace owner and name with your repository.</p>
     </div>
     <div class="door-part stack">
       <h2 class="label">Open source</h2>
-      <p class="hint">This is {{if .Hosted}}a hosted installation of {{end}}{{.View.ProjectName}}, an open-source git server. You can read the code and run your own.</p>
-      <p><a href="{{.View.ProjectURL}}">The {{.View.ProjectName}} project</a></p>
+      <p class="hint">{{if .Hosted}}This installation runs {{else}}This is {{end}}{{.View.ProjectName}}, an open-source git server.</p>
+      <p><a href="{{.View.ProjectURL}}">{{.View.ProjectName}} source code</a></p>
     </div>
   </div>
 </main>

@@ -2,14 +2,14 @@
 {{define "main"}}
 <main class="stack">
   <h1 class="heading-page">SSH keys</h1>
-  <p class="lead">Keys registered to {{if .Who}}<span class="path">{{.Who}}</span>{{else}}this account{{end}}. Any of them can push to every repository you can write.</p>
+  <p class="lead">Public keys registered to {{if .Who}}<span class="path">{{.Who}}</span>{{else}}this account{{end}}. Each one can clone and push as you.</p>
 
   {{- if .Error}}
-  <p class="notice" role="alert"><strong>That did not work.</strong> {{.Error}}</p>
+  <p class="notice" role="alert">{{.Error}}</p>
   {{- end}}
 
   {{- if .Unavailable}}
-  <p class="notice" role="alert"><strong>The key store is not answering.</strong> Your keys keep working. This page cannot show or change them until the store is back.</p>
+  <p class="notice" role="alert"><strong>The key store is unavailable.</strong> Existing keys still work. Try again later.</p>
   {{- end}}
 
   {{- if .Removing}}
@@ -22,7 +22,7 @@
       <dt>Fingerprint</dt><dd class="sha">{{.Removing.Fingerprint}}</dd>
       <dt>Last used</dt><dd class="when">{{.Removing.LastUsed}}</dd>
     </dl>
-    <p class="prose">A machine holding the matching private key stops being able to clone and push within a minute. Nothing else changes, and you can add the key again later.</p>
+    <p class="prose">Clone and push with this key stop working within a minute. You can add it again later.</p>
     <div class="row">
       <button class="button-primary" type="submit">Remove this key</button>
       <a href="/keys">Cancel</a>
@@ -34,7 +34,7 @@
   <div class="panel flush">
     <div class="scroller">
       <table class="stackable">
-        <caption>Your registered public keys</caption>
+        <caption>Registered keys</caption>
         <thead>
           <tr>
             <th scope="col">Comment</th>
@@ -59,7 +59,7 @@
     </div>
   </div>
   {{- else if not .Unavailable}}
-  <p class="empty">No keys yet. Add one below and <span class="path">git clone</span> over SSH will work from the machine that holds its private half.</p>
+  <p class="empty">No keys yet. Add one below to clone and push over SSH.</p>
   {{- end}}
 
   {{- if .Confirm}}
@@ -68,7 +68,7 @@
     <input type="hidden" name="key" value="{{.Confirm.Pasted}}">
     <input type="hidden" name="confirm" value="yes">
     <h2 class="heading-section">Confirm this key</h2>
-    <p class="prose">One key was read. Check the fingerprint against <span class="path">ssh-keygen -lf</span> on the machine that owns it before you confirm.</p>
+    <p class="prose">Check the fingerprint against <span class="path">ssh-keygen -lf</span> on the machine that owns the key.</p>
     <dl class="facts">
       <dt>Type</dt><dd class="refname">{{.Confirm.Type}}</dd>
       <dt>Comment</dt><dd>{{if .Confirm.Comment}}{{.Confirm.Comment}}{{else}}<span class="meta">no comment</span>{{end}}</dd>
@@ -85,14 +85,14 @@
     <h2 class="heading-section">Add a key</h2>
     <div class="fields">
       <div class="field">
-        <label for="key">Paste the contents of a public key file, for example <span class="path">~/.ssh/id_ed25519.pub</span>. One key.</label>
+        <label for="key">Public key, the contents of <span class="path">~/.ssh/id_ed25519.pub</span> or similar</label>
         <textarea id="key" name="key" rows="4" class="mono" placeholder="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... you@host" required>{{.Paste}}</textarea>
-        <span class="hint">The comment at the end of the line becomes the key's label. Nothing else to fill in.</span>
+        <span class="hint">The trailing comment becomes the key's label.</span>
       </div>
     </div>
     <div class="row">
       <button class="button-primary" type="submit">Continue</button>
-      <span class="hint">You check the fingerprint on the next step before anything is stored.</span>
+      <span class="hint">The fingerprint is shown for review before the key is stored.</span>
     </div>
   </form>
   {{- end}}

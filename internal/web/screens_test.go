@@ -223,7 +223,7 @@ func TestRefusalAndAbsenceAreIndistinguishable(t *testing.T) {
 	if withoutCSRF(forbidden.Body.String()) != withoutCSRF(missing.Body.String()) {
 		t.Error("a refusal and an absence rendered different pages")
 	}
-	if !strings.Contains(forbidden.Body.String(), "No such repository, or you cannot see it") {
+	if !strings.Contains(forbidden.Body.String(), "does not exist or you do not have access") {
 		t.Errorf("the sentence is not the one the spec fixes:\n%s", forbidden.Body.String())
 	}
 }
@@ -347,13 +347,13 @@ func TestStaleNotice(t *testing.T) {
 	h := newHarness(t)
 	c := h.signedIn("alice")
 	plain := h.get(h.repoPath("/log"), c).Body.String()
-	if strings.Contains(plain, "may be a few minutes behind") {
+	if strings.Contains(plain, "may be out of date") {
 		t.Fatal("a consistent response carried the staleness line")
 	}
 
 	h.fake.headers["/v1/repos/1f2e3d/commits"] = http.Header{"Origo-Stale": []string{"180"}}
 	stale := h.get(h.repoPath("/log"), c).Body.String()
-	if !strings.Contains(stale, "may be a few minutes behind") {
+	if !strings.Contains(stale, "may be out of date") {
 		t.Error("a stale response carried no staleness line")
 	}
 	if !strings.Contains(stale, "3 minutes") {
@@ -846,7 +846,7 @@ func TestTheIdentityAppearsOnceOnAScreen(t *testing.T) {
 	// reads the same whether or not the installation has a name.
 	for _, h := range []*harness{named, plain} {
 		gate := doc(t, h.get("/sign-in").Body.String())
-		if got := text(elements(gate, "h1")[0]); got != "Sign in to read git repositories" {
+		if got := text(elements(gate, "h1")[0]); got != "Sign in" {
 			t.Errorf("the signed-out page leads with %q", got)
 		}
 	}
