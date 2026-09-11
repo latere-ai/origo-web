@@ -10,6 +10,8 @@ committed: the commit log already holds that.
 
 ## Unreleased
 
+## v0.5.1 - 2026-09-11
+
 - The signed-out page is one column instead of three cards in a row. The
   way in comes first and is the only filled button on the page; the clone
   address and what this software is sit under it, parted by a rule, in
