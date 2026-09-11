@@ -229,13 +229,13 @@ const maxBody = 1 << 20
 // slash inside it alone.
 func (c *Client) do(ctx context.Context, method, tok string, body []byte, segments ...string) (*http.Response, error) {
 	u := *c.base
-	decoded := strings.TrimRight(u.Path, "/")
-	escaped := strings.TrimRight(u.EscapedPath(), "/")
+	decoded := []string{strings.TrimRight(u.Path, "/")}
+	escaped := []string{strings.TrimRight(u.EscapedPath(), "/")}
 	for _, segment := range segments {
-		decoded += "/" + segment
-		escaped += "/" + url.PathEscape(segment)
+		decoded = append(decoded, segment)
+		escaped = append(escaped, url.PathEscape(segment))
 	}
-	u.Path, u.RawPath = decoded, escaped
+	u.Path, u.RawPath = strings.Join(decoded, "/"), strings.Join(escaped, "/")
 	var rdr io.Reader
 	if body != nil {
 		rdr = bytes.NewReader(body)
