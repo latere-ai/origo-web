@@ -28,6 +28,7 @@ func TestVisibilityScreenSaysWhatChanges(t *testing.T) {
 		"This repository is private.",
 		"Anyone can read and clone this repository. They do not need an account.",
 		"The code, every branch, every tag, and the full history become readable.",
+		"It does not appear in any list.",
 		"Make public",
 	} {
 		if !strings.Contains(body, want) {

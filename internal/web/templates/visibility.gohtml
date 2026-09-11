@@ -29,7 +29,7 @@
     <h2 class="heading-section">Make it public</h2>
     <p>Anyone can read and clone this repository. They do not need an account.</p>
     <p>The code, every branch, every tag, and the full history become readable.</p>
-    <p>Nobody can push to it without access. This does not show the repository in any list.</p>
+    <p>Nobody can push to it without access. It does not appear in any list.</p>
     <form action="{{.Repo.URL}}/visibility" method="post">
       <input type="hidden" name="{{.View.CSRFField}}" value="{{.View.CSRF}}">
       <input type="hidden" name="visibility" value="{{.Target}}">

@@ -532,8 +532,8 @@ has to be told about:
 
 > Making it public: Anyone can read and clone this repository. They do
 > not need an account. The code, every branch, every tag, and the full
-> history become readable. Nobody can push to it without access. This
-> does not show the repository in any list.
+> history become readable. Nobody can push to it without access. It does
+> not appear in any list.
 
 Somebody who may read a repository but not administer it gets the
 interface's one refusal, which is the same answer an absent repository

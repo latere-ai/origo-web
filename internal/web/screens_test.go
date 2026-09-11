@@ -54,6 +54,33 @@ func (h *harness) everyPage() map[string]*httptest.ResponseRecorder {
 	}
 	out["sign in"] = h.get("/sign-in")
 	maps.Copy(out, keyScreens(h.t, h.cfg))
+	maps.Copy(out, visibilityScreens(h.t, h.cfg))
+	return out
+}
+
+// visibilityScreens renders the screen that changes who can read a
+// repository, in both directions.
+//
+// It needs a harness of its own because the screen answers only an
+// administrator, and because the two directions are separate pages to a
+// reader: each one says what changes before it offers its button. A
+// page-wide property that held on one and not the other would be a
+// property that did not hold.
+//
+// base is the calling harness's own configuration, carried over so these
+// are the same installation as the screens beside them.
+func visibilityScreens(t *testing.T, base config.Config) map[string]*httptest.ResponseRecorder {
+	t.Helper()
+	out := make(map[string]*httptest.ResponseRecorder, 2)
+	for name, current := range map[string]string{
+		"visibility, now private": "private",
+		"visibility, now public":  "public",
+	} {
+		h := newHarness(t, func(cfg *config.Config) { *cfg = base })
+		h.registry.canChange = true
+		h.registry.visibility = current
+		out[name] = h.get(h.repoPath("/visibility"), h.signedIn("alice"))
+	}
 	return out
 }
 
