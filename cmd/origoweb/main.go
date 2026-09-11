@@ -23,6 +23,7 @@ import (
 	"latere.ai/x/pkg/otel"
 
 	"github.com/latere-ai/origo-web/internal/config"
+	"github.com/latere-ai/origo-web/internal/keys"
 	"github.com/latere-ai/origo-web/internal/origo"
 	"github.com/latere-ai/origo-web/internal/registry"
 	"github.com/latere-ai/origo-web/internal/session"
@@ -53,6 +54,17 @@ func run() error {
 		return err
 	}
 
+	// The key store, when the installation runs one. Origo holds no public
+	// key: it asks a store the operator runs whose an offered key is, and
+	// that store is where a person adds one. With none configured the key
+	// screen and its navigation entry are both absent, which is the neutral
+	// default for an operator who has not built that surface.
+	var keyStore *keys.Client
+	if cfg.KeysURL != nil {
+		keyStore = keys.New(cfg.KeysURL, otel.HTTPClient())
+		slog.Info("key screen enabled", "store", cfg.KeysURL.String())
+	}
+
 	srv := &http.Server{
 		Addr: cfg.Addr,
 		Handler: web.New(web.Options{
@@ -60,6 +72,7 @@ func run() error {
 			Sessions:  sessions,
 			API:       origo.New(cfg.OrigoURL, otel.HTTPClient()),
 			Registry:  registry.New(cfg.RegistryURL(), otel.HTTPClient()),
+			Keys:      keyStore,
 			Version:   Version,
 			Commit:    Commit,
 			BuildTime: Date,

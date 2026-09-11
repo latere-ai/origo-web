@@ -19,6 +19,7 @@ import (
 	"latere.ai/x/pkg/authkit/oidc"
 
 	"github.com/latere-ai/origo-web/internal/config"
+	"github.com/latere-ai/origo-web/internal/keys"
 	"github.com/latere-ai/origo-web/internal/origo"
 	"github.com/latere-ai/origo-web/internal/registry"
 	"github.com/latere-ai/origo-web/internal/session"
@@ -357,6 +358,11 @@ type harness struct {
 	registry       *fakeRegistry
 	registryServer *httptest.Server
 
+	// keys is the fake key store, wired to the server only when the
+	// configuration turns the key screen on.
+	keys     *fakeKeys
+	keysHTTP *httptest.Server
+
 	// csrfCookies is what the last rendered form left behind.
 	csrfCookies []*http.Cookie
 }
@@ -396,12 +402,23 @@ func newHarness(t *testing.T, opts ...func(*config.Config)) *harness {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The key store exists in the harness either way; the server is given
+	// a client for it only when the configuration names one, which is the
+	// switch an operator has.
+	fakeStore := newFakeKeys()
+	storeHTTP := httptest.NewServer(fakeStore)
+	t.Cleanup(storeHTTP.Close)
+	var keyClient *keys.Client
+	if cfg.KeysURL != nil {
+		keyClient = keys.New(mustURL(t, storeHTTP.URL), storeHTTP.Client())
+	}
 	sealer := oc
 	sealer.CookieName = session.CookieName
 	sealer.SessionTTL = session.Lifetime
 	return &harness{
 		t: t, fake: fake, backend: backend, cfg: cfg, oidc: oidc.New(sealer),
 		registry: reg, registryServer: regServer,
+		keys: fakeStore, keysHTTP: storeHTTP,
 		server: New(Options{
 			Config: cfg, Sessions: sessions,
 			API: origo.New(base, backend.Client()),
@@ -409,6 +426,7 @@ func newHarness(t *testing.T, opts ...func(*config.Config)) *harness {
 			// so a test that unsets the provider gets an interface with
 			// no registry rather than one wired past its own settings.
 			Registry: registry.New(cfg.RegistryURL(), regServer.Client()),
+			Keys:     keyClient,
 		}),
 	}
 }

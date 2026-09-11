@@ -477,6 +477,13 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 .path, .sha, .size, .when, .refname { font-family: var(--font-mono); font-size: var(--t-12); }
 .sha { color: var(--ink-2); }
 
+/* A credential that has never been used, which is the one fact in this
+ * interface that usually means "remove me". It is the only place outside a
+ * diff that carries the palette's red, and it carries it beside the words
+ * rather than instead of them, so it survives greyscale and a screen reader
+ * reads the same fact a sighted reader does. */
+.unused { color: var(--del); }
+
 /* ---- notices ---- */
 
 /* A notice, a callout and a quotation are set apart by their surface and

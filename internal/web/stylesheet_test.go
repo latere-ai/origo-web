@@ -325,6 +325,10 @@ func TestBothThemesMeetTheirContrast(t *testing.T) {
 			{"--del", "--del-bg", 4.5},
 			{"--ink", "--add-bg", 4.5},
 			{"--ink", "--del-bg", 4.5},
+			// The red also carries "never used" on the key screen, which
+			// sits on a panel inside a page, so it is measured on both.
+			{"--del", "--surface", 4.5},
+			{"--del", "--bg", 4.5},
 			{"--bg", "--ink", 7},
 		} {
 			fg, bg := v[pair.fg], v[pair.bg]

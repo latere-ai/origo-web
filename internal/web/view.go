@@ -221,6 +221,15 @@ func plural(n int, unit string) string {
 	return fmt.Sprintf("%d %ss", n, unit)
 }
 
+// absDate is the day alone, which is what a date a person will not compare
+// to a clock should say. A key was added on a day; the hour is noise.
+func absDate(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format("2 Jan 2006")
+}
+
 // absTime is the exact time, kept beside every relative one so a person can
 // read the fact and not only the impression.
 func absTime(t time.Time) string {

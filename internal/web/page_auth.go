@@ -303,35 +303,6 @@ func (s *Server) listRow(repo origo.Repo) listRow {
 	return row
 }
 
-// keysData is the one screen with no contract behind it.
-type keysData struct {
-	View view
-	URL  string
-}
-
-// handleKeys exists only when a key surface is configured, which is never by
-// default. Spec 024 keeps public keys out of Origo, behind a resolver Origo
-// only reads, so no component owns a place to add or remove one. When a
-// component grows that place, this screen lists the reader's keys with a
-// comment and a fingerprint, adds one, and removes one by fingerprint.
-func (s *Server) handleKeys(w http.ResponseWriter, r *http.Request) {
-	rq := s.begin(w, r, "")
-	if rq.tok == "" {
-		s.signIn(w, r, rq, http.StatusOK)
-		return
-	}
-	rq.v.Title = "SSH keys"
-	s.render(w, r, http.StatusNotImplemented, "keys", keysData{View: rq.v, URL: s.cfg.KeysURL.String()})
-}
-
-func (s *Server) handleKeysPost(w http.ResponseWriter, r *http.Request) {
-	if !s.sessions.CSRFValid(r) {
-		http.Error(w, "This form has expired. Go back and try again.", http.StatusForbidden)
-		return
-	}
-	s.handleKeys(w, r)
-}
-
 // handleOpen takes the identifier a person typed on the home screen and
 // sends them to it. It is a GET form and a redirect, so the address bar
 // carries the repository and the page can be bookmarked.

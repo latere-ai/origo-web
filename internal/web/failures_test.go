@@ -112,7 +112,7 @@ func TestAReadmeThatCannotBeReadDoesNotTakeThePageDown(t *testing.T) {
 }
 
 func TestKeysNeedsASession(t *testing.T) {
-	h := newHarness(t, func(c *config.Config) { c.KeysURL = "https://keys.example" })
+	h := newHarness(t, func(c *config.Config) { c.KeysURL = mustURL(t, "https://keys.example") })
 	rec := h.get("/keys")
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "/auth/start") {
 		t.Errorf("the key screen with no session answered %d", rec.Code)

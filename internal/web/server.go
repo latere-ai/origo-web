@@ -17,6 +17,7 @@ import (
 	"latere.ai/x/pkg/health"
 
 	"github.com/latere-ai/origo-web/internal/config"
+	"github.com/latere-ai/origo-web/internal/keys"
 	"github.com/latere-ai/origo-web/internal/origo"
 	"github.com/latere-ai/origo-web/internal/registry"
 	"github.com/latere-ai/origo-web/internal/session"
@@ -33,6 +34,11 @@ type Options struct {
 	// no registry gets.
 	Registry *registry.Client
 
+	// Keys is the installation's public key store, nil where the operator
+	// runs none. With no store the key routes are not mounted and the
+	// masthead carries no entry for them.
+	Keys *keys.Client
+
 	Version   string
 	Commit    string
 	BuildTime string
@@ -44,6 +50,7 @@ type Server struct {
 	sessions *session.Manager
 	api      *origo.Client
 	registry *registry.Client
+	keys     *keys.Client
 	mux      *http.ServeMux
 }
 
@@ -54,8 +61,8 @@ type Route struct {
 }
 
 // Routes is the whole route table, in one place so it can be asserted
-// against. Everything here is a GET except four forms: sign-out, the key
-// screen, the mint form, and the one that creates a repository.
+// against. Everything here is a GET except five forms: sign-out, the mint
+// form, the one that creates a repository, and the two on the key screen.
 //
 // None of them touches repository content. This interface has no write path
 // to a repository of any kind: nothing here edits a file, moves a reference,
@@ -63,6 +70,8 @@ type Route struct {
 // because the token it asks for is signed and kept nowhere. Creating brings
 // an empty repository into being, which is the one thing a person cannot
 // obtain from any other screen and which changes no repository that exists.
+// The key forms write to the installation's key store, which holds an
+// account's credentials and no repository at all.
 func Routes(keys bool) []Route {
 	rs := []Route{
 		{"GET", "/{$}"},
@@ -88,14 +97,22 @@ func Routes(keys bool) []Route {
 		{"GET", "/r/{id}/raw/{path...}"},
 	}
 	if keys {
-		rs = append(rs, Route{"GET", "/keys"}, Route{"POST", "/keys"})
+		rs = append(rs,
+			Route{"GET", "/keys"},
+			Route{"POST", "/keys"},
+			Route{"GET", "/keys/{id}/remove"},
+			Route{"POST", "/keys/{id}/remove"},
+		)
 	}
 	return rs
 }
 
 // New builds the server.
 func New(o Options) *Server {
-	s := &Server{cfg: o.Config, sessions: o.Sessions, api: o.API, registry: o.Registry, mux: http.NewServeMux()}
+	s := &Server{
+		cfg: o.Config, sessions: o.Sessions, api: o.API,
+		registry: o.Registry, keys: o.Keys, mux: http.NewServeMux(),
+	}
 
 	handlers := map[string]http.HandlerFunc{
 		"GET /{$}":                   s.handleHome,
@@ -121,8 +138,10 @@ func New(o Options) *Server {
 		"GET /r/{id}/raw/{path...}":  s.handleRaw,
 		"GET /keys":                  s.handleKeys,
 		"POST /keys":                 s.handleKeysPost,
+		"GET /keys/{id}/remove":      s.handleKeyRemove,
+		"POST /keys/{id}/remove":     s.handleKeyRemovePost,
 	}
-	for _, rt := range Routes(o.Config.KeysURL != nil) {
+	for _, rt := range Routes(o.Keys != nil) {
 		pattern := rt.Method + " " + rt.Pattern
 		h, listed := handlers[pattern]
 		if !listed {

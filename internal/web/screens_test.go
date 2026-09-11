@@ -4,8 +4,10 @@
 package web
 
 import (
+	"maps"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -18,6 +20,7 @@ import (
 	"latere.ai/x/pkg/authkit/oidc"
 
 	"github.com/latere-ai/origo-web/internal/config"
+	"github.com/latere-ai/origo-web/internal/keys"
 	"github.com/latere-ai/origo-web/internal/origo"
 )
 
@@ -45,11 +48,58 @@ func (h *harness) screens() map[string]string {
 func (h *harness) everyPage() map[string]*httptest.ResponseRecorder {
 	h.t.Helper()
 	c := h.signedIn("alice")
-	out := make(map[string]*httptest.ResponseRecorder, len(h.screens())+1)
+	out := make(map[string]*httptest.ResponseRecorder, len(h.screens())+5)
 	for name, path := range h.screens() {
 		out[name] = h.get(path, c)
 	}
 	out["sign in"] = h.get("/sign-in")
+	maps.Copy(out, keyScreens(h.t, h.cfg))
+	return out
+}
+
+// keyScreens renders the key screen in each of the three states it has.
+//
+// It needs a harness of its own because the screen exists only where the
+// installation runs a key store, and the screens above are the ones every
+// installation has. The three states are separate pages to a reader even
+// though they are one address: the table and the add form, the parsed key
+// waiting for a yes, and the removal asking before it acts. A page-wide
+// property that held on the first and not the other two would be a property
+// that did not hold.
+//
+// base is the calling harness's own configuration, carried over so the key
+// screens are the same installation as the screens beside them: a test that
+// names the installation and draws its mark must see them here too.
+func keyScreens(t *testing.T, base config.Config) map[string]*httptest.ResponseRecorder {
+	t.Helper()
+	withKeys := func(cfg *config.Config) {
+		*cfg = base
+		cfg.KeysURL = mustURL(t, "https://keys.example")
+	}
+	h := newHarness(t, withKeys)
+	used := time.Now().Add(-6 * 24 * time.Hour)
+	added := time.Now().Add(-200 * 24 * time.Hour)
+	h.keys.add(keys.Key{
+		ID: "k1", Comment: "aki@thinkpad", Type: "ssh-ed25519", Bits: 256,
+		Fingerprint: "SHA256:9Xk2pL0rTqYb1nH4vDcE7mZaW8sJfQ6uR3gN5oB2iVc",
+		Created:     &added, LastUsed: &used,
+	})
+	h.keys.add(keys.Key{
+		ID: "k2", Comment: "", Type: "ssh-rsa", Bits: 4096,
+		Fingerprint: "SHA256:Pw4Lm8Rt2Yq6Ze1Ns0Vb7Ud3Xj9Kc5Ga2Hf8Oi4Tr0",
+		Created:     &added,
+	})
+	c := h.signedIn("alice")
+	out := map[string]*httptest.ResponseRecorder{
+		"keys":        h.get("/keys", c),
+		"key removal": h.get("/keys/k1/remove", c),
+	}
+	out["key confirm"] = h.post("/keys", url.Values{"key": {"ssh-ed25519 AAAAnewkey aki@framework"}}, c)
+
+	// An empty account is a page a person meets on their first visit, so
+	// the properties hold on it too.
+	empty := newHarness(t, withKeys)
+	out["keys empty"] = empty.get("/keys", empty.signedIn("alice"))
 	return out
 }
 
@@ -289,11 +339,13 @@ func TestStaleNotice(t *testing.T) {
 // TestRoutesAreReadOnly asserts the route table against a checked-in list.
 //
 // This interface has no write path to repository content of any kind. The
-// four routes that are not a GET are sign-out, the key screen, the mint
-// form and the creation form, each of which requires a token issued to this
-// session, and none of which edits a file, moves a reference, or changes a
-// repository that exists. Creating brings an empty repository into being,
-// which is a different thing from writing to one.
+// five routes that are not a GET are sign-out, the mint form, the creation
+// form and the two on the key screen, each of which requires a token issued
+// to this session, and none of which edits a file, moves a reference, or
+// changes a repository that exists. Creating brings an empty repository
+// into being, which is a different thing from writing to one. A key is an
+// account's credential: adding one writes to the installation's key store
+// and touches no repository at all.
 func TestRoutesAreReadOnly(t *testing.T) {
 	want := []string{
 		"GET /{$}", "GET /sign-in", "GET /open", "GET /auth/start", "GET /auth/callback",
@@ -302,7 +354,7 @@ func TestRoutesAreReadOnly(t *testing.T) {
 		"GET /r/{id}", "GET /r/{id}/refs", "GET /r/{id}/log", "GET /r/{id}/commit/{sha}",
 		"GET /r/{id}/patch/{sha}", "GET /r/{id}/compare", "GET /r/{id}/tree/{path...}",
 		"GET /r/{id}/blob/{path...}", "GET /r/{id}/raw/{path...}",
-		"GET /keys", "POST /keys",
+		"GET /keys", "POST /keys", "GET /keys/{id}/remove", "POST /keys/{id}/remove",
 	}
 	var got []string
 	for _, r := range Routes(true) {
@@ -318,7 +370,7 @@ func TestRoutesAreReadOnly(t *testing.T) {
 	}
 
 	// Every form refuses a submission with no token.
-	h := newHarness(t, func(c *config.Config) { c.KeysURL = "https://keys.example" })
+	h := newHarness(t, func(c *config.Config) { c.KeysURL = mustURL(t, "https://keys.example") })
 	for _, path := range []string{"/sign-out", "/keys", "/tokens", "/new"} {
 		req := httptest.NewRequest(http.MethodPost, path, nil)
 		req.AddCookie(h.signedIn("alice"))
@@ -360,23 +412,31 @@ func TestRoutesAreReadOnly(t *testing.T) {
 	}
 }
 
-// TestKeyScreenIsOptional asserts that the one screen with no contract behind
-// it is absent by default, together with its navigation entry, and that
-// nothing else changes when it appears.
+// TestKeyScreenIsOptional asserts that the key screen is absent by default,
+// together with its navigation entry, and that nothing else changes when it
+// appears.
+//
+// Origo holds no public key: it asks a store the operator runs whose an
+// offered key is. An operator who runs no such store has no place to add
+// one, so this interface offers none rather than offering a screen that
+// cannot work.
 func TestKeyScreenIsOptional(t *testing.T) {
 	off := newHarness(t)
 	c := off.signedIn("alice")
 	if rec := off.get("/keys", c); rec.Code != http.StatusNotFound {
-		t.Errorf("the key screen answers %d while no key surface is configured, want 404", rec.Code)
+		t.Errorf("the key screen answers %d while no key store is configured, want 404", rec.Code)
+	}
+	if rec := off.get("/keys/k1/remove", c); rec.Code != http.StatusNotFound {
+		t.Errorf("a removal answers %d with no key store, want 404", rec.Code)
 	}
 	home := off.get("/", c).Body.String()
 	if strings.Contains(home, "ssh keys") {
 		t.Error("the navigation offers a screen that is not there")
 	}
 
-	on := newHarness(t, func(cfg *config.Config) { cfg.KeysURL = "https://keys.example" })
+	on := newHarness(t, func(cfg *config.Config) { cfg.KeysURL = mustURL(t, "https://keys.example") })
 	c2 := on.signedIn("alice")
-	if rec := on.get("/keys", c2); rec.Code != http.StatusNotImplemented {
+	if rec := on.get("/keys", c2); rec.Code != http.StatusOK {
 		t.Errorf("the configured key screen answers %d", rec.Code)
 	}
 	if !strings.Contains(on.get("/", c2).Body.String(), "ssh keys") {

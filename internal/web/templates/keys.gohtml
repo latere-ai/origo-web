@@ -1,8 +1,100 @@
 {{define "title"}}SSH keys{{end}}
 {{define "main"}}
-<main class="panel stack prose">
+<main class="stack">
   <h1 class="heading-page">SSH keys</h1>
-  <p class="prose"><strong>Key management is not available on this installation yet.</strong>
-  Public keys are held outside the git server, and the place to add or remove one is still being built. Until it exists, ask whoever administers this installation to register a key for you.</p>
+  <p class="lead">Keys registered to {{if .Who}}<span class="path">{{.Who}}</span>{{else}}this account{{end}}. Any of them can push to every repository you can write.</p>
+
+  {{- if .Error}}
+  <p class="notice" role="alert"><strong>That did not work.</strong> {{.Error}}</p>
+  {{- end}}
+
+  {{- if .Unavailable}}
+  <p class="notice" role="alert"><strong>The key store is not answering.</strong> Your keys keep working. This page cannot show or change them until the store is back.</p>
+  {{- end}}
+
+  {{- if .Removing}}
+  <form class="panel stack" action="{{.Removing.RemoveURL}}" method="post">
+    <input type="hidden" name="{{.View.CSRFField}}" value="{{.View.CSRF}}">
+    <h2 class="heading-section">Remove this key</h2>
+    <dl class="facts">
+      <dt>Comment</dt><dd>{{if .Removing.Named}}{{.Removing.Comment}}{{else}}<span class="meta">no comment</span>{{end}}</dd>
+      <dt>Type</dt><dd class="refname">{{.Removing.Algorithm}}</dd>
+      <dt>Fingerprint</dt><dd class="sha">{{.Removing.Fingerprint}}</dd>
+      <dt>Last used</dt><dd class="when">{{.Removing.LastUsed}}</dd>
+    </dl>
+    <p class="prose">A machine holding the matching private key stops being able to clone and push within a minute. Nothing else changes, and you can add the key again later.</p>
+    <div class="row">
+      <button class="button-primary" type="submit">Remove this key</button>
+      <a href="/keys">Cancel</a>
+    </div>
+  </form>
+  {{- end}}
+
+  {{- if .Keys}}
+  <div class="panel flush">
+    <div class="scroller">
+      <table class="stackable">
+        <caption>Your registered public keys</caption>
+        <thead>
+          <tr>
+            <th scope="col">Comment</th>
+            <th scope="col">Fingerprint</th>
+            <th scope="col">Added</th>
+            <th scope="col">Last used</th>
+            <th scope="col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+        {{- range .Keys}}
+          <tr>
+            <th scope="row">{{if .Named}}{{.Comment}}{{else}}<span class="meta">no comment</span>{{end}}</th>
+            <td data-label="Fingerprint"><span class="refname">{{.Algorithm}}</span> <span class="sha">{{.Fingerprint}}</span></td>
+            <td data-label="Added" class="when"><span title="{{.AddedExact}}">{{.Added}}</span></td>
+            <td data-label="Last used" class="when">{{if .Unused}}<span class="unused">never used</span>{{else}}{{.LastUsed}}{{end}}</td>
+            <td data-label="Action"><a href="{{.RemoveURL}}">Remove</a></td>
+          </tr>
+        {{- end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{- else if not .Unavailable}}
+  <p class="empty">No keys yet. Add one below and <span class="path">git clone</span> over SSH will work from the machine that holds its private half.</p>
+  {{- end}}
+
+  {{- if .Confirm}}
+  <form class="panel stack" action="/keys" method="post">
+    <input type="hidden" name="{{.View.CSRFField}}" value="{{.View.CSRF}}">
+    <input type="hidden" name="key" value="{{.Confirm.Pasted}}">
+    <input type="hidden" name="confirm" value="yes">
+    <h2 class="heading-section">Confirm this key</h2>
+    <p class="prose">One key was read. Check the fingerprint against <span class="path">ssh-keygen -lf</span> on the machine that owns it before you confirm.</p>
+    <dl class="facts">
+      <dt>Type</dt><dd class="refname">{{.Confirm.Type}}</dd>
+      <dt>Comment</dt><dd>{{if .Confirm.Comment}}{{.Confirm.Comment}}{{else}}<span class="meta">no comment</span>{{end}}</dd>
+      <dt>Fingerprint</dt><dd class="sha">{{.Confirm.Fingerprint}}</dd>
+    </dl>
+    <div class="row">
+      <button class="button-primary" type="submit">Add this key</button>
+      <a href="/keys">Cancel</a>
+    </div>
+  </form>
+  {{- else if not .Unavailable}}
+  <form class="panel stack" action="/keys" method="post">
+    <input type="hidden" name="{{.View.CSRFField}}" value="{{.View.CSRF}}">
+    <h2 class="heading-section">Add a key</h2>
+    <div class="fields">
+      <div class="field">
+        <label for="key">Paste the contents of a public key file, for example <span class="path">~/.ssh/id_ed25519.pub</span>. One key.</label>
+        <textarea id="key" name="key" rows="4" class="mono" placeholder="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... you@host" required>{{.Paste}}</textarea>
+        <span class="hint">The comment at the end of the line becomes the key's label. Nothing else to fill in.</span>
+      </div>
+    </div>
+    <div class="row">
+      <button class="button-primary" type="submit">Continue</button>
+      <span class="hint">You check the fingerprint on the next step before anything is stored.</span>
+    </div>
+  </form>
+  {{- end}}
 </main>
 {{end}}
