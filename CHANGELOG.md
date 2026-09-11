@@ -10,6 +10,8 @@ already holds what was committed.
 
 ## Unreleased
 
+## v0.6.0 - 2026-09-11
+
 - The colours are Latere's. The page is the neutral ground and surface of
   the Latere design system, with its rounded panels and capsule buttons,
   and one deep iris accent on links, focus rings and the button you are
