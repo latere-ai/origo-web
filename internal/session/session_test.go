@@ -372,6 +372,47 @@ func TestRecentCarriesTheName(t *testing.T) {
 	}
 }
 
+// TestForgetTakesOneRepositoryOut asserts that forgetting removes one entry
+// and leaves the rest, and that forgetting the last one clears the cookie.
+func TestForgetTakesOneRepositoryOut(t *testing.T) {
+	is := newIssuer(t)
+	m, err := New(testConfig(t, is))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: RecentCookieName, Value: "r2=infra%2Ftwo r1=infra%2Fone"})
+
+	rec := httptest.NewRecorder()
+	m.Forget(rec, req, "r2")
+	next := httptest.NewRequest(http.MethodGet, "/", nil)
+	next.AddCookie(cookieNamed(t, rec, RecentCookieName))
+	if got := m.Recent(next); len(got) != 1 || got[0] != (Opened{"r1", "infra/one"}) {
+		t.Errorf("after forgetting r2 the list reads %v", got)
+	}
+
+	rec = httptest.NewRecorder()
+	m.Forget(rec, next, "r1")
+	if c := cookieNamed(t, rec, RecentCookieName); c == nil || c.MaxAge >= 0 {
+		t.Errorf("forgetting the last repository left the cookie: %+v", c)
+	}
+
+	// Remembered and forgotten in one response, the response carries one
+	// cookie, and it is the forgetting.
+	rec = httptest.NewRecorder()
+	m.Remember(rec, req, "r3", "infra/three")
+	m.Forget(rec, req, "r3")
+	var recent []*http.Cookie
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == RecentCookieName {
+			recent = append(recent, c)
+		}
+	}
+	if len(recent) != 1 || strings.Contains(recent[0].Value, "r3") {
+		t.Errorf("one response set the recent cookie as %v", recent)
+	}
+}
+
 func TestCSRFRoundTrip(t *testing.T) {
 	is := newIssuer(t)
 	m, err := New(testConfig(t, is))

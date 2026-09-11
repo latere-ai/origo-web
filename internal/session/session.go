@@ -265,19 +265,58 @@ func (m *Manager) Remember(w http.ResponseWriter, r *http.Request, id, name stri
 			break
 		}
 	}
-	parts := make([]string, len(next))
-	for i, o := range next {
+	m.writeRecent(w, next)
+}
+
+// Forget takes one repository out of the recent list, which is what its
+// deletion does to it: a list that went on naming a repository nobody can
+// open would lead to the one refusal every time it was followed.
+func (m *Manager) Forget(w http.ResponseWriter, r *http.Request, id string) {
+	var next []Opened
+	for _, old := range m.Recent(r) {
+		if old.ID != id {
+			next = append(next, old)
+		}
+	}
+	m.writeRecent(w, next)
+}
+
+// writeRecent is the one place the recent cookie is written. An empty list
+// clears it rather than writing an empty value.
+//
+// One response carries one Set-Cookie for it. Opening a repository
+// remembers it and deleting the same repository forgets it in the same
+// request, and a browser given both would keep whichever came last; the
+// earlier header is taken back so there is nothing to keep but the last.
+func (m *Manager) writeRecent(w http.ResponseWriter, list []Opened) {
+	h := w.Header()
+	var kept []string
+	for _, line := range h["Set-Cookie"] {
+		if !strings.HasPrefix(line, m.recentName+"=") {
+			kept = append(kept, line)
+		}
+	}
+	if len(kept) == 0 {
+		h.Del("Set-Cookie")
+	} else {
+		h["Set-Cookie"] = kept
+	}
+	c := &http.Cookie{
+		Name: m.recentName, Path: "/",
+		HttpOnly: true, Secure: m.secure, SameSite: http.SameSiteLaxMode,
+	}
+	if len(list) == 0 {
+		c.MaxAge = -1
+		http.SetCookie(w, c)
+		return
+	}
+	parts := make([]string, len(list))
+	for i, o := range list {
 		parts[i] = formatOpened(o)
 	}
-	http.SetCookie(w, &http.Cookie{
-		Name:     m.recentName,
-		Value:    strings.Join(parts, " "),
-		Path:     "/",
-		MaxAge:   int(Lifetime / time.Second),
-		HttpOnly: true,
-		Secure:   m.secure,
-		SameSite: http.SameSiteLaxMode,
-	})
+	c.Value = strings.Join(parts, " ")
+	c.MaxAge = int(Lifetime / time.Second)
+	http.SetCookie(w, c)
 }
 
 // The cookie is one entry per repository, separated by spaces: the escaped
