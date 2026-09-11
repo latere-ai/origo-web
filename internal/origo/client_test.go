@@ -469,3 +469,39 @@ func TestTokenListDegradesRatherThanFails(t *testing.T) {
 		t.Errorf("the registry was asked at %q", s.paths[0])
 	}
 }
+
+// TestDeleteMarksTheRepositoryAndCarriesTheHold asserts the one call the
+// deletion screen makes: a DELETE of the repository's own address with the
+// person's token and no body, and the hold Origo answers with read back. A
+// refusal is classified as every other refusal is.
+func TestDeleteMarksTheRepositoryAndCarriesTheHold(t *testing.T) {
+	var method, contentType string
+	s := newServer(t, func(w http.ResponseWriter, r *http.Request) {
+		method, contentType = r.Method, r.Header.Get("Content-Type")
+		w.WriteHeader(http.StatusAccepted)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id": "r1", "deleted_at": "2026-09-11T12:00:00Z", "purge_after": "2026-09-18T12:00:00Z",
+		})
+	})
+	d, err := s.client(t).Delete(t.Context(), "abc", "r1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if method != http.MethodDelete || contentType != "" {
+		t.Errorf("the deletion was a %s carrying %q", method, contentType)
+	}
+	if s.paths[0] != "/v1/repos/r1" || s.auth[0] != "Bearer abc" {
+		t.Errorf("the deletion asked %q as %q", s.paths[0], s.auth[0])
+	}
+	if d.ID != "r1" || d.DeletedAt == nil || d.PurgeAfter == nil || d.PurgeAfter.Sub(*d.DeletedAt) != 7*24*time.Hour {
+		t.Errorf("the hold read back as %+v", d)
+	}
+
+	refused := newServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte(`{"error":{"code":"forbidden"}}`))
+	})
+	if _, err := refused.client(t).Delete(t.Context(), "abc", "r1"); !Absent(err) {
+		t.Errorf("a refused deletion reads as %v, want the one refusal", err)
+	}
+}

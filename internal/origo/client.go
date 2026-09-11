@@ -527,17 +527,48 @@ func (c *Client) Tokens(ctx context.Context, tok, id string) ([]TokenRecord, err
 	return out.Tokens, err
 }
 
-// postJSON sends one JSON body and reads one JSON answer. It is the only
-// write this client makes, and it writes no repository content: minting a
-// credential is the one thing a person does here that Origo records nowhere.
+// Deletion is what Origo answers a delete with: when the repository was
+// marked, and when its content will be purged. Between the two an
+// administrator can undelete it through the API. This interface offers no
+// screen for that.
+type Deletion struct {
+	ID         string     `json:"id"`
+	DeletedAt  *time.Time `json:"deleted_at"`
+	PurgeAfter *time.Time `json:"purge_after"`
+}
+
+// Delete marks one repository deleted (spec 020). Origo evicts it at once
+// and answers 404 for it from then on; the content is held and purged
+// later. Repeating the call is the same deletion.
+func (c *Client) Delete(ctx context.Context, tok, id string) (Deletion, error) {
+	var out Deletion
+	err := c.send(ctx, http.MethodDelete, tok, "/v1/repos/"+url.PathEscape(id), nil, &out)
+	return out, err
+}
+
+// postJSON sends one JSON body and reads one JSON answer.
 func (c *Client) postJSON(ctx context.Context, tok, path string, body []byte, out any) error {
+	return c.send(ctx, http.MethodPost, tok, path, body, out)
+}
+
+// send makes the one kind of call that is not a read: the mint, the create
+// and the delete. None of them writes repository content, and each is a
+// thing the person could do with curl at the same address with the same
+// token, which is the property the delegation row of spec 023 rests on.
+func (c *Client) send(ctx context.Context, method, tok, path string, body []byte, out any) error {
 	u := *c.base
 	u.Path = strings.TrimRight(u.Path, "/") + path
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(body))
+	var payload io.Reader = http.NoBody
+	if body != nil {
+		payload = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), payload)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	if tok != "" {
 		req.Header.Set("Authorization", "Bearer "+tok)
 	}
