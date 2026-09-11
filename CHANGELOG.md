@@ -10,6 +10,22 @@ holds what was committed.
 
 ## Unreleased
 
+- The file page says whether its address moves. A file opened at a branch
+  warns that the next push can change it and offers the address pinned to
+  the commit. A file opened at a commit says the address always shows those
+  bytes and offers the way back to the branch.
+- Every file and commit page ends with a `machine` line linking the same
+  page in a format a program reads: `raw` on a file, `patch` on a commit.
+  The same addresses are in the page head as `link rel="alternate"`.
+- File and commit pages carry a `copy` section that a click opens. It lists
+  the permalink, the commit, the path, the patch address and the clone
+  address as fields you can select and copy.
+- A commit page names the committer when it is not the author, and offers
+  one link that opens every file the page rendered shut.
+- A directory listing counts the entries it shows and links that
+  directory's own history.
+- The commit log pager names how many commits the next link fetches.
+
 ## v0.6.1 - 2026-09-11
 
 - Every page is denser. Corners are 4px or less, buttons are rectangles,
