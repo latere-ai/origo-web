@@ -142,6 +142,13 @@ func (m *Manager) Load(w http.ResponseWriter, r *http.Request) (*oidc.Session, e
 type Reader struct {
 	Token string
 	Who   string
+
+	// Sub is the account itself: the subject claim the issuer minted, which
+	// names one principal and nothing else. Who is a display name, and two
+	// people may call themselves the same thing, so anything this service
+	// holds per reader is keyed by Sub and never by Who. It is empty only
+	// where the issuer minted no subject.
+	Sub string
 }
 
 // Read is the reader on the request.
@@ -155,7 +162,11 @@ func (m *Manager) Read(w http.ResponseWriter, r *http.Request) Reader {
 	if err != nil {
 		return Reader{}
 	}
-	return Reader{Token: sess.AccessToken, Who: who(sess.User)}
+	return Reader{
+		Token: sess.AccessToken,
+		Who:   who(sess.User),
+		Sub:   strings.TrimSpace(sess.User.Sub),
+	}
 }
 
 // who is the line that names the signed-in person, drawn from the claims the

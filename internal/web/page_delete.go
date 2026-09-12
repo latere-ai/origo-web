@@ -94,7 +94,9 @@ func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 	s.withdrawRow(r.Context(), rc.tok, rc.repo.ID)
 	s.sessions.Forget(w, r, rc.repo.ID)
-	s.visibility.Invalidate(visibilityKey(rc.v.Who, rc.repo.ID))
+	if key, keyed := visibilityKey(rc.sub, rc.repo.ID); keyed {
+		s.visibility.Invalidate(key)
+	}
 	http.Redirect(w, r, "/?deleted="+url.QueryEscape(name), http.StatusSeeOther)
 }
 

@@ -43,7 +43,7 @@ import (
 // value. The registry decides every read and every write, whatever the
 // badge says.
 //
-// The key carries the reader as well as the repository, because CanChange
+// The key carries the account as well as the repository, because CanChange
 // is an answer about a person. Two readers of one repository are two
 // entries, and one reader's right to change it is never served to
 // another.
@@ -58,9 +58,21 @@ func newVisibilityCache() *cache.TTLCache[string, registry.Visibility] {
 		cache.WithMaxSize[string, registry.Visibility](visibilityCacheMax))
 }
 
-// visibilityKey is one reader's answer about one repository. The reader is
-// the session's own identity, so two people never share an entry.
-func visibilityKey(who, id string) string { return who + "\x00" + id }
+// visibilityKey is one account's answer about one repository, and reports
+// whether there is a key at all.
+//
+// The account is the subject claim, which names one principal. A display
+// name does not: two people may call themselves the same thing, and an
+// entry keyed by that is served to whichever of them asks second, which
+// hands one person's private repository and one person's right to change
+// it to another. A session whose issuer minted no subject has no key, and
+// nothing about it is stored or reused.
+func visibilityKey(sub, id string) (string, bool) {
+	if sub == "" {
+		return "", false
+	}
+	return sub + "\x00" + id, true
+}
 
 // visibilityData is the screen.
 type visibilityData struct {
@@ -127,8 +139,9 @@ func (s *Server) handleVisibilityPost(w http.ResponseWriter, r *http.Request) {
 	// Written through rather than dropped, so the overview this redirect
 	// lands on shows what was just chosen. The lifetime above bounds a
 	// change made elsewhere and never a change made here.
-	s.visibility.Set(visibilityKey(rc.v.Who, rc.repo.ID),
-		registry.Visibility{Visibility: target, CanChange: true})
+	if key, keyed := visibilityKey(rc.sub, rc.repo.ID); keyed {
+		s.visibility.Set(key, registry.Visibility{Visibility: target, CanChange: true})
+	}
 	http.Redirect(w, r, rc.rv.URL(), http.StatusSeeOther)
 }
 

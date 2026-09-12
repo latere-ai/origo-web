@@ -8,6 +8,10 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"latere.ai/x/pkg/authkit/oidc"
+
+	"github.com/latere-ai/origo-web/internal/registry"
 )
 
 // The visibility screen: what it says before either change, who may see
@@ -262,5 +266,57 @@ func TestVisibilityIsAskedOncePerReader(t *testing.T) {
 	body := h.get(h.repoPath(""), c).Body.String()
 	if !strings.Contains(body, ">public<") {
 		t.Error("the overview after a flip does not show what was just chosen")
+	}
+}
+
+// TestOneDisplayNameIsNotOneAccount is the cache key.
+//
+// The per-reader answer about a repository is held per account, and an
+// account is the issuer's subject claim. It was held per display name once,
+// and a display name is not an identity: two people who call themselves the
+// same thing shared one entry, so the second was served the first's answer
+// about a repository and the first's right to change it.
+func TestOneDisplayNameIsNotOneAccount(t *testing.T) {
+	h := newHarness(t)
+	h.registry.answerFor("Bearer token-for-s1",
+		registry.Visibility{Visibility: registry.Public, CanChange: true})
+	h.registry.answerFor("Bearer token-for-s2",
+		registry.Visibility{Visibility: registry.Private, CanChange: false})
+
+	one := h.signedInAs(oidc.User{Sub: "s1", DisplayName: "Robin Ellis"})
+	two := h.signedInAs(oidc.User{Sub: "s2", DisplayName: "Robin Ellis"})
+
+	first := h.get(h.repoPath(""), one).Body.String()
+	second := h.get(h.repoPath(""), two).Body.String()
+
+	// The precondition. If the two sessions did not render one name, the
+	// old key was already two keys and the rest of this proves nothing.
+	for i, body := range []string{first, second} {
+		if !strings.Contains(body, `<span class="who">Robin Ellis</span>`) {
+			t.Fatalf("session %d does not render the shared display name", i+1)
+		}
+	}
+
+	if !strings.Contains(first, `<span class="badge">public</span>`) {
+		t.Error("the first account was not shown what the registry told it")
+	}
+	if strings.Contains(second, `<span class="badge">public</span>`) {
+		t.Error("the second account was served the first account's answer")
+	}
+	if !strings.Contains(second, `<span class="badge badge-quiet">private</span>`) {
+		t.Error("the second account was not shown what the registry told it")
+	}
+	if strings.Contains(second, "change visibility") {
+		t.Error("the second account was offered a control the registry did not give it")
+	}
+
+	var asked int
+	for _, c := range h.registry.Calls() {
+		if strings.HasSuffix(c, "/visibility") {
+			asked++
+		}
+	}
+	if asked != 2 {
+		t.Errorf("the registry was asked %d times, want once for each account", asked)
 	}
 }

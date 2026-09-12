@@ -306,14 +306,20 @@ func (s *Server) visibilityOf(r *http.Request, rc repoContext) (string, string) 
 	if rc.tok == "" {
 		return "", ""
 	}
-	key := visibilityKey(rc.v.Who, rc.repo.ID)
-	current, ok := s.visibility.Get(key)
+	key, keyed := visibilityKey(rc.sub, rc.repo.ID)
+	var current registry.Visibility
+	var ok bool
+	if keyed {
+		current, ok = s.visibility.Get(key)
+	}
 	if !ok {
 		var err error
 		current, err = s.registry.ReadVisibility(r.Context(), rc.tok, rc.repo.ID)
 		switch {
 		case err == nil:
-			s.visibility.Set(key, current)
+			if keyed {
+				s.visibility.Set(key, current)
+			}
 		case errors.Is(err, registry.ErrNoRegistry), registry.NotFound(err):
 			// The installation keeps no visibility, or this reader may
 			// not ask about this repository. Neither is a failure and

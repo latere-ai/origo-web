@@ -51,6 +51,11 @@ type fakeRegistry struct {
 	visibilityStatus int
 	// visibilityWrites is every value the screen wrote, in order.
 	visibilityWrites []string
+
+	// perToken answers the visibility question differently for a named
+	// credential, so a test can put two readers of one repository through
+	// the interface and see which answer each is given.
+	perToken map[string]registry.Visibility
 }
 
 // newFakeRegistry returns a registry holding one namespace, which is the
@@ -116,12 +121,17 @@ func (f *fakeRegistry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		(r.Method == http.MethodGet || r.Method == http.MethodPut):
 		f.mu.Lock()
 		status, current, can := f.visibilityStatus, f.visibility, f.canChange
+		own, particular := f.perToken[r.Header.Get("Authorization")]
 		f.mu.Unlock()
 		if status != 0 {
 			writeRegistryError(w, status, "refused")
 			return
 		}
 		if r.Method == http.MethodGet {
+			if particular {
+				writeJSON(w, own)
+				return
+			}
 			if current == "" {
 				current = registry.Private
 			}
@@ -195,6 +205,17 @@ func (f *fakeRegistry) Forgotten() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]string(nil), f.forgotten...)
+}
+
+// answerFor makes the visibility question answer this credential its own
+// way, whatever the registry says to everybody else.
+func (f *fakeRegistry) answerFor(bearer string, v registry.Visibility) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.perToken == nil {
+		f.perToken = map[string]registry.Visibility{}
+	}
+	f.perToken[bearer] = v
 }
 
 // refuseCreate makes the next write answer this status and code.

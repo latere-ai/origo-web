@@ -19,6 +19,12 @@ import (
 type req struct {
 	tok string
 	v   view
+
+	// sub is the account the token belongs to: the issuer's subject claim.
+	// It names a principal where v.Who only names a person, so everything
+	// this service holds per reader is keyed by it. It is not in the view,
+	// because no screen shows it.
+	sub string
 }
 
 // begin reads the session once per request. A refreshed session is written
@@ -30,6 +36,7 @@ func (s *Server) begin(w http.ResponseWriter, r *http.Request, section string) r
 	reader := s.sessions.Read(w, r)
 	return req{
 		tok: reader.Token,
+		sub: reader.Sub,
 		v: view{
 			Section:     section,
 			SignedIn:    reader.Token != "",
