@@ -72,6 +72,11 @@ type Route struct {
 // form, the one that creates a repository, the one that changes who may
 // read it, the one that deletes it, and the two on the key screen.
 //
+// /login is not a screen of its own. It is where authkit's callback sends
+// a browser whose flow cookie is gone or whose state did not match, and
+// this interface answers it with the sign-in page rather than with the
+// page that says there is nothing at this address.
+//
 // None of them touches repository content. This interface has no write path
 // to the content of a repository: nothing here edits a file, moves a
 // reference, renames, transfers or freezes anything. Minting writes nothing,
@@ -86,6 +91,7 @@ func Routes(keys bool) []Route {
 	rs := []Route{
 		{"GET", "/{$}"},
 		{"GET", "/sign-in"},
+		{"GET", "/login"},
 		{"GET", "/open"},
 		{"GET", "/auth/start"},
 		{"GET", "/auth/callback"},
@@ -149,6 +155,7 @@ func New(o Options) *Server {
 	handlers := map[string]http.HandlerFunc{
 		"GET /{$}":                           s.handleHome,
 		"GET /sign-in":                       s.handleSignIn,
+		"GET /login":                         s.handleSignIn,
 		"GET /open":                          s.handleOpen,
 		"GET /auth/start":                    s.handleAuthStart,
 		"GET /auth/callback":                 s.handleAuthCallback,

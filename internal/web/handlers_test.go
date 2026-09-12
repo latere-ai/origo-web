@@ -354,6 +354,104 @@ func TestSignInStartsAndReturnsTheFlow(t *testing.T) {
 	}
 }
 
+// TestLoginIsTheSignInScreen covers the address authkit sends a browser to
+// when the flow cookie is gone or the state did not match. This interface
+// links to /sign-in and never to /login, so without a route the recovery
+// path from a lost flow landed on the page that says there is no page here.
+func TestLoginIsTheSignInScreen(t *testing.T) {
+	h := newHarness(t)
+	rec := h.get("/login")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("/login answered %d, want the sign-in screen", rec.Code)
+	}
+	// The href is written into a query, so the template escapes the
+	// separators, which is what the document carries.
+	if !strings.Contains(rec.Body.String(), `href="/auth/start?return_to=%2f"`) {
+		t.Errorf("/login carries no way to start the flow:\n%s", rec.Body.String())
+	}
+
+	// A return the library forwarded is kept, and one that leaves this
+	// origin is not, which is the check /sign-in already makes.
+	if body := h.get("/login?return_to=/alice/origo/log").Body.String(); !strings.Contains(
+		body, `href="/auth/start?return_to=%2falice%2forigo%2flog"`) {
+		t.Errorf("/login dropped the address to come back to:\n%s", body)
+	}
+	if body := h.get("/login?return_to=//elsewhere.example/").Body.String(); strings.Contains(
+		body, "elsewhere.example") {
+		t.Errorf("/login would return off origin:\n%s", body)
+	}
+
+	// A browser that still holds a session is sent where it was going.
+	rec = h.get("/login?return_to=/alice/origo", h.signedIn("alice"))
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/alice/origo" {
+		t.Errorf("a signed-in visitor to /login got %d to %q", rec.Code, rec.Header().Get("Location"))
+	}
+}
+
+// TestAFailedSignInSaysSoInWords covers the other half of what authkit's
+// callback does with a flow it could not finish: it sends the browser to
+// /?auth_error=<code>. The code is written for a log, so the screen says
+// what happened in a sentence and never repeats the parameter.
+func TestAFailedSignInSaysSoInWords(t *testing.T) {
+	h := newHarness(t)
+	body := h.get("/?auth_error=token_exchange_failed").Body.String()
+	if !strings.Contains(body, authFailedSentence) {
+		t.Errorf("a failed sign-in says nothing:\n%s", body)
+	}
+	if strings.Contains(body, "token_exchange_failed") {
+		t.Error("the screen repeated the code back")
+	}
+
+	// A refusal is the one code a person can act on, so it has its own
+	// sentence, and a code nobody has seen before still gets one.
+	if body := h.get("/?auth_error=access_denied").Body.String(); !strings.Contains(body, authRefusedSentence) {
+		t.Errorf("a refusal reads as a fault:\n%s", body)
+	}
+	if body := h.get("/?auth_error=weather").Body.String(); !strings.Contains(body, authFailedSentence) {
+		t.Errorf("an unknown code says nothing:\n%s", body)
+	}
+	if body := h.get("/").Body.String(); strings.Contains(body, authFailedSentence) {
+		t.Error("an ordinary visit says a sign-in failed")
+	}
+
+	// An angle bracket in the parameter never reaches the page at all,
+	// because the page carries the sentence and not the parameter.
+	if body := h.get("/?auth_error=%3Cscript%3E").Body.String(); strings.Contains(body, "<script>") {
+		t.Error("the parameter reached the document")
+	}
+}
+
+// TestAFailedSignInSaysSoOnTheSignInScreen is the same sentence on the page
+// a visitor with no session is actually shown. An installation whose
+// directory needs a credential answers the home screen's list 401, and the
+// home screen hands the visitor to the front door; the sentence goes too,
+// or the one case authkit produces is the one case that says nothing.
+func TestAFailedSignInSaysSoOnTheSignInScreen(t *testing.T) {
+	refuse := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"error":{"code":"unauthenticated"}}`))
+	}))
+	defer refuse.Close()
+	h := newHarness(t)
+	h.server = New(Options{
+		Config: h.cfg, Sessions: mustSessions(t, h.cfg), API: origo.New(mustURL(t, refuse.URL), refuse.Client()),
+	})
+	rec := h.get("/?auth_error=invalid_id_token")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("the front door answered %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "/auth/start") {
+		t.Fatalf("this is not the sign-in screen:\n%s", body)
+	}
+	if !strings.Contains(body, authFailedSentence) {
+		t.Errorf("the sign-in screen says nothing about the failure:\n%s", body)
+	}
+	if strings.Contains(body, "invalid_id_token") {
+		t.Error("the screen repeated the code back")
+	}
+}
+
 func TestSignInScreenNamesTheIssuerWhenItIsConfigured(t *testing.T) {
 	h := newHarness(t, func(c *config.Config) { c.IssuerName = "Okta"; c.SSHCloneHost = "git.example" })
 	body := h.get("/sign-in").Body.String()

@@ -7,6 +7,9 @@
     <a class="button" href="/new">New repository</a>
     {{- end}}
   </div>
+  {{- if .AuthError}}
+  <p class="notice">{{.AuthError}}</p>
+  {{- end}}
   {{- if .Deleted}}
   <p class="notice"><strong>{{.Deleted}} was deleted.</strong> The name is free to use again.</p>
   {{- end}}

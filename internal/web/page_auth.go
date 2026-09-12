@@ -20,6 +20,13 @@ type req struct {
 	tok string
 	v   view
 
+	// authError is the sentence the screen says about a sign-in that ended
+	// at the callback instead of at a session, empty when there is none.
+	// It is on the request and not on the home screen alone because the
+	// home screen hands a signed-out visitor to the sign-in page, which is
+	// where the sentence is needed most.
+	authError string
+
 	// sub is the account the token belongs to: the issuer's subject claim.
 	// It names a principal where v.Who only names a person, so everything
 	// this service holds per reader is keyed by it. It is not in the view,
@@ -61,6 +68,10 @@ type signInData struct {
 	ReturnTo    string
 	Refused     bool
 
+	// AuthError is what went wrong on the way back from the issuer, empty
+	// when nothing did.
+	AuthError string
+
 	// Hosted says this installation carries a name of its own, so the page
 	// says which project it is an instance of rather than claiming to be
 	// the project.
@@ -93,6 +104,7 @@ func (s *Server) signInPage(rq req, returnTo string) signInData {
 		CloneSSH:    s.cfg.CloneSSH("<owner>", "<name>"),
 		ReturnTo:    returnTo,
 		Refused:     rq.tok != "",
+		AuthError:   rq.authError,
 		Hosted:      s.cfg.Hosted(),
 	}
 }
@@ -126,10 +138,22 @@ func frontDoorStatus(rq req) int {
 
 // returnTo is the path to come back to after signing in: this request's own
 // path, and never a path from another origin.
+//
+// The callback's own auth_error is taken out of it. It is not part of the
+// address the person asked for, and a return that kept it would land the
+// person on a page telling them a sign-in had failed, just after one
+// succeeded.
 func returnTo(r *http.Request) string {
 	p := r.URL.Path
-	if r.URL.RawQuery != "" {
-		p += "?" + r.URL.RawQuery
+	q := r.URL.RawQuery
+	if q != "" {
+		if values := r.URL.Query(); values.Has("auth_error") {
+			values.Del("auth_error")
+			q = values.Encode()
+		}
+	}
+	if q != "" {
+		p += "?" + q
 	}
 	if !strings.HasPrefix(p, "/") || strings.HasPrefix(p, "//") {
 		return "/"
@@ -137,6 +161,10 @@ func returnTo(r *http.Request) string {
 	return p
 }
 
+// handleSignIn draws the front door. It answers /sign-in, which is where
+// this interface's own links point, and /login, which is where authkit
+// sends a browser whose flow cookie is gone or whose state did not match.
+// Both take return_to, and both refuse an address that is not a path here.
 func (s *Server) handleSignIn(w http.ResponseWriter, r *http.Request) {
 	rq := s.begin(w, r, "")
 	if rq.tok != "" {
@@ -166,6 +194,37 @@ func (s *Server) handleSignOut(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/sign-in", http.StatusSeeOther)
 }
 
+// The two sentences this interface says about a sign-in that came back
+// from the issuer without a session.
+//
+// authkit's callback sends the browser to /?auth_error=<code> when the
+// issuer refused the request, when the code could not be exchanged, and
+// when the token that came back did not verify. The code is the issuer's
+// own string and is written for whoever reads a log, so no screen shows
+// it: it stays in the address bar and in the line authkit already logged,
+// and the person reads what happened and what to do.
+const (
+	authFailedSentence  = "Sign-in did not finish. Try again."
+	authRefusedSentence = "Sign-in was refused. Try again, or ask your administrator whether your account may use this installation."
+)
+
+// authErrorSentence is what the screen says about the auth_error code the
+// callback may have arrived with, empty when it arrived with none.
+//
+// Only the refusal is told apart, because it is the only one a person can
+// do anything about: every other code is a fault between this service and
+// the issuer, and the same sentence covers all of them.
+func authErrorSentence(code string) string {
+	switch code {
+	case "":
+		return ""
+	case "access_denied":
+		return authRefusedSentence
+	default:
+		return authFailedSentence
+	}
+}
+
 func safeReturn(p string) string {
 	if p == "" || !strings.HasPrefix(p, "/") || strings.HasPrefix(p, "//") {
 		return "/"
@@ -187,6 +246,10 @@ type homeData struct {
 	// Deleted names the repository a deletion just landed here from, so
 	// the list says what happened; empty otherwise.
 	Deleted string
+
+	// AuthError is what went wrong on the way back from the issuer, empty
+	// when nothing did. authkit's callback lands a failed sign-in here.
+	AuthError string
 
 	// CanFilter says the whole directory arrived in this one answer, so a
 	// filter over it covers everything the reader may see. Origo has no
@@ -229,11 +292,15 @@ type listRow struct {
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	rq := s.begin(w, r, "")
 	rq.v.Title = "Repositories"
+	// Read before the list, because a visitor with no session is handed
+	// to the sign-in page below and the sentence has to go with them.
+	rq.authError = authErrorSentence(r.URL.Query().Get("auth_error"))
 
 	data := homeData{
-		View:    rq.v,
-		Query:   strings.TrimSpace(r.URL.Query().Get("q")),
-		Deleted: deletedName(r.URL.Query().Get("deleted")),
+		View:      rq.v,
+		Query:     strings.TrimSpace(r.URL.Query().Get("q")),
+		Deleted:   deletedName(r.URL.Query().Get("deleted")),
+		AuthError: rq.authError,
 	}
 	page, err := s.api.List(r.Context(), rq.tok, r.URL.Query().Get("cursor"), 50)
 	switch {

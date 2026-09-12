@@ -395,7 +395,7 @@ func TestStaleNotice(t *testing.T) {
 // installation's key store and touches no repository at all.
 func TestRoutesAreReadOnly(t *testing.T) {
 	want := []string{
-		"GET /{$}", "GET /sign-in", "GET /open", "GET /auth/start", "GET /auth/callback",
+		"GET /{$}", "GET /sign-in", "GET /login", "GET /open", "GET /auth/start", "GET /auth/callback",
 		"POST /sign-out", "GET /assets/{file}",
 		"GET /tokens", "POST /tokens", "GET /new", "POST /new", "GET /docs/agents",
 		"GET /{owner}/{slug}", "GET /{owner}/{slug}/refs", "GET /{owner}/{slug}/log",
