@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -210,6 +211,56 @@ func TestRemovingAKeyAsksFirst(t *testing.T) {
 	}
 	if code := h.post("/keys/k9/remove", nil, c).Code; code != http.StatusNotFound {
 		t.Errorf("removing an unknown id answered %d, want 404", code)
+	}
+}
+
+// TestTheRemovalPageReadsTheListOnce is the removal screen's one read.
+//
+// The screen names the key the decision is about, and the store's list is
+// the only place that name is. The handler used to read the list itself and
+// then render, which reads it again: the page named a key out of the first
+// answer and listed the keys of the second, and a store that failed the
+// first read was asked a second time and answered 200 if it recovered.
+func TestTheRemovalPageReadsTheListOnce(t *testing.T) {
+	h := keyHarness(t)
+	c := h.signedIn("alice")
+	h.keys.add(keys.Key{ID: "k1", Comment: "aki@thinkpad", Type: "ssh-ed25519", Bits: 256})
+	h.keys.reset()
+
+	if code := h.get("/keys/k1/remove", c).Code; code != http.StatusOK {
+		t.Fatalf("the removal page answered %d", code)
+	}
+	if got := h.keys.made(); !slices.Equal(got, []string{"GET /me/ssh-keys"}) {
+		t.Errorf("the removal page called %v, want one list", got)
+	}
+
+	// A store that cannot list cannot name the key either, so the page is
+	// the outage the other key screens render and not a second attempt.
+	h.keys.reset()
+	h.keys.down = true
+	rec := h.get("/keys/k1/remove", c)
+	if rec.Code != http.StatusBadGateway {
+		t.Errorf("the removal page with the store down answered %d, want 502", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "key store is unavailable") {
+		t.Errorf("the page does not say the store is down:\n%s", rec.Body.String())
+	}
+	if got := h.keys.made(); !slices.Equal(got, []string{"GET /me/ssh-keys"}) {
+		t.Errorf("the removal page called %v with the store down, want one list", got)
+	}
+
+	// A store that fails the read and is up again a moment later is where
+	// the second read showed: the page answered 200 and drew a screen
+	// naming no key, which reads as a removal that is ready to go ahead.
+	h.keys.reset()
+	h.keys.down = false
+	h.keys.downNext = 1
+	rec = h.get("/keys/k1/remove", c)
+	if rec.Code != http.StatusBadGateway {
+		t.Errorf("the removal page with one failed read answered %d, want 502", rec.Code)
+	}
+	if got := h.keys.made(); !slices.Equal(got, []string{"GET /me/ssh-keys"}) {
+		t.Errorf("the removal page retried the store: %v", got)
 	}
 }
 

@@ -33,8 +33,11 @@ type fakeKeys struct {
 	// forbid answers every call 403, which is the installation whose
 	// client was never granted the scope.
 	forbid bool
-	// down answers every call 500.
-	down bool
+	// down answers every call 500, and downNext answers that many calls 500
+	// and then answers normally, which is the store that fails a read and
+	// is up again by the next one.
+	down     bool
+	downNext int
 	// unauthenticated answers every call 401.
 	unauthenticated bool
 
@@ -119,6 +122,10 @@ func (f *fakeKeys) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.calls = append(f.calls, r.Method+" "+r.URL.Path)
 	f.bearer = append(f.bearer, strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
 	forbid, down, unauth := f.forbid, f.down, f.unauthenticated
+	if f.downNext > 0 {
+		f.downNext--
+		down = true
+	}
 	f.mu.Unlock()
 
 	switch {

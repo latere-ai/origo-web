@@ -69,8 +69,16 @@ type keysData struct {
 	// Confirm is the parsed key awaiting a yes, absent on a first visit.
 	Confirm *parsedKey
 
-	// Removing is the key a removal is asking about, absent otherwise.
+	// Removing is the key a removal is asking about, absent otherwise. It
+	// is picked out of the list renderKeys already read, by removing.
 	Removing *keyRow
+
+	// removing is the id of the key a removal is asking about. The screen
+	// names the key the decision is about, and the list is the only place
+	// that name is, so the id travels with the render rather than the row:
+	// a handler that looked the row up itself would read the list twice
+	// and answer from the first read while rendering the second.
+	removing string
 
 	// Paste survives a refusal so nothing has to be retyped, and Error is
 	// the one sentence that says what was wrong with it.
@@ -107,6 +115,9 @@ func (s *Server) renderKeys(w http.ResponseWriter, r *http.Request, rq req, stat
 	switch {
 	case err == nil:
 		data.Keys = keyRows(rows)
+		if data.removing != "" {
+			status = pickRemoving(&data, status)
+		}
 	case keys.Unauthenticated(err):
 		s.sessions.Clear(w)
 		rq.tok = ""
@@ -123,6 +134,22 @@ func (s *Server) renderKeys(w http.ResponseWriter, r *http.Request, rq req, stat
 		}
 	}
 	s.render(w, r, status, "keys", data)
+}
+
+// pickRemoving finds the key a removal is asking about in the list just
+// read, and says what the screen answers.
+//
+// A key that is not the reader's and one that does not exist are the same
+// answer, which is what the store already does with the id.
+func pickRemoving(data *keysData, status int) int {
+	for i := range data.Keys {
+		if data.Keys[i].ID == data.removing {
+			data.Removing = &data.Keys[i]
+			return status
+		}
+	}
+	data.Error = "That key is not on your account."
+	return http.StatusNotFound
 }
 
 // handleKeysPost is both steps of the add: a paste is parsed and shown, and
@@ -173,23 +200,7 @@ func (s *Server) handleKeyRemove(w http.ResponseWriter, r *http.Request) {
 		s.signIn(w, r, rq, http.StatusOK)
 		return
 	}
-	id := r.PathValue("id")
-	rows, err := s.keys.List(r.Context(), rq.tok)
-	if err != nil {
-		s.renderKeys(w, r, rq, http.StatusOK, keysData{})
-		return
-	}
-	for _, row := range keyRows(rows) {
-		if row.ID == id {
-			s.renderKeys(w, r, rq, http.StatusOK, keysData{Removing: &row})
-			return
-		}
-	}
-	// A key that is not the reader's and one that does not exist are the
-	// same answer, which is what the store already does with the id.
-	s.renderKeys(w, r, rq, http.StatusNotFound, keysData{
-		Error: "That key is not on your account.",
-	})
+	s.renderKeys(w, r, rq, http.StatusOK, keysData{removing: r.PathValue("id")})
 }
 
 // handleKeyRemovePost removes one key.
