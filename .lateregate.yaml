@@ -62,3 +62,7 @@ depcheck:
 license:
   spdx: MIT
   holder: Latere AI
+
+# The identity shape of the family: specs/infrastructure/identity.md in latere-ai/specs
+identity:
+  role: bff
