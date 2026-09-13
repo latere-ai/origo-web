@@ -16,8 +16,8 @@ env:
   # else (spec 023, "Where it lives"). The stubs are Origo's spec 013 issuer
   # and authorizer at the same release. MinIO is the bucket origod needs,
   # the pins Origo's own workflow carries.
-  ORIGOD_IMAGE: ghcr.io/latere-ai/origod:v0.2.0@sha256:4f2cc4eae308524e664f025ed95cf7b62919de5155f211f3c8ae8310f533d072
-  STUBS_IMAGE: ghcr.io/latere-ai/origo-stubs:v0.2.0@sha256:a8865ba3fb08ec177397a3eb4a99aff998634cba374cf7d88c486bacf0b889c4
+  ORIGOD_IMAGE: ghcr.io/latere-ai/origod:v0.2.1@sha256:92ca6e544c2f6d9febaa20d68e7a88a612d4ce993d781289e5b1e3325595d25c
+  STUBS_IMAGE: ghcr.io/latere-ai/origo-stubs:v0.2.1@sha256:ef81a260891b9cfc71c9a322c25fe3642c82913f496aae8342bbfc4be1d11339
   MINIO_IMAGE: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
   MC_IMAGE: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
   REPO_ID: 4b1d6c2e-8f3a-4e5b-9c7d-2a1b3c4d5e6f
