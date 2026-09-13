@@ -3,6 +3,7 @@ module github.com/latere-ai/origo-web
 go 1.27.0
 
 require (
+	github.com/goccy/go-yaml v1.19.2
 	github.com/google/uuid v1.6.0
 	golang.org/x/net v0.59.0
 	latere.ai/x/pkg v0.61.0
@@ -14,7 +15,6 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/yuin/goldmark v1.8.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
@@ -43,7 +43,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	latere.ai/x/ci-gate v0.32.2 // indirect
+	latere.ai/x/ci-gate v0.35.0 // indirect
 )
 
 tool latere.ai/x/ci-gate/cmd/lateregate
