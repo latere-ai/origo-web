@@ -24,15 +24,12 @@ env:
 
 jobs:
   gate:
-    # Every job runs on the org's self-hosted linux-vm runner, like the
-    # product repositories: this repository is private, so hosted minutes
-    # are metered against the org's Actions budget, which stopped the runs
-    # of one day. Hosted runners are the fallback: set both inputs and the
-    # runs-on below back to ubuntu-latest.
+    # This public repository uses hosted runners. The organization's
+    # self-hosted runner group accepts private repositories only.
     uses: latere-ai/ci/.github/workflows/lateregate.yml@v1
     with:
-      runs_on: linux-vm
-      test_os: '["linux-vm"]'
+      runs_on: ubuntu-latest
+      test_os: '["ubuntu-latest"]'
 
   # The end-to-end tier of spec 023: the interface against the pinned origod
   # with the stub issuer and stub authorizer, one repository with a
@@ -42,7 +39,7 @@ jobs:
   # the test stands in for.
   e2e:
     name: end-to-end against the pinned origod
-    runs-on: linux-vm
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
