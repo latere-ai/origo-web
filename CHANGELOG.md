@@ -10,6 +10,8 @@ holds what was committed.
 
 ## Unreleased
 
+## v0.9.0 - 2026-09-13
+
 - Every call to Origo carries a token the identity provider mints for
   Origo alone, for the signed-in person and for minutes; the session token
   stays with the identity provider, where the repository registry and the
