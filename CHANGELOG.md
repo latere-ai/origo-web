@@ -10,6 +10,16 @@ holds what was committed.
 
 ## Unreleased
 
+- A tag now rolls Latere's installation instead of stopping at the image.
+  The release applies `deploy/prod`, sets the new image, waits for the
+  rollout and reads the Deployment's tag back, then fetches the sign-in
+  page. Applying the overlay is the part that matters: a setting the
+  overlay has dropped used to outlive the release that removed it, because
+  setting the image alone leaves the live Deployment's own fields in place.
+  The job runs only where `ORIGOWEB_RELEASE_DEPLOY` is set, and waits on the
+  `production` environment's reviewer, so another installation publishes the
+  image and deploys on its own terms.
+
 ## v0.9.0 - 2026-09-13
 
 - Every call to Origo carries a token the identity provider mints for

@@ -1,7 +1,12 @@
-# A tag publishes the image and the GitHub release, and nothing else. The
-# interface holds no state and reaches no cluster from here: what a target
-# runs is a tag pinned in its own overlay, applied by whoever owns that
-# cluster.
+# A tag publishes the image and the GitHub release, and then rolls Latere's
+# own installation.
+#
+# The deploy job is Latere's and nobody else's. It runs only where the
+# variable ORIGOWEB_RELEASE_DEPLOY is set, which is this repository and no
+# fork, and it waits on the production environment's reviewer before it
+# touches a cluster. Another installation runs the same manifests against
+# its own overlay and never reaches this job, so what a target runs is
+# still a tag pinned in an overlay applied by whoever owns that cluster.
 #
 # The image is built from the tag's tree by the Dockerfile in this
 # repository, so the bytes a target pulls come from a commit anyone can
@@ -108,3 +113,67 @@ jobs:
           printf '\n`%s:%s`\n' "$IMAGE" "$TAG" >> note.md
           printf '\nDigest: `%s`\n' "${{ steps.build.outputs.digest }}" >> note.md
           gh release create "$TAG" --title "$TAG" --notes-file note.md
+
+  # code.latere.ai is one host split by path: origod answers /v1/, the git
+  # paths, /readyz and /version, and this interface answers everything else.
+  # The smoke therefore reads the sign-in page, which is this service's, and
+  # the roll is proved from the Deployment's own image rather than from a
+  # /version that belongs to the node.
+  deploy:
+    name: deploy and smoke
+    needs: image
+    if: ${{ vars.ORIGOWEB_RELEASE_DEPLOY != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://code.latere.ai
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Write the kubeconfig
+        env:
+          KUBECONFIG_CONTENT: ${{ secrets.ORIGOWEB_KUBECONFIG }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d "$RUNNER_TEMP/kube"
+          printf '%s' "$KUBECONFIG_CONTENT" > "$RUNNER_TEMP/kube/config"
+          chmod 600 "$RUNNER_TEMP/kube/config"
+          echo "KUBECONFIG=$RUNNER_TEMP/kube/config" >> "$GITHUB_ENV"
+
+      # deploy/prod holds only re-appliable manifests; deploy/bootstrap is
+      # never read here. Applying the overlay is what removes a setting the
+      # overlay has dropped: a variable left on the live Deployment outlives
+      # the release that removed it, and `set image` alone would not clear
+      # it.
+      - name: Apply deploy/prod and roll the new image
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # The namespace is the overlay's, not a name repeated here.
+          NS=$(kubectl kustomize deploy/prod | awk '/^  namespace: /{print $2; exit}')
+          test -n "$NS"
+          kubectl apply -k deploy/prod/
+          kubectl -n "$NS" set image deployment/origoweb "origoweb=${IMAGE}:${TAG}"
+          kubectl -n "$NS" rollout status deployment/origoweb --timeout=300s
+          # A green rollout that left the old tag in place is the failure
+          # this job exists to make impossible, so the tag is read back.
+          got=$(kubectl -n "$NS" get deployment/origoweb \
+            -o jsonpath='{.spec.template.spec.containers[0].image}')
+          test "$got" = "${IMAGE}:${TAG}" \
+            || { echo "::error::the Deployment runs ${got}, not ${IMAGE}:${TAG}"; exit 1; }
+
+      - name: Smoke the sign-in page
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          code=$(curl -sS --retry 5 --retry-delay 3 --retry-all-errors \
+            -o page.html -w '%{http_code}' https://code.latere.ai/)
+          test "$code" = 200 || { echo "::error::code.latere.ai answered ${code}"; exit 1; }
+          # Matched without the title's separator, which is multibyte: a
+          # runner under a C locale would not match it with a dot.
+          grep -q 'Latere Code</title>' page.html \
+            || { echo "::error::code.latere.ai did not serve the sign-in page"; exit 1; }
+          echo "code.latere.ai serves the sign-in page on ${TAG}" >> "$GITHUB_STEP_SUMMARY"
