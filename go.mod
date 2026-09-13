@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/google/uuid v1.6.0
 	golang.org/x/net v0.59.0
-	latere.ai/x/pkg v0.59.0
+	latere.ai/x/pkg v0.61.0
 )
 
 require (
