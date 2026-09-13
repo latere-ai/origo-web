@@ -7,6 +7,8 @@ import (
 	"os"
 	"regexp"
 	"testing"
+
+	"github.com/goccy/go-yaml"
 )
 
 // The production overlay names the image tag the cluster runs. The release
@@ -30,11 +32,27 @@ func TestProductionOverlayNamesTheNewestRelease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := regexp.MustCompile(`(?m)^\s*newTag:\s*(v\d+\.\d+\.\d+)\s*$`).FindSubmatch(overlay)
-	if got == nil {
-		t.Fatal("deploy/prod/kustomization.yaml names no newTag")
+	var config struct {
+		Images []struct {
+			Name   string `yaml:"name"`
+			NewTag string `yaml:"newTag"`
+			Digest string `yaml:"digest"`
+		} `yaml:"images"`
 	}
-	if string(got[1]) != want {
-		t.Errorf("deploy/prod pins %s, the newest release is %s", got[1], want)
+	if err := yaml.Unmarshal(overlay, &config); err != nil {
+		t.Fatal(err)
 	}
+	for _, image := range config.Images {
+		if image.Name != "ghcr.io/latere-ai/origoweb" {
+			continue
+		}
+		if image.NewTag != want {
+			t.Errorf("deploy/prod pins %s, the newest release is %s", image.NewTag, want)
+		}
+		if image.Digest != "" {
+			t.Errorf("digest %s overrides the release tag", image.Digest)
+		}
+		return
+	}
+	t.Fatal("deploy/prod/kustomization.yaml does not pin the origoweb image")
 }
