@@ -18,7 +18,9 @@ package session
 
 import (
 	"cmp"
+	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -49,6 +51,13 @@ const (
 
 	// recentLimit is how many repositories the home screen remembers.
 	recentLimit = 12
+
+	// OrigoAudience is the audience Origo verifies on every token it takes
+	// (spec 007): the literal "origo", not the installation's hostname.
+	// The session token is addressed to the issuer and opens nothing at
+	// Origo; every call there carries an actor token the issuer mints for
+	// this audience and this person.
+	OrigoAudience = "origo"
 )
 
 // ErrNoSession means the request carries no usable session: no cookie, a
@@ -136,12 +145,27 @@ func (m *Manager) Load(w http.ResponseWriter, r *http.Request) (*oidc.Session, e
 	return sess, nil
 }
 
-// Reader is the signed-in person as a screen needs them: the token their
-// requests to Origo carry, and the one line that says who they are. Both are
+// Reader is the signed-in person as a screen needs them: the two tokens
+// their requests carry, and the one line that says who they are. All are
 // empty when the request carries no session.
 type Reader struct {
+	// Token is the session token. It is addressed to the issuer, so it
+	// opens the repository registry and the key store there, and nothing
+	// at Origo.
 	Token string
-	Who   string
+
+	// Origo is the token every call to Origo carries: minted by the issuer
+	// for this person, addressed to Origo and to nothing else, and good for
+	// minutes. It is empty when there is no session and when the issuer
+	// did not mint, which Fault then says.
+	Origo string
+
+	// Fault is why Origo is empty behind a live session: the issuer did
+	// not answer or refused to mint. It is nil when Origo is set and when
+	// there is no session, which is not a fault.
+	Fault error
+
+	Who string
 
 	// Sub is the account itself: the subject claim the issuer minted, which
 	// names one principal and nothing else. Who is a display name, and two
@@ -162,11 +186,27 @@ func (m *Manager) Read(w http.ResponseWriter, r *http.Request) Reader {
 	if err != nil {
 		return Reader{}
 	}
-	return Reader{
+	reader := Reader{
 		Token: sess.AccessToken,
 		Who:   who(sess.User),
 		Sub:   strings.TrimSpace(sess.User.Sub),
 	}
+	reader.Origo, reader.Fault = m.origoToken(r.Context(), sess)
+	return reader
+}
+
+// origoToken is the actor token for Origo on this session. The library
+// mints once per session and audience and reuses the token until shortly
+// before it lapses, so a page that makes several calls to Origo pays for
+// one mint at most. A failure is logged here, once, and returned for the
+// screen to say.
+func (m *Manager) origoToken(ctx context.Context, sess *oidc.Session) (string, error) {
+	tok, _, err := m.client.ActorToken(ctx, sess, OrigoAudience)
+	if err != nil {
+		slog.WarnContext(ctx, "session: the issuer did not mint a token for Origo", "error", err)
+		return "", err
+	}
+	return tok, nil
 }
 
 // who is the line that names the signed-in person, drawn from the claims the

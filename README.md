@@ -77,7 +77,7 @@ session.
 ## Run it
 
 You need an Origo installation, an OIDC client registered for the browser
-flow whose tokens carry Origo's audience, and a cookie key.
+flow and allowed to mint tokens for Origo, and a cookie key.
 
 ```sh
 export ORIGOWEB_ORIGO_URL=https://git.example.com
@@ -85,7 +85,6 @@ export ORIGOWEB_PUBLIC_URL=https://code.example.com
 export ORIGOWEB_AUTH_URL=https://auth.example.com
 export ORIGOWEB_AUTH_CLIENT_ID=origoweb
 export ORIGOWEB_AUTH_CLIENT_SECRET=...
-export ORIGOWEB_AUTH_AUDIENCE=origo
 export ORIGOWEB_AUTH_COOKIE_KEY=$(openssl rand -hex 32)
 make build && out/origoweb
 ```
@@ -115,7 +114,6 @@ hostname with an Ingress split, which is what Latere runs and
 | `ORIGOWEB_AUTH_URL` | `https://auth.latere.ai` | OIDC issuer. Must be one of Origo's `ORIGO_OIDC_ISSUERS`. Also the repository registry, see [Creating a repository](#creating-a-repository) |
 | `ORIGOWEB_AUTH_CLIENT_ID` | required | OIDC client id for the browser flow |
 | `ORIGOWEB_AUTH_CLIENT_SECRET` | unset | Client secret. A public client uses PKCE only |
-| `ORIGOWEB_AUTH_AUDIENCE` | the issuer | Audience Origo verifies, normally `origo` |
 | `ORIGOWEB_AUTH_COOKIE_KEY` | required | 32 bytes as hex. Rotating it signs everyone out |
 
 `deploy/` holds a Kubernetes base: a Deployment with two stateless

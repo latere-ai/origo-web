@@ -14,11 +14,17 @@ import (
 	"github.com/latere-ai/origo-web/internal/session"
 )
 
-// req is what one request carries into a screen: the reader's token, which
-// is empty when there is none, and the frame every page renders.
+// req is what one request carries into a screen: the reader's two tokens,
+// which are empty when there is no session, and the frame every page
+// renders.
 type req struct {
+	// tok is the token for Origo: an actor token the issuer minted for this
+	// person and this installation. Every call to Origo carries it.
 	tok string
-	v   view
+	// auth is the session token, addressed to the issuer. The repository
+	// registry and the key store live there, and it opens nothing else.
+	auth string
+	v    view
 
 	// authError is the sentence the screen says about a sign-in that ended
 	// at the callback instead of at a session, empty when there is none.
@@ -41,9 +47,10 @@ type req struct {
 // is signed in.
 func (s *Server) begin(w http.ResponseWriter, r *http.Request, section string) req {
 	reader := s.sessions.Read(w, r)
-	return req{
-		tok: reader.Token,
-		sub: reader.Sub,
+	rq := req{
+		tok:  reader.Origo,
+		auth: reader.Token,
+		sub:  reader.Sub,
 		v: view{
 			Section:     section,
 			SignedIn:    reader.Token != "",
@@ -57,6 +64,10 @@ func (s *Server) begin(w http.ResponseWriter, r *http.Request, section string) r
 			Mark:        s.cfg.Mark,
 		},
 	}
+	if reader.Fault != nil {
+		rq.authError = issuerFaultSentence
+	}
+	return rq
 }
 
 // signInData is the front door, and the one page written for a stranger.
@@ -206,6 +217,11 @@ func (s *Server) handleSignOut(w http.ResponseWriter, r *http.Request) {
 const (
 	authFailedSentence  = "Sign-in did not finish. Try again."
 	authRefusedSentence = "Sign-in was refused. Try again, or ask your administrator whether your account may use this installation."
+
+	// issuerFaultSentence is said behind a live session when the issuer did
+	// not mint the token Origo takes: the person is signed in and this
+	// interface still cannot read for them.
+	issuerFaultSentence = "The identity provider did not answer for this installation. Try again."
 )
 
 // authErrorSentence is what the screen says about the auth_error code the
@@ -293,8 +309,10 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	rq := s.begin(w, r, "")
 	rq.v.Title = "Repositories"
 	// Read before the list, because a visitor with no session is handed
-	// to the sign-in page below and the sentence has to go with them.
-	rq.authError = authErrorSentence(r.URL.Query().Get("auth_error"))
+	// to the sign-in page below and the sentence has to go with them. A
+	// fault the session read already found stands when the address
+	// carries no code of its own.
+	rq.authError = cmp.Or(authErrorSentence(r.URL.Query().Get("auth_error")), rq.authError)
 
 	data := homeData{
 		View:      rq.v,

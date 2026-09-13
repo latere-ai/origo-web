@@ -469,7 +469,7 @@ request and the cookie.
 | `ORIGOWEB_PRODUCT_NAME` | `Origo` | what the installation calls itself, in the masthead and the tab title |
 | `ORIGOWEB_PROJECT_URL` | the Origo repository | where the signed-out page links to the open-source project |
 | `ORIGOWEB_BRAND_MARK` | unset | the brand mark drawn beside the product name; `latere` is the only value this binary carries, and an unknown value is refused at start |
-| `AUTH_URL`, `AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET`, `AUTH_REDIRECT_URL`, `AUTH_COOKIE_KEY`, `AUTH_AUDIENCE`, `AUTH_SCOPES` | the library's | read by `authkit/oidc` with the prefix `ORIGOWEB`; `AUTH_AUDIENCE` must be the audience Origo verifies, and `AUTH_URL` must be an issuer in the installation's `ORIGO_OIDC_ISSUERS` |
+| `AUTH_URL`, `AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET`, `AUTH_REDIRECT_URL`, `AUTH_COOKIE_KEY`, `AUTH_SCOPES` | the library's | read by `authkit/oidc` with the prefix `ORIGOWEB`; `AUTH_URL` must be an issuer in the installation's `ORIGO_OIDC_ISSUERS`. The session token is the issuer's; every call to Origo carries an actor token the issuer mints for the audience Origo verifies |
 
 ### The software and the installation are not the same name
 

@@ -92,7 +92,7 @@ func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
 		s.readFailed(w, r, rc.req, err)
 		return
 	}
-	s.withdrawRow(r.Context(), rc.tok, rc.repo.ID)
+	s.withdrawRow(r.Context(), rc.auth, rc.repo.ID)
 	s.sessions.Forget(w, r, rc.repo.ID)
 	if key, keyed := visibilityKey(rc.sub, rc.repo.ID); keyed {
 		s.visibility.Invalidate(key)
@@ -111,11 +111,11 @@ func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
 // nobody learns which of absent and withheld it was; a signed-out visitor
 // is sent to sign in.
 func (s *Server) administers(w http.ResponseWriter, r *http.Request, rc repoContext) bool {
-	if rc.tok == "" {
+	if rc.auth == "" {
 		s.signIn(w, r, rc.req, http.StatusOK)
 		return false
 	}
-	current, err := s.registry.ReadVisibility(r.Context(), rc.tok, rc.repo.ID)
+	current, err := s.registry.ReadVisibility(r.Context(), rc.auth, rc.repo.ID)
 	if err != nil {
 		s.visibilityFailed(w, r, rc, err)
 		return false

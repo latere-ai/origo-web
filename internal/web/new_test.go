@@ -66,26 +66,34 @@ func TestCreatingARepositoryLandsOnIt(t *testing.T) {
 
 // TestTheCreationScreenSendsOnlyTheReadersToken: this service holds no
 // credential of its own, so both halves of a creation carry the person's
-// own token and nothing else.
+// authority and nothing else: the registry takes the session token, and
+// Origo takes the token the issuer minted for Origo on that same session.
 func TestTheCreationScreenSendsOnlyTheReadersToken(t *testing.T) {
 	h := newHarness(t)
 	c := h.signedIn("alice")
 	if rec := h.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, c); rec.Code != http.StatusSeeOther {
 		t.Fatalf("create: %d", rec.Code)
 	}
-	tokens := h.registry.Tokens()
-	if len(tokens) == 0 {
-		t.Fatal("the registry was never called")
-	}
-	for _, tok := range tokens {
-		if !strings.HasPrefix(tok, "Bearer ") {
-			t.Fatalf("a registry call carried %q, want the reader's bearer", tok)
+	const session = "Bearer token-for-alice"
+	var registryCalls int
+	for i, tok := range h.registry.Tokens() {
+		if strings.HasPrefix(h.registry.Calls()[i], "POST /actor-tokens") {
+			continue
+		}
+		registryCalls++
+		if tok != session {
+			t.Fatalf("a registry call carried %q, want the reader's session token", tok)
 		}
 	}
-	// And the same token reached Origo, which is what makes the two halves
-	// one person's authority rather than this service's.
-	if got := h.fake.Tokens(); len(got) == 0 || got[len(got)-1] != tokens[0] {
-		t.Fatalf("Origo saw %v and the registry saw %v; they must be one credential", got, tokens)
+	if registryCalls == 0 {
+		t.Fatal("the registry was never called")
+	}
+	// And Origo received the token the issuer minted for it on that session,
+	// which is what makes the two halves one person's authority rather than
+	// this service's.
+	want := "Bearer " + actorTokenFor("origo", "token-for-alice")
+	if got := h.fake.Tokens(); len(got) == 0 || got[len(got)-1] != want {
+		t.Fatalf("Origo saw %v, want the actor token %q for the session the registry saw", got, want)
 	}
 }
 

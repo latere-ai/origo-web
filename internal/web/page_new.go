@@ -91,7 +91,7 @@ const (
 // handleNew renders the creation screen.
 func (s *Server) handleNew(w http.ResponseWriter, r *http.Request) {
 	rq := s.begin(w, r, "new")
-	if rq.tok == "" {
+	if rq.auth == "" {
 		s.signIn(w, r, rq, http.StatusOK)
 		return
 	}
@@ -103,7 +103,7 @@ func (s *Server) renderNew(w http.ResponseWriter, r *http.Request, rq req, statu
 	rq.v.Title = "New repository"
 	data := newRepoData{View: rq.v, Form: form, Error: refusal, AccountURL: s.cfg.AccountURL()}
 
-	spaces, err := s.registry.Namespaces(r.Context(), rq.tok)
+	spaces, err := s.registry.Namespaces(r.Context(), rq.auth)
 	switch {
 	case err == nil:
 		data.Owners, data.Handle = spaces.Namespaces, spaces.Handle
@@ -141,7 +141,7 @@ func (s *Server) handleNewPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rq := s.begin(w, r, "new")
-	if rq.tok == "" {
+	if rq.auth == "" {
 		s.signIn(w, r, rq, http.StatusOK)
 		return
 	}
@@ -162,7 +162,7 @@ func (s *Server) handleNewPost(w http.ResponseWriter, r *http.Request) {
 	// written before the repository exists and what makes a retry of the
 	// second call the same call again.
 	id := uuid.NewString()
-	if _, err := s.registry.Create(r.Context(), rq.tok, id, form.Owner, form.Name); err != nil {
+	if _, err := s.registry.Create(r.Context(), rq.auth, id, form.Owner, form.Name); err != nil {
 		s.createRefused(w, r, rq, form, err)
 		return
 	}
@@ -171,7 +171,7 @@ func (s *Server) handleNewPost(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Nothing was created, so nothing is kept. A row left behind
 		// would hold the name against its own owner.
-		s.forget(r.Context(), rq.tok, id)
+		s.forget(r.Context(), rq.auth, id)
 		s.originRefused(w, r, rq, form, err)
 		return
 	}

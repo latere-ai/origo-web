@@ -445,7 +445,6 @@ func newHarness(t *testing.T, opts ...func(*config.Config)) *harness {
 	oc := oidc.Config{
 		AuthURL: regServer.URL, ClientID: "origoweb",
 		RedirectURL: "https://code.example/auth/callback", CookieKey: testCookieKey,
-		Audience: "origo",
 	}
 	cfg := config.Config{
 		Addr: ":0", OrigoURL: base, PublicURL: mustURL(t, "https://code.example"),

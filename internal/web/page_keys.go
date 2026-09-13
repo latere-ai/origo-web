@@ -96,7 +96,7 @@ type keysData struct {
 // both absent.
 func (s *Server) handleKeys(w http.ResponseWriter, r *http.Request) {
 	rq := s.begin(w, r, "keys")
-	if rq.tok == "" {
+	if rq.auth == "" {
 		s.signIn(w, r, rq, http.StatusOK)
 		return
 	}
@@ -111,7 +111,7 @@ func (s *Server) renderKeys(w http.ResponseWriter, r *http.Request, rq req, stat
 	data.View = rq.v
 	data.Who = rq.v.Who
 
-	rows, err := s.keys.List(r.Context(), rq.tok)
+	rows, err := s.keys.List(r.Context(), rq.auth)
 	switch {
 	case err == nil:
 		data.Keys = keyRows(rows)
@@ -120,7 +120,7 @@ func (s *Server) renderKeys(w http.ResponseWriter, r *http.Request, rq req, stat
 		}
 	case keys.Unauthenticated(err):
 		s.sessions.Clear(w)
-		rq.tok = ""
+		rq.auth = ""
 		s.signIn(w, r, rq, http.StatusUnauthorized)
 		return
 	default:
@@ -171,7 +171,7 @@ func (s *Server) handleKeysPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.PostFormValue("confirm") == "" {
-		parsed, err := s.keys.Parse(r.Context(), rq.tok, pasted)
+		parsed, err := s.keys.Parse(r.Context(), rq.auth, pasted)
 		if err != nil {
 			s.refuseKey(w, r, rq, pasted, err)
 			return
@@ -184,7 +184,7 @@ func (s *Server) handleKeysPost(w http.ResponseWriter, r *http.Request) {
 		}})
 		return
 	}
-	if _, err := s.keys.Add(r.Context(), rq.tok, pasted); err != nil {
+	if _, err := s.keys.Add(r.Context(), rq.auth, pasted); err != nil {
 		s.refuseKey(w, r, rq, pasted, err)
 		return
 	}
@@ -196,7 +196,7 @@ func (s *Server) handleKeysPost(w http.ResponseWriter, r *http.Request) {
 // the decision is about.
 func (s *Server) handleKeyRemove(w http.ResponseWriter, r *http.Request) {
 	rq := s.begin(w, r, "keys")
-	if rq.tok == "" {
+	if rq.auth == "" {
 		s.signIn(w, r, rq, http.StatusOK)
 		return
 	}
@@ -209,10 +209,10 @@ func (s *Server) handleKeyRemovePost(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if err := s.keys.Remove(r.Context(), rq.tok, r.PathValue("id")); err != nil {
+	if err := s.keys.Remove(r.Context(), rq.auth, r.PathValue("id")); err != nil {
 		if keys.Unauthenticated(err) {
 			s.sessions.Clear(w)
-			rq.tok = ""
+			rq.auth = ""
 			s.signIn(w, r, rq, http.StatusUnauthorized)
 			return
 		}
@@ -239,7 +239,7 @@ func (s *Server) beginKeyWrite(w http.ResponseWriter, r *http.Request) (req, boo
 		return req{}, false
 	}
 	rq := s.begin(w, r, "keys")
-	if rq.tok == "" {
+	if rq.auth == "" {
 		s.signIn(w, r, rq, http.StatusOK)
 		return req{}, false
 	}
@@ -255,7 +255,7 @@ func (s *Server) beginKeyWrite(w http.ResponseWriter, r *http.Request) (req, boo
 func (s *Server) refuseKey(w http.ResponseWriter, r *http.Request, rq req, pasted string, err error) {
 	if keys.Unauthenticated(err) {
 		s.sessions.Clear(w)
-		rq.tok = ""
+		rq.auth = ""
 		s.signIn(w, r, rq, http.StatusUnauthorized)
 		return
 	}

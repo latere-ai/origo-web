@@ -56,6 +56,13 @@ type fakeRegistry struct {
 	// credential, so a test can put two readers of one repository through
 	// the interface and see which answer each is given.
 	perToken map[string]registry.Visibility
+
+	// minted is every actor token the issuer side of this fake handed out,
+	// in order, as "<audience> for <bearer>". refuseMint makes the mint
+	// route refuse the way the issuer refuses an audience the client is
+	// not registered to act at.
+	minted     []string
+	refuseMint bool
 }
 
 // newFakeRegistry returns a registry holding one namespace, which is the
@@ -78,8 +85,15 @@ func (f *fakeRegistry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.tokens = append(f.tokens, r.Header.Get("Authorization"))
 	absent, nsStatus := f.absent, f.namespacesStatus
 	createStatus, createCode := f.createStatus, f.createCode
+	refuseMint := f.refuseMint
 	f.mu.Unlock()
 
+	// The issuer mints actor tokens whether or not it keeps a registry:
+	// the route belongs to the identity provider, not to the registry.
+	if r.Method == http.MethodPost && r.URL.Path == "/actor-tokens" {
+		f.mintActorToken(w, r, refuseMint)
+		return
+	}
 	if absent {
 		http.NotFound(w, r)
 		return
@@ -230,4 +244,35 @@ func (f *fakeRegistry) setNamespaces(n registry.Namespaces) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.spaces = n
+}
+
+// mintActorToken is the issuer's POST /actor-tokens: a token addressed to
+// the requested audience for the bearer shown, named so a test can read
+// both off the value Origo then receives.
+func (f *fakeRegistry) mintActorToken(w http.ResponseWriter, r *http.Request, refuse bool) {
+	bearer := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	var body struct {
+		Audience string `json:"audience"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Audience == "" || bearer == "" {
+		writeRegistryError(w, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	if refuse {
+		writeRegistryError(w, http.StatusBadRequest, "invalid_target")
+		return
+	}
+	f.mu.Lock()
+	f.minted = append(f.minted, body.Audience+" for "+bearer)
+	f.mu.Unlock()
+	writeJSON(w, map[string]any{
+		"actor_token": actorTokenFor(body.Audience, bearer),
+		"expires_in":  300,
+	})
+}
+
+// actorTokenFor is the value the fake issuer mints for one audience and one
+// session token.
+func actorTokenFor(audience, bearer string) string {
+	return "actor-" + audience + "-for-" + bearer
 }

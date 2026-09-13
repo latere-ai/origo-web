@@ -26,12 +26,34 @@ type issuer struct {
 	refreshes atomic.Int32
 	refuse    atomic.Bool
 	life      time.Duration
+	// mints counts actor tokens handed out; refuseMint makes the route
+	// refuse the way the issuer refuses an audience the client may not
+	// act at.
+	mints      atomic.Int32
+	refuseMint atomic.Bool
 }
 
 func newIssuer(t *testing.T) *issuer {
 	t.Helper()
 	is := &issuer{life: time.Hour}
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /actor-tokens", func(w http.ResponseWriter, r *http.Request) {
+		if is.refuseMint.Load() {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"invalid_target"}`))
+			return
+		}
+		is.mints.Add(1)
+		var body struct {
+			Audience string `json:"audience"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"actor_token": "actor-" + body.Audience + "-for-" + strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "),
+			"expires_in":  300,
+		})
+	})
 	mux.HandleFunc("POST /token", func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		if r.Form.Get("grant_type") == "refresh_token" {
@@ -76,7 +98,6 @@ func testConfig(t *testing.T, is *issuer) oidc.Config {
 		ClientID:    "origoweb",
 		RedirectURL: "https://code.example/auth/callback",
 		CookieKey:   "0123456789abcdef0123456789abcdef",
-		Audience:    "origo",
 	}
 }
 
@@ -649,5 +670,39 @@ func TestReadCarriesTheTokenAndWhoHoldsIt(t *testing.T) {
 	got := m.Read(httptest.NewRecorder(), req)
 	if got.Token != "an-access-token" || got.Who != "aki@example.com" {
 		t.Errorf("the reader is %+v", got)
+	}
+	// The token for Origo is the issuer's actor token for this session and
+	// the audience Origo verifies, and never the session token itself.
+	if got.Origo != "actor-origo-for-an-access-token" || got.Fault != nil {
+		t.Errorf("the Origo token is %q (fault %v), want the issuer's actor token", got.Origo, got.Fault)
+	}
+	if is.mints.Load() != 1 {
+		t.Errorf("mints = %d, want one", is.mints.Load())
+	}
+	// A second read on the same session reuses the token.
+	m.Read(httptest.NewRecorder(), req)
+	if is.mints.Load() != 1 {
+		t.Errorf("mints = %d after a second read, want the cached token", is.mints.Load())
+	}
+}
+
+// TestReadSaysWhenTheIssuerDoesNotMint pins the shape of a fault: the
+// session stands, the token for Origo is empty, and Fault says why.
+func TestReadSaysWhenTheIssuerDoesNotMint(t *testing.T) {
+	is := newIssuer(t)
+	is.refuseMint.Store(true)
+	m, err := New(testConfig(t, is))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := requestWith(t, m, &oidc.Session{
+		AccessToken:   "an-access-token",
+		Expiry:        time.Now().Add(time.Hour),
+		SessionExpiry: time.Now().Add(Lifetime),
+		User:          oidc.User{Sub: "01HQ8Z"},
+	})
+	got := m.Read(httptest.NewRecorder(), req)
+	if got.Token != "an-access-token" || got.Origo != "" || got.Fault == nil {
+		t.Errorf("the reader is %+v, want the session with no Origo token and a fault", got)
 	}
 }

@@ -303,7 +303,7 @@ const (
 //
 // A signed-out reader asks nothing and is told nothing.
 func (s *Server) visibilityOf(r *http.Request, rc repoContext) (string, string) {
-	if rc.tok == "" {
+	if rc.auth == "" {
 		return "", ""
 	}
 	key, keyed := visibilityKey(rc.sub, rc.repo.ID)
@@ -314,7 +314,7 @@ func (s *Server) visibilityOf(r *http.Request, rc repoContext) (string, string) 
 	}
 	if !ok {
 		var err error
-		current, err = s.registry.ReadVisibility(r.Context(), rc.tok, rc.repo.ID)
+		current, err = s.registry.ReadVisibility(r.Context(), rc.auth, rc.repo.ID)
 		switch {
 		case err == nil:
 			if keyed {

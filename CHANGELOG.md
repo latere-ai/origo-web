@@ -10,6 +10,14 @@ holds what was committed.
 
 ## Unreleased
 
+- Every call to Origo carries a token the identity provider mints for
+  Origo alone, for the signed-in person and for minutes; the session token
+  stays with the identity provider, where the repository registry and the
+  key store are. `ORIGOWEB_AUTH_AUDIENCE` is gone: the client asks for no
+  audience at sign-in and is registered at the identity provider to mint
+  for `origo`. When the identity provider does not mint, the page says so
+  instead of reading as a stranger.
+
 - The sign-in page says what each clone address needs: a key on your
   account over SSH, an agent token over HTTPS, and nothing for a public
   repository.
