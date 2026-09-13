@@ -73,6 +73,16 @@ type Config struct {
 	// service makes three calls against it.
 	KeysURL *url.URL
 
+	// registryURL is ORIGOWEB_REGISTRY_URL: an explicit address for the
+	// repository registry, which overrides the address RegistryURL()
+	// otherwise derives from the identity provider. The registry moves
+	// from the identity provider to the platform control plane in the
+	// family's identity epic (id-06); this variable is how an operator
+	// points the interface at the control plane once it is live, without
+	// waiting for the derivation to change. Unset keeps the derived
+	// address, so an installation that has not moved is unaffected.
+	registryURL *url.URL
+
 	// IssuerName is what the sign-in button names, for an installation
 	// whose people know their identity provider by name.
 	IssuerName string
@@ -129,6 +139,11 @@ func Load() (Config, error) {
 			return Config{}, err
 		}
 	}
+	if raw := strings.TrimSpace(os.Getenv(EnvPrefix + "_REGISTRY_URL")); raw != "" {
+		if c.registryURL, err = parseURL(EnvPrefix+"_REGISTRY_URL", raw); err != nil {
+			return Config{}, err
+		}
+	}
 	if raw := strings.TrimSpace(os.Getenv(EnvPrefix + "_CLONE_HOST")); raw != "" {
 		if c.CloneHost, err = parseURL(EnvPrefix+"_CLONE_HOST", raw); err != nil {
 			return Config{}, err
@@ -150,6 +165,13 @@ func Load() (Config, error) {
 // credential to hold. Empty when no provider is configured, which leaves
 // the interface with no creation screen.
 func (c Config) RegistryURL() *url.URL {
+	// An explicit ORIGOWEB_REGISTRY_URL wins: it is how the interface
+	// points at the platform control plane once the registry has moved
+	// there (id-06). Without it the address is the identity provider's,
+	// the transitional default.
+	if c.registryURL != nil {
+		return c.registryURL
+	}
 	raw := strings.TrimRight(strings.TrimSpace(c.OIDC.AuthURL), "/")
 	if raw == "" {
 		return nil

@@ -13,7 +13,7 @@ func setEnv(t *testing.T, kv map[string]string) {
 	t.Helper()
 	for _, k := range []string{
 		"ORIGOWEB_ADDR", "ORIGOWEB_ORIGO_URL", "ORIGOWEB_PUBLIC_URL", "ORIGOWEB_CLONE_HOST",
-		"ORIGOWEB_SSH_CLONE_HOST", "ORIGOWEB_KEYS_URL", "ORIGOWEB_ISSUER_NAME",
+		"ORIGOWEB_SSH_CLONE_HOST", "ORIGOWEB_KEYS_URL", "ORIGOWEB_REGISTRY_URL", "ORIGOWEB_ISSUER_NAME",
 		"ORIGOWEB_PRODUCT_NAME", "ORIGOWEB_PROJECT_URL", "ORIGOWEB_BRAND_MARK",
 		"ORIGOWEB_AUTH_CLIENT_ID", "ORIGOWEB_AUTH_REDIRECT_URL", "ORIGOWEB_AUTH_URL",
 		"AUTH_CLIENT_ID", "AUTH_URL", "AUTH_REDIRECT_URL",
@@ -200,6 +200,50 @@ func TestKeysURLIsOptionalAndChecked(t *testing.T) {
 	}
 
 	withBad := map[string]string{"ORIGOWEB_KEYS_URL": "keys.example"}
+	maps.Copy(withBad, base)
+	setEnv(t, withBad)
+	if _, err := Load(); err == nil {
+		t.Error("an address with no scheme was accepted")
+	}
+}
+
+// TestRegistryURLOverridesTheDerivedAddress is the id-06 repoint knob:
+// ORIGOWEB_REGISTRY_URL, when set, is the registry address, over the one
+// otherwise derived from the identity provider; unset keeps the derived
+// address, so an installation that has not moved is unaffected.
+func TestRegistryURLOverridesTheDerivedAddress(t *testing.T) {
+	base := map[string]string{
+		"ORIGOWEB_ORIGO_URL":      "https://git.example",
+		"ORIGOWEB_PUBLIC_URL":     "https://code.example",
+		"ORIGOWEB_AUTH_CLIENT_ID": "origoweb",
+		"ORIGOWEB_AUTH_URL":       "https://issuer.example",
+	}
+
+	// Unset: the registry is the identity provider's own address.
+	setEnv(t, base)
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := c.RegistryURL(); got == nil || got.String() != "https://issuer.example" {
+		t.Errorf("the derived registry address is %v", got)
+	}
+
+	// Set: the explicit address wins, so the interface points at the
+	// platform control plane.
+	withOverride := map[string]string{"ORIGOWEB_REGISTRY_URL": "https://platform.example/internal/origo"}
+	maps.Copy(withOverride, base)
+	setEnv(t, withOverride)
+	c, err = Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := c.RegistryURL(); got == nil || got.String() != "https://platform.example/internal/origo" {
+		t.Errorf("the explicit registry address is %v", got)
+	}
+
+	// A value that is not an address is a misconfiguration.
+	withBad := map[string]string{"ORIGOWEB_REGISTRY_URL": "platform.example"}
 	maps.Copy(withBad, base)
 	setEnv(t, withBad)
 	if _, err := Load(); err == nil {
