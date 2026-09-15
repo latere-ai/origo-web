@@ -124,12 +124,25 @@ interface says each where it is felt:
 |---|---|---|
 | both minted | the screens | the screens |
 | Origo refused | the issuer-fault sentence | the issuer-fault sentence |
-| platform refused | unaffected | sign-in page with the issuer-fault sentence |
+| platform refused | unaffected | 502 with the issuer-fault sentence |
 
 One combined fault would put a sentence about the identity provider on
 screens that are reading Origo perfectly well; a fault the create screen
 could not see would leave a person at a sign-in page with nothing said.
 The wording does not change: it is audience-neutral already.
+
+The screen that says it is not the sign-in page. Two ways to hold no token
+for the control plane are not one answer:
+
+| The request | The screen |
+|---|---|
+| no session | the sign-in page, as before |
+| a live session, the mint refused | the sentence, over the frame they are signed in to, 502 |
+
+The sign-in page says *you are signed out, your session was rejected*.
+Behind a live session whose other token minted, both halves of that are
+false, and the person would be told to sign in again to fix something
+signing in again does not fix.
 
 ### Deployment
 
@@ -181,11 +194,12 @@ that carries it. Every criterion above holds in the tree:
 
 - `session.Reader` carries `Platform` and `PlatformFault` beside `Origo`
   and `Fault`; `actorToken` is the one mint path, called once per audience.
-- `req.auth` is `req.platform`, and the five guards that read it are
-  `requirePlatform`, which says the issuer-fault sentence on the screen
-  that needed the token. Nine call sites forward it: namespaces, create,
-  forget, withdraw, read and write visibility twice over, and the four key
-  calls.
+- `req.auth` is `req.platform`, and the eight guards that read it are one
+  helper, `requirePlatform`, which says the issuer-fault sentence on the
+  screen that needed the token, over that person's own frame. Twelve call
+  sites forward it: namespaces, create and the compensating forget; the
+  withdrawal after a deletion; three visibility reads and one write; and
+  the four key calls.
 - `AccountURL()` reads the issuer through `issuerURL()`, which
   `RegistryURL()`'s fallback reads too.
 - `deploy/prod/settings.yaml` sets both addresses to

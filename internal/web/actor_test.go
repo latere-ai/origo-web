@@ -139,12 +139,23 @@ func TestThePlatformMintFailsAlone(t *testing.T) {
 		t.Error("a screen reading Origo says the issuer failed; only the control plane's mint did")
 	}
 
-	// The two that need the control plane say the sentence instead of
-	// offering a form that cannot work.
+	// The two that need the control plane say what happened instead of
+	// offering a form that cannot work -- and say it without telling a
+	// person whose session is alive that they are signed out.
 	for _, path := range []string{"/new", "/keys"} {
 		rec := h.get(path, c)
-		if !strings.Contains(rec.Body.String(), issuerFaultSentence) {
-			t.Errorf("%s does not say the issuer did not mint:\n%s", path, rec.Body.String())
+		body := rec.Body.String()
+		if rec.Code != http.StatusBadGateway {
+			t.Errorf("%s = %d, want 502: the issuer did not answer", path, rec.Code)
+		}
+		if !strings.Contains(body, issuerFaultSentence) {
+			t.Errorf("%s does not say the issuer did not mint:\n%s", path, body)
+		}
+		if strings.Contains(body, "You are signed out") || strings.Contains(body, "Sign in again") {
+			t.Errorf("%s tells a signed-in person their session was rejected:\n%s", path, body)
+		}
+		if !strings.Contains(body, `<span class="who">alice</span>`) {
+			t.Errorf("%s drops the frame the person is signed in to:\n%s", path, body)
 		}
 	}
 

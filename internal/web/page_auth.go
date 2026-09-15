@@ -86,18 +86,27 @@ func (s *Server) begin(w http.ResponseWriter, r *http.Request, section string) r
 // plane -- the repository registry and the key store -- when this request
 // carries no token for it, and reports whether the screen may go on.
 //
-// Without a session there is nothing to mint from and the sign-in page is
-// the answer. Behind a live session the token is missing because the issuer
-// refused to mint it, and then the page has to say so: the same sentence
-// the home screen says when the mint for Origo fails, folded in here
-// because begin leaves it on platformError, where no screen reading Origo
-// picks it up. A code the address carried wins over both, as it does
-// everywhere.
+// The two ways to have no token are not one screen. Without a session there
+// is nothing to mint from, and the sign-in page is the answer. Behind a
+// live session the token is missing because the issuer would not mint it,
+// and then the person is signed in, nothing of theirs was refused, and the
+// sign-in page would tell them they are signed out and their session was
+// rejected -- two false sentences over a session that is alive. So that
+// case says what happened and keeps the frame they are signed in to.
 func (s *Server) requirePlatform(w http.ResponseWriter, r *http.Request, rq req) bool {
 	if rq.platform != "" {
 		return true
 	}
-	rq.authError = cmp.Or(rq.authError, rq.platformError)
+	if rq.platformError != "" {
+		v := rq.v
+		v.Title = "Unavailable"
+		s.render(w, r, http.StatusBadGateway, "message", messageData{
+			View:    v,
+			Heading: "Server unavailable",
+			Body:    rq.platformError,
+		})
+		return false
+	}
 	s.signIn(w, r, rq, http.StatusOK)
 	return false
 }
