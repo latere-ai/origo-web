@@ -5,6 +5,7 @@ package web
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -48,8 +49,11 @@ func TestOrigoReceivesAnActorTokenAndAuthTheSessionToken(t *testing.T) {
 	registryTokens := append([]string(nil), h.registry.tokens...)
 	registryCalls := append([]string(nil), h.registry.calls...)
 	h.registry.mu.Unlock()
-	if len(minted) != 1 || minted[0] != "origo for "+session {
-		t.Errorf("the issuer minted %v, want one token for origo on the session", minted)
+	// One mint per audience on this session: the issuer is asked once for
+	// Origo and once for the control plane, and the library caches each.
+	wantMinted := []string{"origo for " + session, "api.latere.ai for " + session}
+	if !slices.Equal(minted, wantMinted) {
+		t.Errorf("the issuer minted %v, want %v", minted, wantMinted)
 	}
 	for i, call := range registryCalls {
 		if strings.HasPrefix(call, "POST /actor-tokens") {

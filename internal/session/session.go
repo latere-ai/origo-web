@@ -58,6 +58,13 @@ const (
 	// Origo; every call there carries an actor token the issuer mints for
 	// this audience and this person.
 	OrigoAudience = "origo"
+
+	// PlatformAudience is the audience the platform control plane verifies
+	// on every token it takes (spec 029). The repository registry and the
+	// public key store live there and not at the issuer, so a call to
+	// either carries an actor token minted for this audience, the way a
+	// call to Origo carries one minted for OrigoAudience.
+	PlatformAudience = "api.latere.ai"
 )
 
 // ErrNoSession means the request carries no usable session: no cookie, a
@@ -145,13 +152,16 @@ func (m *Manager) Load(w http.ResponseWriter, r *http.Request) (*oidc.Session, e
 	return sess, nil
 }
 
-// Reader is the signed-in person as a screen needs them: the two tokens
+// Reader is the signed-in person as a screen needs them: the three tokens
 // their requests carry, and the one line that says who they are. All are
 // empty when the request carries no session.
 type Reader struct {
-	// Token is the session token. It is addressed to the issuer, so it
-	// opens the repository registry and the key store there, and nothing
-	// at Origo.
+	// Token is the session token. It is addressed to the issuer and opens
+	// what the issuer holds: the sign-in, the refresh, and the mint of the
+	// two tokens below. It goes to no other service. The repository
+	// registry and the key store used to be the issuer's and are the
+	// platform control plane's now (spec 029), which verifies an audience
+	// of its own, so a call to either carries Platform and never this.
 	Token string
 
 	// Origo is the token every call to Origo carries: minted by the issuer
@@ -160,10 +170,24 @@ type Reader struct {
 	// did not mint, which Fault then says.
 	Origo string
 
+	// Platform is the same for the platform control plane: the token every
+	// call to the repository registry and to the key store carries,
+	// addressed to PlatformAudience and to nothing else. It is empty when
+	// there is no session and when the issuer did not mint, which
+	// PlatformFault then says.
+	Platform string
+
 	// Fault is why Origo is empty behind a live session: the issuer did
 	// not answer or refused to mint. It is nil when Origo is set and when
 	// there is no session, which is not a fault.
 	Fault error
+
+	// PlatformFault is the same for Platform, and it is a field of its own
+	// because the two mints fail apart. An issuer that has not granted this
+	// client the control plane's audience refuses that one mint and mints
+	// for Origo as usual, so a single fault would put a sentence about the
+	// identity provider on screens that are reading Origo perfectly well.
+	PlatformFault error
 
 	Who string
 
@@ -177,8 +201,8 @@ type Reader struct {
 
 // Read is the reader on the request.
 //
-// It reads the session once, and every caller takes both fields from that one
-// read. Two reads in one request can each cross the refresh boundary: the
+// It reads the session once, and every caller takes every field from that
+// one read. Two reads in one request can each cross the refresh boundary: the
 // second presents a refresh token the first already rotated, the issuer
 // refuses it, and Load then clears a session that was alive.
 func (m *Manager) Read(w http.ResponseWriter, r *http.Request) Reader {
@@ -191,19 +215,22 @@ func (m *Manager) Read(w http.ResponseWriter, r *http.Request) Reader {
 		Who:   who(sess.User),
 		Sub:   strings.TrimSpace(sess.User.Sub),
 	}
-	reader.Origo, reader.Fault = m.origoToken(r.Context(), sess)
+	reader.Origo, reader.Fault = m.actorToken(r.Context(), sess, OrigoAudience)
+	reader.Platform, reader.PlatformFault = m.actorToken(r.Context(), sess, PlatformAudience)
 	return reader
 }
 
-// origoToken is the actor token for Origo on this session. The library
-// mints once per session and audience and reuses the token until shortly
-// before it lapses, so a page that makes several calls to Origo pays for
-// one mint at most. A failure is logged here, once, and returned for the
-// screen to say.
-func (m *Manager) origoToken(ctx context.Context, sess *oidc.Session) (string, error) {
-	tok, _, err := m.client.ActorToken(ctx, sess, OrigoAudience)
+// actorToken is the actor token for one audience on this session. The
+// library mints once per session and audience and reuses the token until
+// shortly before it lapses, so a page that makes several calls to one
+// service pays for one mint at most, and the two audiences of a page that
+// reads Origo and the registry cost one mint each. A failure is logged
+// here, once, and returned for the screen to say.
+func (m *Manager) actorToken(ctx context.Context, sess *oidc.Session, audience string) (string, error) {
+	tok, _, err := m.client.ActorToken(ctx, sess, audience)
 	if err != nil {
-		slog.WarnContext(ctx, "session: the issuer did not mint a token for Origo", "error", err)
+		slog.WarnContext(ctx, "session: the issuer did not mint an actor token",
+			"audience", audience, "error", err)
 		return "", err
 	}
 	return tok, nil

@@ -28,9 +28,12 @@ type issuer struct {
 	life      time.Duration
 	// mints counts actor tokens handed out; refuseMint makes the route
 	// refuse the way the issuer refuses an audience the client may not
-	// act at.
-	mints      atomic.Int32
-	refuseMint atomic.Bool
+	// act at. refuseAudience narrows that refusal to one audience, which
+	// is how an issuer answers a client registered to act at Origo and not
+	// at the control plane.
+	mints          atomic.Int32
+	refuseMint     atomic.Bool
+	refuseAudience atomic.Value
 }
 
 func newIssuer(t *testing.T) *issuer {
@@ -38,16 +41,17 @@ func newIssuer(t *testing.T) *issuer {
 	is := &issuer{life: time.Hour}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /actor-tokens", func(w http.ResponseWriter, r *http.Request) {
-		if is.refuseMint.Load() {
+		var body struct {
+			Audience string `json:"audience"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		refused, _ := is.refuseAudience.Load().(string)
+		if is.refuseMint.Load() || (refused != "" && refused == body.Audience) {
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = w.Write([]byte(`{"error":"invalid_target"}`))
 			return
 		}
 		is.mints.Add(1)
-		var body struct {
-			Audience string `json:"audience"`
-		}
-		_ = json.NewDecoder(r.Body).Decode(&body)
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"actor_token": "actor-" + body.Audience + "-for-" + strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "),
@@ -676,13 +680,19 @@ func TestReadCarriesTheTokenAndWhoHoldsIt(t *testing.T) {
 	if got.Origo != "actor-origo-for-an-access-token" || got.Fault != nil {
 		t.Errorf("the Origo token is %q (fault %v), want the issuer's actor token", got.Origo, got.Fault)
 	}
-	if is.mints.Load() != 1 {
-		t.Errorf("mints = %d, want one", is.mints.Load())
+	// The token for the control plane is the second mint on the same
+	// session, addressed to the audience that plane verifies.
+	if got.Platform != "actor-api.latere.ai-for-an-access-token" || got.PlatformFault != nil {
+		t.Errorf("the platform token is %q (fault %v), want the issuer's actor token",
+			got.Platform, got.PlatformFault)
 	}
-	// A second read on the same session reuses the token.
+	if is.mints.Load() != 2 {
+		t.Errorf("mints = %d, want one for each audience", is.mints.Load())
+	}
+	// A second read on the same session reuses both tokens.
 	m.Read(httptest.NewRecorder(), req)
-	if is.mints.Load() != 1 {
-		t.Errorf("mints = %d after a second read, want the cached token", is.mints.Load())
+	if is.mints.Load() != 2 {
+		t.Errorf("mints = %d after a second read, want the cached tokens", is.mints.Load())
 	}
 }
 
@@ -704,5 +714,36 @@ func TestReadSaysWhenTheIssuerDoesNotMint(t *testing.T) {
 	got := m.Read(httptest.NewRecorder(), req)
 	if got.Token != "an-access-token" || got.Origo != "" || got.Fault == nil {
 		t.Errorf("the reader is %+v, want the session with no Origo token and a fault", got)
+	}
+	if got.Platform != "" || got.PlatformFault == nil {
+		t.Errorf("the reader is %+v, want no platform token and a fault", got)
+	}
+}
+
+// TestReadMintsTheTwoAudiencesApart pins the case the cutover creates: the
+// issuer has not granted this client the control plane's audience yet, so it
+// refuses that mint alone and mints for Origo as usual. Every screen that
+// reads Origo goes on working, and only the two that talk to the control
+// plane have a fault to say.
+func TestReadMintsTheTwoAudiencesApart(t *testing.T) {
+	is := newIssuer(t)
+	is.refuseAudience.Store(PlatformAudience)
+	m, err := New(testConfig(t, is))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := requestWith(t, m, &oidc.Session{
+		AccessToken:   "an-access-token",
+		Expiry:        time.Now().Add(time.Hour),
+		SessionExpiry: time.Now().Add(Lifetime),
+		User:          oidc.User{Sub: "01HQ8Z"},
+	})
+	got := m.Read(httptest.NewRecorder(), req)
+	if got.Origo != "actor-origo-for-an-access-token" || got.Fault != nil {
+		t.Errorf("the Origo token is %q (fault %v), want the issuer's actor token", got.Origo, got.Fault)
+	}
+	if got.Platform != "" || got.PlatformFault == nil {
+		t.Errorf("the platform token is %q (fault %v), want neither a token nor silence",
+			got.Platform, got.PlatformFault)
 	}
 }
