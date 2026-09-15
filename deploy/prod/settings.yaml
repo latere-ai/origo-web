@@ -17,6 +17,13 @@
 # ORIGOWEB_KEYS_URL turns the SSH keys screen on. It is unset in the base,
 # because an operator who runs no key store has no place to add a key and
 # is better served by no screen than by one that cannot work.
+#
+# It and ORIGOWEB_REGISTRY_URL are the platform control plane's public
+# address: the repository registry and the key store are platformd's, not
+# the identity provider's (spec 029). Both are addresses and neither is a
+# credential, so they belong here and not in the Secret. Each client
+# appends its own path -- /repositories... and /me/ssh-keys -- so the value
+# is the bare base with no suffix.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -41,14 +48,22 @@ spec:
               value: Latere Code
             - name: ORIGOWEB_BRAND_MARK
               value: latere
-            # The key store. Origo holds no public key: it asks auth whose
-            # an offered key is, and auth is where a person adds one, so
-            # this is the same address the session is signed in against
-            # (auth's spec 075). The public host rather than the in-cluster
-            # Service, because the call carries the person's own token and
-            # the issuer in that token is the public one.
+            # The repository registry: who owns which repository. It is the
+            # control plane's now, and the control plane verifies an
+            # audience of its own, so every call carries the actor token the
+            # issuer mints for api.latere.ai and not the session token.
+            # The issuer must grant this client that audience before this
+            # setting is applied, or the creation screen fails closed.
+            - name: ORIGOWEB_REGISTRY_URL
+              value: https://platform.latere.ai
+            # The key store. Origo holds no public key: it asks whose an
+            # offered key is, and the component that answers is where a
+            # person adds one. That is the control plane too, at the same
+            # address. The public host rather than an in-cluster Service,
+            # because the call carries a token whose audience and issuer are
+            # the public ones.
             - name: ORIGOWEB_KEYS_URL
-              value: https://auth.latere.ai
+              value: https://platform.latere.ai
             # The scope auth requires before it will let this interface
             # manage a person's keys. Adding a public key creates a
             # credential that pushes to every repository that person can
