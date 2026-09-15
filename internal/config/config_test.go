@@ -231,14 +231,14 @@ func TestRegistryURLOverridesTheDerivedAddress(t *testing.T) {
 
 	// Set: the explicit address wins, so the interface points at the
 	// platform control plane.
-	withOverride := map[string]string{"ORIGOWEB_REGISTRY_URL": "https://platform.example/internal/origo"}
+	withOverride := map[string]string{"ORIGOWEB_REGISTRY_URL": "https://platform.example"}
 	maps.Copy(withOverride, base)
 	setEnv(t, withOverride)
 	c, err = Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := c.RegistryURL(); got == nil || got.String() != "https://platform.example/internal/origo" {
+	if got := c.RegistryURL(); got == nil || got.String() != "https://platform.example" {
 		t.Errorf("the explicit registry address is %v", got)
 	}
 
@@ -248,5 +248,44 @@ func TestRegistryURLOverridesTheDerivedAddress(t *testing.T) {
 	setEnv(t, withBad)
 	if _, err := Load(); err == nil {
 		t.Error("an address with no scheme was accepted")
+	}
+}
+
+// TestTheAccountScreenStaysAtTheIssuer is the defect the repoint would
+// otherwise introduce.
+//
+// AccountURL is the *claim a name* link of the creation screen, and a handle
+// is the identity provider's to hold. It was derived from the registry,
+// which was the same address until the registry moved to the control plane;
+// derived from the registry after the move, the one sentence a person
+// without a handle is given would point at a service that has no account
+// screen.
+func TestTheAccountScreenStaysAtTheIssuer(t *testing.T) {
+	base := map[string]string{
+		"ORIGOWEB_ORIGO_URL":      "https://git.example",
+		"ORIGOWEB_PUBLIC_URL":     "https://code.example",
+		"ORIGOWEB_AUTH_CLIENT_ID": "origoweb",
+		"ORIGOWEB_AUTH_URL":       "https://issuer.example",
+		"ORIGOWEB_REGISTRY_URL":   "https://platform.example",
+	}
+	setEnv(t, base)
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := c.AccountURL(); got != "https://issuer.example/me" {
+		t.Errorf("the account screen is %q, want the issuer's own", got)
+	}
+	if got := c.RegistryURL(); got == nil || got.String() != "https://platform.example" {
+		t.Errorf("the registry address is %v, want the control plane's", got)
+	}
+
+	// A configuration naming no identity provider links to no account
+	// screen at all, whatever the registry's address is. The environment
+	// cannot produce this -- the library defaults the issuer -- so the
+	// value is built here.
+	none := Config{registryURL: c.RegistryURL()}
+	if got := none.AccountURL(); got != "" {
+		t.Errorf("the account screen is %q with no identity provider, want none", got)
 	}
 }

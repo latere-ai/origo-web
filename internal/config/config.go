@@ -158,20 +158,43 @@ func Load() (Config, error) {
 	return c, nil
 }
 
-// RegistryURL is the address of the repository registry, which is the
-// identity provider's own: the component that issues the token also holds
-// the handles, the organizations and the record of who owns which
-// repository, so there is no second address to configure and no second
-// credential to hold. Empty when no provider is configured, which leaves
-// the interface with no creation screen.
+// RegistryURL is the address of the repository registry: the component that
+// holds the record of who owns which repository. Empty when neither it nor
+// an identity provider is configured, which leaves the interface with no
+// creation screen.
 func (c Config) RegistryURL() *url.URL {
 	// An explicit ORIGOWEB_REGISTRY_URL wins: it is how the interface
-	// points at the platform control plane once the registry has moved
-	// there (id-06). Without it the address is the identity provider's,
-	// the transitional default.
+	// points at the platform control plane, where the registry lives
+	// (spec 029). Without it the address is the identity provider's, which
+	// is where the registry was and which is the transitional default.
 	if c.registryURL != nil {
 		return c.registryURL
 	}
+	return c.issuerURL()
+}
+
+// AccountURL is where a person claims the name their repositories live
+// under. It is the identity provider's own account screen, because a handle
+// is the provider's to hold, and it is read from the provider's address
+// rather than from the registry's.
+//
+// The two were one string until the registry moved to the control plane.
+// Deriving this from RegistryURL() after that move would send the one
+// sentence a person without a handle is given -- claim a name, then return
+// here -- to a control plane that has no account screen at all.
+func (c Config) AccountURL() string {
+	u := c.issuerURL()
+	if u == nil {
+		return ""
+	}
+	return strings.TrimRight(u.String(), "/") + "/me"
+}
+
+// issuerURL is the identity provider's address as a URL, nil when none is
+// configured or the value is not an address. It is the one place the OIDC
+// issuer's string is parsed, so the registry's fallback and the account
+// screen cannot disagree about what it is.
+func (c Config) issuerURL() *url.URL {
 	raw := strings.TrimRight(strings.TrimSpace(c.OIDC.AuthURL), "/")
 	if raw == "" {
 		return nil
@@ -181,17 +204,6 @@ func (c Config) RegistryURL() *url.URL {
 		return nil
 	}
 	return u
-}
-
-// AccountURL is where a person claims the name their repositories live
-// under. It is the identity provider's own account screen, because the name
-// is the provider's to hold.
-func (c Config) AccountURL() string {
-	u := c.RegistryURL()
-	if u == nil {
-		return ""
-	}
-	return strings.TrimRight(u.String(), "/") + "/me"
 }
 
 // Name is what the interface calls itself, which is the project's own name
