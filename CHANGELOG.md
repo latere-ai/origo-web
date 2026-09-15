@@ -10,6 +10,25 @@ holds what was committed.
 
 ## Unreleased
 
+- The repository registry and the SSH key store are the platform control
+  plane's, not the identity provider's. **An operator must set two
+  addresses before this release runs**: `ORIGOWEB_REGISTRY_URL` and
+  `ORIGOWEB_KEYS_URL`, both the control plane's public base
+  (`https://platform.latere.ai` on Latere's installation). Each client
+  appends its own path, so neither takes a suffix.
+
+  The interface now presents those two a token minted for the control
+  plane's audience, `api.latere.ai`, instead of the session token, which is
+  the identity provider's and opens nothing there. The identity provider
+  must grant this interface that audience first, or the creation screen and
+  the key screen say the provider did not answer and offer no form. Every
+  other screen is unaffected: reading a repository uses the token minted
+  for Origo, as before.
+
+  The *claim a name* link of the creation screen still points at the
+  identity provider's account screen. It was derived from the registry's
+  address, which is no longer the same place.
+
 - A tag now rolls Latere's installation instead of stopping at the image.
   The release applies `deploy/prod`, sets the new image, waits for the
   rollout and reads the Deployment's tag back, then fetches the sign-in

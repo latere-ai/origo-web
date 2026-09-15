@@ -1,10 +1,10 @@
 ---
 title: "The registry and the key store move to the control plane, and the token moves with them"
-status: in-progress
+status: complete
 track: infra
 depends_on:
   - specs/023-web-interface.md
-affects: [deploy/prod/settings.yaml]
+affects: [deploy/prod/settings.yaml, CHANGELOG.md]
 effort: medium
 created: 2026-09-16
 updated: 2026-09-16
@@ -173,3 +173,39 @@ works while the identity provider still serves the registry.
 | a person whose platform mint failed is told why | a create-screen render carrying the issuer-fault sentence |
 | the *claim a name* link points at the issuer with the registry repointed | `internal/config`: `ORIGOWEB_REGISTRY_URL` at a platform host and `AccountURL()` still under the issuer's host |
 | the addresses are the control plane's, in the manifest | `deploy/prod/settings.yaml` sets both; no Secret changes |
+
+## Outcome
+
+Built on branch `id-08/platform-token` on 2026-09-16, ahead of the release
+that carries it. Every criterion above holds in the tree:
+
+- `session.Reader` carries `Platform` and `PlatformFault` beside `Origo`
+  and `Fault`; `actorToken` is the one mint path, called once per audience.
+- `req.auth` is `req.platform`, and the five guards that read it are
+  `requirePlatform`, which says the issuer-fault sentence on the screen
+  that needed the token. Nine call sites forward it: namespaces, create,
+  forget, withdraw, read and write visibility twice over, and the four key
+  calls.
+- `AccountURL()` reads the issuer through `issuerURL()`, which
+  `RegistryURL()`'s fallback reads too.
+- `deploy/prod/settings.yaml` sets both addresses to
+  `https://platform.latere.ai`. No Secret changed.
+- The full gate passes (15 gates), every package clears 90%, and the
+  binary end-to-end tier passes against `origod:v0.2.1` with the stub
+  issuer and authorizer.
+
+Two things this spec found in the code that the family design did not
+name, both corrected here:
+
+- The creation screen asked for a credential before it asked whether the
+  installation registers repositories at all, so an installation with no
+  registry would have answered a sign-in page where it used to answer
+  "not available". The check for the screen's existence now comes first.
+- The repoint knob's test named `https://platform.example/internal/origo`
+  as the registry address. That is the registrar-and-Origo listener, which
+  this interface may not address; the public base replaced it.
+
+What this release does **not** carry, because it is the identity
+provider's: the `api.latere.ai` audience on this client's `actor_audiences`
+row. Until auth ships it, the two control-plane screens fail closed and
+say so.
