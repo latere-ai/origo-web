@@ -66,23 +66,29 @@ func TestCreatingARepositoryLandsOnIt(t *testing.T) {
 
 // TestTheCreationScreenSendsOnlyTheReadersToken: this service holds no
 // credential of its own, so both halves of a creation carry the person's
-// authority and nothing else: the registry takes the session token, and
-// Origo takes the token the issuer minted for Origo on that same session.
+// authority and nothing else. Each half carries the token minted for the
+// service it addresses: the registry takes the one for the control plane's
+// audience, Origo takes the one for Origo, and the session token, which is
+// the issuer's, goes to neither.
 func TestTheCreationScreenSendsOnlyTheReadersToken(t *testing.T) {
 	h := newHarness(t)
 	c := h.signedIn("alice")
 	if rec := h.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, c); rec.Code != http.StatusSeeOther {
 		t.Fatalf("create: %d", rec.Code)
 	}
-	const session = "Bearer token-for-alice"
+	const session = "token-for-alice"
 	var registryCalls int
 	for i, tok := range h.registry.Tokens() {
 		if strings.HasPrefix(h.registry.Calls()[i], "POST /actor-tokens") {
 			continue
 		}
 		registryCalls++
-		if tok != session {
-			t.Fatalf("a registry call carried %q, want the reader's session token", tok)
+		if tok != platformBearer(session) {
+			t.Fatalf("a registry call carried %q, want the control plane's actor token %q",
+				tok, platformBearer(session))
+		}
+		if tok == "Bearer "+session {
+			t.Fatal("a registry call carried the session token")
 		}
 	}
 	if registryCalls == 0 {
@@ -91,7 +97,7 @@ func TestTheCreationScreenSendsOnlyTheReadersToken(t *testing.T) {
 	// And Origo received the token the issuer minted for it on that session,
 	// which is what makes the two halves one person's authority rather than
 	// this service's.
-	want := "Bearer " + actorTokenFor("origo", "token-for-alice")
+	want := "Bearer " + actorTokenFor("origo", session)
 	if got := h.fake.Tokens(); len(got) == 0 || got[len(got)-1] != want {
 		t.Fatalf("Origo saw %v, want the actor token %q for the session the registry saw", got, want)
 	}

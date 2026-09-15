@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/latere-ai/origo-web/internal/registry"
+	"github.com/latere-ai/origo-web/internal/session"
 )
 
 // fakeRegistry is the component that records who owns a repository: the
@@ -60,9 +61,12 @@ type fakeRegistry struct {
 	// minted is every actor token the issuer side of this fake handed out,
 	// in order, as "<audience> for <bearer>". refuseMint makes the mint
 	// route refuse the way the issuer refuses an audience the client is
-	// not registered to act at.
-	minted     []string
-	refuseMint bool
+	// not registered to act at; refuseAudience narrows that refusal to one
+	// audience, which is how an issuer answers a client registered to act
+	// at Origo and not yet at the control plane.
+	minted         []string
+	refuseMint     bool
+	refuseAudience string
 }
 
 // newFakeRegistry returns a registry holding one namespace, which is the
@@ -85,13 +89,13 @@ func (f *fakeRegistry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.tokens = append(f.tokens, r.Header.Get("Authorization"))
 	absent, nsStatus := f.absent, f.namespacesStatus
 	createStatus, createCode := f.createStatus, f.createCode
-	refuseMint := f.refuseMint
+	refuseMint, refuseAudience := f.refuseMint, f.refuseAudience
 	f.mu.Unlock()
 
 	// The issuer mints actor tokens whether or not it keeps a registry:
 	// the route belongs to the identity provider, not to the registry.
 	if r.Method == http.MethodPost && r.URL.Path == "/actor-tokens" {
-		f.mintActorToken(w, r, refuseMint)
+		f.mintActorToken(w, r, refuseMint, refuseAudience)
 		return
 	}
 	if absent {
@@ -249,7 +253,7 @@ func (f *fakeRegistry) setNamespaces(n registry.Namespaces) {
 // mintActorToken is the issuer's POST /actor-tokens: a token addressed to
 // the requested audience for the bearer shown, named so a test can read
 // both off the value Origo then receives.
-func (f *fakeRegistry) mintActorToken(w http.ResponseWriter, r *http.Request, refuse bool) {
+func (f *fakeRegistry) mintActorToken(w http.ResponseWriter, r *http.Request, refuse bool, refuseAudience string) {
 	bearer := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 	var body struct {
 		Audience string `json:"audience"`
@@ -258,7 +262,7 @@ func (f *fakeRegistry) mintActorToken(w http.ResponseWriter, r *http.Request, re
 		writeRegistryError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
-	if refuse {
+	if refuse || (refuseAudience != "" && refuseAudience == body.Audience) {
 		writeRegistryError(w, http.StatusBadRequest, "invalid_target")
 		return
 	}
@@ -275,4 +279,11 @@ func (f *fakeRegistry) mintActorToken(w http.ResponseWriter, r *http.Request, re
 // session token.
 func actorTokenFor(audience, bearer string) string {
 	return "actor-" + audience + "-for-" + bearer
+}
+
+// platformBearer is the Authorization header every call to the control
+// plane must carry for a session: the actor token minted for that plane's
+// audience, and never the session token itself.
+func platformBearer(sessionToken string) string {
+	return "Bearer " + actorTokenFor(session.PlatformAudience, sessionToken)
 }

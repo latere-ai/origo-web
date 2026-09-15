@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 // Package registry is a client of the repository registry the installation's
-// authorizer keeps.
+// control plane keeps.
 //
 // Origo stores no user and no permission. Before every repository operation
 // it asks an operator-run endpoint whether a subject may read, write or
@@ -12,11 +12,12 @@
 // This package is the first half.
 //
 // It holds the same rule the rest of this service holds. There is no
-// credential of its own here: every call carries the signed-in person's own
-// token, so the registry decides on that person's authority and this service
-// can do nothing a person could not do at the same address with curl. An
-// installation whose authorizer serves no such surface simply has no
-// creation screen, which is what ErrNoRegistry is for.
+// credential of its own here: every call carries a token the issuer minted
+// for the signed-in person and for the registry's own audience, so the
+// registry decides on that person's authority and this service can do
+// nothing a person could not do at the same address with curl. An
+// installation that serves no such surface simply has no creation screen,
+// which is what ErrNoRegistry is for.
 package registry
 
 import (
@@ -40,9 +41,11 @@ type Client struct {
 }
 
 // New returns a client for the registry at base, which is the installation's
-// identity provider: the component that holds handles, organizations and the
-// repository registry is the same one that issues the token. A nil base
-// means no registry is configured and every call answers ErrNoRegistry.
+// platform control plane: the component that holds the record of who owns
+// which repository. It is not the identity provider, which holds the handles
+// and the organizations those owners are named by and mints the token this
+// client presents. A nil base means no registry is configured and every call
+// answers ErrNoRegistry.
 func New(base *url.URL, hc *http.Client) *Client {
 	if hc == nil {
 		hc = otel.HTTPClient()
@@ -252,9 +255,9 @@ func (c *Client) do(ctx context.Context, method, tok string, body []byte, segmen
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	// The person's own token, and nothing else. This service holds no
-	// credential, so a registry call can reach exactly what its caller
-	// could reach.
+	// The token minted for the person, and nothing else. This service
+	// holds no credential, so a registry call can reach exactly what its
+	// caller could reach.
 	if tok != "" {
 		req.Header.Set("Authorization", "Bearer "+tok)
 	}

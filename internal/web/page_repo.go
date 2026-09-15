@@ -301,9 +301,11 @@ const (
 // which is a wrong answer rather than a missing one, and the reader would
 // have no way to tell.
 //
-// A signed-out reader asks nothing and is told nothing.
+// A reader with no token for the control plane asks nothing and is told
+// nothing, which is every signed-out reader and, behind a live session, one
+// whose token the issuer would not mint.
 func (s *Server) visibilityOf(r *http.Request, rc repoContext) (string, string) {
-	if rc.auth == "" {
+	if rc.platform == "" {
 		return "", ""
 	}
 	key, keyed := visibilityKey(rc.sub, rc.repo.ID)
@@ -314,7 +316,7 @@ func (s *Server) visibilityOf(r *http.Request, rc repoContext) (string, string) 
 	}
 	if !ok {
 		var err error
-		current, err = s.registry.ReadVisibility(r.Context(), rc.auth, rc.repo.ID)
+		current, err = s.registry.ReadVisibility(r.Context(), rc.platform, rc.repo.ID)
 		switch {
 		case err == nil:
 			if keyed {

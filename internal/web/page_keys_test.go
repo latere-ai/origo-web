@@ -15,6 +15,7 @@ import (
 
 	"github.com/latere-ai/origo-web/internal/config"
 	"github.com/latere-ai/origo-web/internal/keys"
+	"github.com/latere-ai/origo-web/internal/session"
 )
 
 // The key screen: what a person does on it, and the one property the whole
@@ -359,8 +360,12 @@ func TestTheTableShowsWhatTellsTwoKeysApart(t *testing.T) {
 }
 
 // TestTheScreenSendsTheReadersOwnToken asserts this interface holds no
-// credential of its own: every key call carries the token of the person at
-// the keyboard, so it can do exactly what they could do.
+// credential of its own: every key call carries a token minted for the
+// person at the keyboard, so it can do exactly what they could do.
+//
+// The store is the platform control plane's, which verifies its own
+// audience, so the token is the actor token minted for that audience and
+// never the session token, which is addressed to the issuer.
 func TestTheScreenSendsTheReadersOwnToken(t *testing.T) {
 	h := keyHarness(t)
 	c := h.signedIn("alice")
@@ -370,9 +375,13 @@ func TestTheScreenSendsTheReadersOwnToken(t *testing.T) {
 	if len(got) == 0 {
 		t.Fatal("the screen made no call to the store")
 	}
+	want := actorTokenFor(session.PlatformAudience, "token-for-alice")
 	for _, b := range got {
-		if b == "" {
-			t.Error("a key call carried no credential")
+		if b != want {
+			t.Errorf("a key call carried %q, want the control plane's actor token %q", b, want)
+		}
+		if b == "token-for-alice" {
+			t.Error("a key call carried the session token")
 		}
 	}
 }

@@ -90,11 +90,10 @@ func (s *Server) handleVisibility(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if rc.auth == "" {
-		s.signIn(w, r, rc.req, http.StatusOK)
+	if !s.requirePlatform(w, r, rc.req) {
 		return
 	}
-	current, err := s.registry.ReadVisibility(r.Context(), rc.auth, rc.repo.ID)
+	current, err := s.registry.ReadVisibility(r.Context(), rc.platform, rc.repo.ID)
 	if err != nil {
 		s.visibilityFailed(w, r, rc, err)
 		return
@@ -119,8 +118,7 @@ func (s *Server) handleVisibilityPost(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if rc.auth == "" {
-		s.signIn(w, r, rc.req, http.StatusOK)
+	if !s.requirePlatform(w, r, rc.req) {
 		return
 	}
 	if err := r.ParseForm(); err != nil {
@@ -132,7 +130,7 @@ func (s *Server) handleVisibilityPost(w http.ResponseWriter, r *http.Request) {
 		s.renderVisibility(w, r, rc, target == registry.Private, http.StatusBadRequest, visibilitySentence)
 		return
 	}
-	if err := s.registry.SetVisibility(r.Context(), rc.auth, rc.repo.ID, target); err != nil {
+	if err := s.registry.SetVisibility(r.Context(), rc.platform, rc.repo.ID, target); err != nil {
 		s.visibilityFailed(w, r, rc, err)
 		return
 	}

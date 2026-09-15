@@ -14,17 +14,20 @@ import (
 	"github.com/latere-ai/origo-web/internal/session"
 )
 
-// req is what one request carries into a screen: the reader's two tokens,
-// which are empty when there is no session, and the frame every page
-// renders.
+// req is what one request carries into a screen: the reader's two
+// downstream tokens, which are empty when there is no session, and the
+// frame every page renders.
 type req struct {
 	// tok is the token for Origo: an actor token the issuer minted for this
 	// person and this installation. Every call to Origo carries it.
 	tok string
-	// auth is the session token, addressed to the issuer. The repository
-	// registry and the key store live there, and it opens nothing else.
-	auth string
-	v    view
+	// platform is the token for the platform control plane: the actor
+	// token the issuer minted for this person and that plane's audience.
+	// The repository registry and the key store live there, and every call
+	// to either carries it. The session token goes to neither: it is
+	// addressed to the issuer, which is not where they are any more.
+	platform string
+	v        view
 
 	// authError is the sentence the screen says about a sign-in that ended
 	// at the callback instead of at a session, empty when there is none.
@@ -32,6 +35,12 @@ type req struct {
 	// home screen hands a signed-out visitor to the sign-in page, which is
 	// where the sentence is needed most.
 	authError string
+
+	// platformError is the same sentence about the mint for the control
+	// plane, and it is kept apart because that mint fails on its own. Only
+	// the screens that talk to the control plane say it; a screen reading
+	// Origo has nothing to report when the token it uses was minted.
+	platformError string
 
 	// sub is the account the token belongs to: the issuer's subject claim.
 	// It names a principal where v.Who only names a person, so everything
@@ -48,9 +57,9 @@ type req struct {
 func (s *Server) begin(w http.ResponseWriter, r *http.Request, section string) req {
 	reader := s.sessions.Read(w, r)
 	rq := req{
-		tok:  reader.Origo,
-		auth: reader.Token,
-		sub:  reader.Sub,
+		tok:      reader.Origo,
+		platform: reader.Platform,
+		sub:      reader.Sub,
 		v: view{
 			Section:     section,
 			SignedIn:    reader.Token != "",
@@ -67,7 +76,30 @@ func (s *Server) begin(w http.ResponseWriter, r *http.Request, section string) r
 	if reader.Fault != nil {
 		rq.authError = issuerFaultSentence
 	}
+	if reader.PlatformFault != nil {
+		rq.platformError = issuerFaultSentence
+	}
 	return rq
+}
+
+// requirePlatform answers the screens that talk to the platform control
+// plane -- the repository registry and the key store -- when this request
+// carries no token for it, and reports whether the screen may go on.
+//
+// Without a session there is nothing to mint from and the sign-in page is
+// the answer. Behind a live session the token is missing because the issuer
+// refused to mint it, and then the page has to say so: the same sentence
+// the home screen says when the mint for Origo fails, folded in here
+// because begin leaves it on platformError, where no screen reading Origo
+// picks it up. A code the address carried wins over both, as it does
+// everywhere.
+func (s *Server) requirePlatform(w http.ResponseWriter, r *http.Request, rq req) bool {
+	if rq.platform != "" {
+		return true
+	}
+	rq.authError = cmp.Or(rq.authError, rq.platformError)
+	s.signIn(w, r, rq, http.StatusOK)
+	return false
 }
 
 // signInData is the front door, and the one page written for a stranger.
@@ -219,8 +251,10 @@ const (
 	authRefusedSentence = "Sign-in was refused. Try again, or ask your administrator whether your account may use this installation."
 
 	// issuerFaultSentence is said behind a live session when the issuer did
-	// not mint the token Origo takes: the person is signed in and this
-	// interface still cannot read for them.
+	// not mint one of the two tokens this interface forwards, Origo's or
+	// the control plane's: the person is signed in and this interface still
+	// cannot act for them. It names no audience, because which service was
+	// unreachable is not a thing the person can do anything about.
 	issuerFaultSentence = "The identity provider did not answer for this installation. Try again."
 )
 

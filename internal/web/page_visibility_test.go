@@ -168,9 +168,14 @@ func TestVisibilitySendsThePersonsOwnToken(t *testing.T) {
 	h.registry.canChange = true
 	c := h.signedIn("alice")
 	h.get(h.repoPath("/visibility"), c)
-	for _, tok := range h.registry.Tokens() {
-		if tok == "" || !strings.HasPrefix(tok, "Bearer ") {
-			t.Errorf("the registry was called with %q, want the reader's bearer", tok)
+	calls := h.registry.Calls()
+	for i, tok := range h.registry.Tokens() {
+		if strings.HasPrefix(calls[i], "POST /actor-tokens") {
+			continue
+		}
+		if tok != platformBearer("token-for-alice") {
+			t.Errorf("the registry was called with %q on %s, want the reader's actor token %q",
+				tok, calls[i], platformBearer("token-for-alice"))
 		}
 	}
 }
@@ -278,9 +283,12 @@ func TestVisibilityIsAskedOncePerReader(t *testing.T) {
 // about a repository and the first's right to change it.
 func TestOneDisplayNameIsNotOneAccount(t *testing.T) {
 	h := newHarness(t)
-	h.registry.answerFor("Bearer token-for-s1",
+	// Keyed by the credential the screen actually sends, which is the actor
+	// token minted for the control plane on each session and not the
+	// session token itself.
+	h.registry.answerFor(platformBearer("token-for-s1"),
 		registry.Visibility{Visibility: registry.Public, CanChange: true})
-	h.registry.answerFor("Bearer token-for-s2",
+	h.registry.answerFor(platformBearer("token-for-s2"),
 		registry.Visibility{Visibility: registry.Private, CanChange: false})
 
 	one := h.signedInAs(oidc.User{Sub: "s1", DisplayName: "Robin Ellis"})

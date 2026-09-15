@@ -12,9 +12,9 @@
 // keeps the fingerprint a person confirms and the key that is stored from
 // ever disagreeing.
 //
-// Every call carries the reader's own token. The interface holds no
-// credential of its own, so a key call can do exactly what the person at
-// the keyboard could do.
+// Every call carries a token minted for the reader, addressed to the store's
+// own audience. The interface holds no credential of its own, so a key call
+// can do exactly what the person at the keyboard could do.
 package keys
 
 import (
