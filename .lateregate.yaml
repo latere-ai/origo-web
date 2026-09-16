@@ -75,3 +75,4 @@ license:
 # The identity shape of the family: specs/infrastructure/identity.md in latere-ai/specs
 identity:
   role: bff
+  roles_only: true
