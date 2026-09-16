@@ -654,14 +654,29 @@ incomplete one.
 | where a person lands | on the repository, at `/{owner}/{slug}`, which is also added to the addresses this session has opened |
 | an installation with no such component | no screen and no affordance. `ORIGOWEB_AUTH_URL` is the address, because the provider that issues the token is the one that holds the names; unset, the creation screen is absent exactly as the key screen is |
 
-The second call is retried, up to three attempts spaced past Origo's own
-deny cache, and only on the one refusal a fresh ownership row produces
-while the authorizer's replicas catch up. Every other refusal is the
-answer. When no attempt succeeds the row is withdrawn, on a context
-detached from the request: the case the withdrawal exists for is the
-person who submitted the form and closed the tab, and a call made on the
-request's own context would fail the moment the browser went and leave
-behind exactly the row it was added to remove.
+> Amended 2026-09-16. The second call was retried until this date: three
+> attempts spaced past Origo's own deny cache, on the one refusal a fresh
+> ownership row produced while the registry's replicas caught up. The
+> registry answered from a snapshot each replica rebuilt every ten
+> seconds, and Origo's authorize call lands on any of them. The control
+> plane closed that gap. `platformd` v0.9.1, live on both replicas,
+> carries its spec 19: an authorizer miss reads the repository through to
+> the database, so a repository is usable on every replica the moment it
+> is created. The retry then hid nothing and only held a genuinely
+> unregistered id for twelve seconds, so it is gone. The control plane's
+> side of this is the family's identity epic leaf
+> `infrastructure/identity/id-06-code-control-plane.md` in
+> `latere-ai/specs`. The paragraph below is the arrangement as it is.
+
+The second call is made once, and the refusal is the answer.
+`unknown_repository` after an ownership row the registry accepted is a
+repository registered nowhere, which no waiting changes, and the screen
+says that rather than asking for another try. When the call does not
+succeed the row is withdrawn, on a context detached from the request: the
+case the withdrawal exists for is the person who submitted the form and
+closed the tab, and a call made on the request's own context would fail
+the moment the browser went and leave behind exactly the row it was added
+to remove.
 
 Renaming, transferring and freezing stay out, and so does granting
 another person access. The line this section draws is between bringing a
@@ -895,13 +910,16 @@ repository, so they assert against the real read API and not a mock.
   `internal/web`, `TestEveryRefusalIsItsOwnSentence`). A name Origo
   would reject never becomes a row (proposed: `internal/web`,
   `TestANameTheInstallationWillNotTakeIsRefusedBeforeARowIsWritten`).
-- Only the refusal a fresh ownership row produces is retried, and a
-  creation that never succeeds withdraws the row it wrote (proposed:
-  `internal/web`,
-  `TestACreationRetriesOnlyTheRefusalTheRegistryLagProduces`,
+- Origo is asked once, whatever it refuses with, and a creation that does
+  not succeed withdraws the row it wrote (proposed: `internal/web`,
+  `TestACreationAsksTheInstallationOnce`,
   `TestACreationThatFailsKeepsNothing`), including when the browser that
   submitted the form has gone (proposed: `internal/web`,
-  `TestTheRowIsWithdrawnEvenWhenTheBrowserIsGone`).
+  `TestTheRowIsWithdrawnEvenWhenTheBrowserIsGone`). Written until
+  2026-09-16 as a retry of the one refusal the registry's snapshot lag
+  produced, the first test then named
+  `TestACreationRetriesOnlyTheRefusalTheRegistryLagProduces`; the
+  amendment in "Creating a repository" says what closed the lag.
 - A person who holds no name is told what to do next rather than shown a
   form, and an installation with no ownership component offers no
   affordance and answers the address as one it does not serve (proposed:
