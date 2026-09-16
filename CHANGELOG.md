@@ -10,6 +10,8 @@ holds what was committed.
 
 ## Unreleased
 
+## v0.10.1 - 2026-09-16
+
 - The interface no longer asks the identity provider for the
   `origo:ssh-keys` scope. Keys are managed at the platform control plane,
   which authorizes the actor token minted for `api.latere.ai` and grants
