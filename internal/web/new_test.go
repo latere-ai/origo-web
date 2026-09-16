@@ -166,7 +166,7 @@ func TestACreationThatFailsKeepsNothing(t *testing.T) {
 		t.Fatalf("a creation the authorizer refused answers %d, want 409", rec.Code)
 	}
 	if !strings.Contains(rec.Body.String(), "was not created") {
-		t.Errorf("the screen does not say the name is free again: %s", rec.Body.String())
+		t.Errorf("the screen does not say the repository was not created: %s", rec.Body.String())
 	}
 	written := h.registry.Written()
 	if len(written) != 1 {
