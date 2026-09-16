@@ -10,6 +10,8 @@ holds what was committed.
 
 ## Unreleased
 
+## v0.10.0 - 2026-09-16
+
 - The repository registry and the SSH key store are the platform control
   plane's, not the identity provider's. **An operator must set two
   addresses before this release runs**: `ORIGOWEB_REGISTRY_URL` and
