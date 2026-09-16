@@ -10,6 +10,11 @@ holds what was committed.
 
 ## Unreleased
 
+- Creating a repository no longer retries the installation. A repository is
+  usable as soon as the control plane registers it, on every replica, so
+  the interface makes the one call. A repository the installation does not
+  recognise is reported at once instead of twelve seconds later.
+
 ## v0.10.1 - 2026-09-16
 
 - The interface no longer asks the identity provider for the

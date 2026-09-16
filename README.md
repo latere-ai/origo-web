@@ -111,7 +111,8 @@ hostname with an Ingress split, which is what Latere runs and
 | `ORIGOWEB_PROJECT_URL` | the Origo repository | Link to the open-source project |
 | `ORIGOWEB_BRAND_MARK` | unset | Logo beside the name. The only value this build accepts is `latere` |
 | `ORIGOWEB_KEYS_URL` | unset | Base URL of the SSH key store. Enables the SSH keys page. See [SSH keys](#ssh-keys) |
-| `ORIGOWEB_AUTH_URL` | `https://auth.latere.ai` | OIDC issuer. Must be one of Origo's `ORIGO_OIDC_ISSUERS`. Also the repository registry, see [Creating a repository](#creating-a-repository) |
+| `ORIGOWEB_REGISTRY_URL` | `ORIGOWEB_AUTH_URL` | Base URL of the repository registry, which records who owns which repository. Enables the New repository button. See [Creating a repository](#creating-a-repository) |
+| `ORIGOWEB_AUTH_URL` | `https://auth.latere.ai` | OIDC issuer. Must be one of Origo's `ORIGO_OIDC_ISSUERS` |
 | `ORIGOWEB_AUTH_CLIENT_ID` | required | OIDC client id for the browser flow |
 | `ORIGOWEB_AUTH_CLIENT_SECRET` | unset | Client secret. A public client uses PKCE only |
 | `ORIGOWEB_AUTH_COOKIE_KEY` | required | 32 bytes as hex. Rotating it signs everyone out |
@@ -192,8 +193,9 @@ The identity provider decides which names are yours and how many
 repositories each may hold. Origo creates the repository and checks again
 before writing. A refusal from either is shown with your form intact.
 
-The button appears only when `ORIGOWEB_AUTH_URL` names a registry that
-records repository ownership.
+The button appears only when the interface has a registry address:
+`ORIGOWEB_REGISTRY_URL`, or `ORIGOWEB_AUTH_URL` on an installation whose
+identity provider still records repository ownership.
 
 Renaming, transferring and freezing are not offered here. An
 administrator can delete a repository from its overview. The server keeps
