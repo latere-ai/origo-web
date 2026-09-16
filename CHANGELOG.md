@@ -10,6 +10,16 @@ holds what was committed.
 
 ## Unreleased
 
+- The interface no longer asks the identity provider for the
+  `origo:ssh-keys` scope. Keys are managed at the platform control plane,
+  which authorizes the actor token minted for `api.latere.ai` and grants
+  nothing on a login scope. **An operator upgrading removes
+  `origo:ssh-keys` from `ORIGOWEB_AUTH_SCOPES`**, leaving
+  `openid,email,profile,offline_access`. Leaving it in breaks sign-in once
+  the provider drops the scope from this client: an authorization request
+  naming a scope the client does not hold is refused outright, so no page
+  is reachable, not just the key screen.
+
 ## v0.10.0 - 2026-09-16
 
 - The repository registry and the SSH key store are the platform control
