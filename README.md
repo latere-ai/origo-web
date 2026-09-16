@@ -126,8 +126,11 @@ key through a key store you run, and that store is where a person adds
 keys. Set `ORIGOWEB_KEYS_URL` to its base address and the SSH keys page
 appears. Unset, the page and its navigation entry are absent.
 
-The page makes three calls to that address, each with the signed-in
-person's own token:
+The page makes three calls to that address. This service stores no key:
+every key lives in the store, which on Latere's installation is the
+platform control plane. Each call carries an actor token minted for the
+store's own audience, `api.latere.ai`, and not the session token your
+browser holds:
 
 | Call | Response |
 |---|---|

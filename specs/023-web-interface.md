@@ -10,7 +10,7 @@ depends_on:
 affects: [specs/README.md]
 effort: large
 created: 2026-09-10
-updated: 2026-09-12
+updated: 2026-09-16
 author: changkun
 ---
 
@@ -362,15 +362,21 @@ directly, so a large tarball never passes through this service.
 something other than Origo.** Origo stores no public key: its spec 024
 resolves an offered key to a subject through an endpoint the operator
 runs, and that same component is where a person adds one. This interface
-is a client of it, exactly as it is a client of Origo, and it carries the
-signed-in person's own token to both.
+is a client of it, exactly as it is a client of Origo, and it holds no
+credential of its own for either: the call to Origo carries the actor
+token minted for Origo's audience, and the call to the key store the one
+minted for `api.latere.ai`.
 
-Latere's key store is auth (its spec 075). An operator running another
-identity provider points `ORIGOWEB_KEYS_URL` at whatever they built, and
-an operator who built nothing sets it to nothing: the screen and its
-navigation entry are absent while it is unset, which is the default.
-Everything else in this document is built, reviewed and shipped without
-it, and the interface is complete and useful with the whole screen gone.
+Latere's key store is the platform control plane, `platformd`, which
+verifies that audience; `specs/029-platform-control-plane-token.md` is
+this repository's half of the move. Written until 2026-09-16 as auth (its
+spec 075), which held the store until the control plane took it over. An
+operator running another key store points `ORIGOWEB_KEYS_URL` at whatever
+they built, and an operator who built nothing sets it to nothing: the
+screen and its navigation entry are absent while it is unset, which is
+the default. Everything else in this document is built, reviewed and
+shipped without it, and the interface is complete and useful with the
+whole screen gone.
 
 **This service reads no key.** It does not parse a paste, does not
 compute a fingerprint and does not decide what algorithm is acceptable.
@@ -641,7 +647,7 @@ incomplete one.
 | Decision | Value |
 |---|---|
 | the routes | `GET /new` renders the screen, `POST /new` creates, with the form token every other form requires |
-| the credential | none of its own. Both calls carry the signed-in person's own token, so the `delegation \| none` row above still holds in full: a bug here can create nothing a person could not create with curl at the same two addresses |
+| the credential | none of its own. Both calls carry a token of the signed-in person's: the registry call the actor token minted for the control plane's audience, `api.latere.ai`, and the Origo call the one minted for Origo's. The `delegation \| none` row above still holds in full: a bug here can create nothing a person could not create with curl at the same two addresses. Written until 2026-09-16 as the session token to both, which is what the registry took while it was the identity provider's (`specs/029-platform-control-plane-token.md`) |
 | who decides | the installation's authorizer, which is the component that holds the names and the record of who owns what. This interface asks and renders; it holds no ownership model and no second copy of one |
 | what a person may create under | what the authorizer says: their own name, and an organisation they administer. The screen draws the answer and never derives one from a token claim, for the reason the repository list gives at length |
 | the order | the ownership row first, the repository second, which is the authorizer's own rule: the failure that leaves a repository unreachable is preferred to the one that leaves it unguarded |
@@ -699,7 +705,7 @@ the actor, and an event.
 | name resolution on Origo's JSON surface, mode 2 above | **done**: Origo's spec 026 serves `GET /v1/repos?owner=&slug=`, answering as the id route does. Every screen is addressed at `/{owner}/{slug}`; the `/r/{id}` addresses the screens had before redirect there for good, and the box on an installation with no directory takes either form | nothing |
 | the directory question on the authorizer contract and the collection route, mode 1 above | **done**: Origo's spec 026, `complete` on 2026-09-11, with the `list` action on the authorizer contract and the directory mode of `GET /v1/repos`; the authorizer each installation runs answers it or says it has no directory | nothing; an installation without a directory takes the name form |
 | the repository `latere-ai/origo-web` | **done**: this spec moved into it on its first commit, 2026-09-10 | nothing |
-| a key management surface: spec 024 keeps keys out of Origo, behind an operator-run resolver Origo only reads | **done**: auth's spec 075 serves the resolver and the three `/me/ssh-keys` routes; an operator running another provider builds the same three | nothing |
+| a key management surface: spec 024 keeps keys out of Origo, behind an operator-run resolver Origo only reads | **done**: the platform control plane, `platformd`, serves the resolver and the three `/me/ssh-keys` routes; an operator running another provider builds the same three. Written until 2026-09-16 as auth's spec 075, which served them until `specs/029-platform-control-plane-token.md` moved the key store and the registry to the control plane, step 3 of the family's identity epic, `specs/infrastructure/identity/id-06-code-control-plane.md` in `latere-ai/specs` | nothing |
 | an anonymous read path, with a subject sentinel that is not the empty string | **done**: Origo's `ORIGO_ANONYMOUS_READ`, released in its `v0.2.0` on 2026-09-11, with the anonymous subject its authorizer contract names | nothing |
 
 The two that touched the authorizer contract, which is a contract an
