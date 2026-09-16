@@ -26,9 +26,10 @@ type Error struct {
 }
 
 // Reason is the authorizer's own deny token, empty when the refusal did not
-// come from one. A creation refused with "unknown_repository" is the one
-// case this service retries: the registry row exists and the authorizer
-// replica answering has not rebuilt its snapshot yet.
+// come from one. It is what lets a screen tell one refusal from another: a
+// creation refused with "unknown_repository" is a repository the registry
+// has no row for, and not the same thing as a subject the authorizer will
+// not let administer this owner.
 func (e *Error) Reason() string {
 	reason, _ := e.Details["reason"].(string)
 	return reason
@@ -42,8 +43,9 @@ func DeniedAs(err error, reason string) bool {
 }
 
 // ReasonUnknownRepository is what an authorizer answers for a repository it
-// has no row for. Spec 072 of auth makes it the deny that a just-written
-// registry row turns into an allow within one snapshot interval.
+// has no row for. The platform control plane reads a miss through to its
+// store, so a row it has just written is an allow at every replica at once:
+// this reason means the repository is registered nowhere.
 const ReasonUnknownRepository = "unknown_repository"
 
 func (e *Error) Error() string {

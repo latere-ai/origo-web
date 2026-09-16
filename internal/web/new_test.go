@@ -103,35 +103,47 @@ func TestTheCreationScreenSendsOnlyTheReadersToken(t *testing.T) {
 	}
 }
 
-// TestACreationRetriesOnlyTheRefusalTheRegistryLagProduces.
+// TestACreationAsksTheInstallationOnce.
 //
-// A registry row reaches the replica that served the write first, and
-// Origo's authorize call lands on any of them, so a fresh row can be
-// answered unknown_repository once. That one refusal is retried. Every
-// other is the answer.
-func TestACreationRetriesOnlyTheRefusalTheRegistryLagProduces(t *testing.T) {
+// The row this screen writes is readable at every replica the moment the
+// registry has it, so unknown_repository is a repository the installation
+// has no row for and not a replica that has not caught up. Origo is asked
+// once, whatever it answers, and the refusal reaches the person at once.
+func TestACreationAsksTheInstallationOnce(t *testing.T) {
 	h := newHarness(t)
-	h.fake.unknownFor = 1
-	shorten(t)
+	// The authorizer has no row for this id and answers every create the
+	// same way, so a screen that tried again would be refused again.
+	h.fake.unknownFor = 9
 	c := h.signedIn("alice")
 
-	if rec := h.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, c); rec.Code != http.StatusSeeOther {
-		t.Fatalf("a creation that raced the registry answers %d, want 303", rec.Code)
+	rec := h.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, c)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("a creation the authorizer refused answers %d, want 409", rec.Code)
 	}
-	if made := h.fake.Created(); len(made) != 1 {
-		t.Fatalf("the installation made %d repositories, want one", len(made))
+	if got := h.fake.CreateCalls(); got != 1 {
+		t.Fatalf("the installation was asked %d times, want one attempt", got)
 	}
-	if len(h.registry.Forgotten()) != 0 {
-		t.Fatal("a creation that succeeded on the second attempt withdrew its row")
+	if body := rec.Body.String(); !strings.Contains(body, "does not recognise it") {
+		t.Errorf("the screen does not say plainly what happened: %s", body)
+	}
+	if made := h.fake.Created(); len(made) != 0 {
+		t.Fatalf("a refused creation made %v", made)
+	}
+	if got := h.registry.Forgotten(); len(got) != 1 {
+		t.Fatalf("a refused creation left %v behind; the row must go with it", got)
 	}
 
-	// A refusal that is not the lag is not retried, and the row goes.
+	// A refusal that names no authorizer reason is the answer too, on the
+	// same one attempt.
 	other := newHarness(t)
-	other.fake.status["/v1/repos"] = http.StatusForbidden
+	other.fake.createStatus, other.fake.createCode = http.StatusForbidden, "forbidden"
 	oc := other.signedIn("alice")
-	rec := other.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, oc)
+	rec = other.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, oc)
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("a refused creation answers %d, want 409", rec.Code)
+	}
+	if got := other.fake.CreateCalls(); got != 1 {
+		t.Fatalf("a refused creation asked the installation %d times, want one", got)
 	}
 	if len(other.fake.Created()) != 0 {
 		t.Fatal("a refused creation made a repository")
@@ -146,13 +158,12 @@ func TestACreationRetriesOnlyTheRefusalTheRegistryLagProduces(t *testing.T) {
 // against its own owner forever.
 func TestACreationThatFailsKeepsNothing(t *testing.T) {
 	h := newHarness(t)
-	h.fake.unknownFor = createAttempts + 1
-	shorten(t)
+	h.fake.unknownFor = 1
 	c := h.signedIn("alice")
 
 	rec := h.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, c)
 	if rec.Code != http.StatusConflict {
-		t.Fatalf("a creation the authorizer never allowed answers %d, want 409", rec.Code)
+		t.Fatalf("a creation the authorizer refused answers %d, want 409", rec.Code)
 	}
 	if !strings.Contains(rec.Body.String(), "was not created") {
 		t.Errorf("the screen does not say the name is free again: %s", rec.Body.String())
@@ -290,26 +301,19 @@ func TestTheCreationScreenNeedsASession(t *testing.T) {
 	}
 }
 
-// shorten makes the retry's wait short enough to drive, and puts it back.
-// The wait is longer than Origo's deny cache in the running service, which
-// is a property of the service and not of this suite.
-func shorten(t *testing.T) {
-	t.Helper()
-	was := createBackoff
-	createBackoff = time.Millisecond
-	t.Cleanup(func() { createBackoff = was })
-}
-
 // TestTheRowIsWithdrawnEvenWhenTheBrowserIsGone.
 //
 // The compensating withdrawal exists for the person who submits the form and
-// closes the tab. That cancels the request while the creation is still
-// retrying, so a withdrawal made on the request's own context would fail at
+// closes the tab. That cancels the request while the create at Origo is in
+// flight, so a withdrawal made on the request's own context would fail at
 // once and leave behind exactly the row it was added to remove.
 func TestTheRowIsWithdrawnEvenWhenTheBrowserIsGone(t *testing.T) {
 	h := newHarness(t)
-	h.fake.unknownFor = createAttempts + 1
-	shorten(t)
+	h.fake.unknownFor = 1
+	// The installation holds the create open, which is the window the
+	// browser goes in.
+	hold := make(chan struct{})
+	h.fake.hold = hold
 	c := h.signedIn("alice")
 
 	// The form token first, on a request that completes.
@@ -325,17 +329,22 @@ func TestTheRowIsWithdrawnEvenWhenTheBrowserIsGone(t *testing.T) {
 		req.AddCookie(ck)
 	}
 
-	// The browser goes while the creation is between attempts.
+	done := make(chan struct{})
 	go func() {
-		for range 200 {
-			if len(h.registry.Written()) > 0 {
-				break
-			}
-			time.Sleep(time.Millisecond)
-		}
-		cancel()
+		defer close(done)
+		h.server.ServeHTTP(httptest.NewRecorder(), req)
 	}()
-	h.server.ServeHTTP(httptest.NewRecorder(), req)
+
+	// The browser goes while the installation is still answering.
+	for i := 0; h.fake.CreateCalls() == 0; i++ {
+		if i == 2000 {
+			t.Fatal("the creation never reached the installation")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	cancel()
+	close(hold)
+	<-done
 
 	written := h.registry.Written()
 	if len(written) != 1 {

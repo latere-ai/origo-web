@@ -60,12 +60,18 @@ type fakeOrigo struct {
 	// way a proxy that strips the header would.
 	ignoreRange bool
 
-	// created is every repository the create route made, in order.
-	created []origo.CreateRequest
+	// created is every repository the create route made, in order, and
+	// createCalls counts every call of the route, refused ones included,
+	// which is what a test asserts one attempt against.
+	created     []origo.CreateRequest
+	createCalls int
 	// unknownFor is how many creates the authorizer denies with
-	// unknown_repository before it allows one, which is the refusal a
-	// registry row that has not reached every replica produces.
+	// unknown_repository, which is the refusal a repository the
+	// authorizer has no row for produces.
 	unknownFor int
+	// hold, when set, stops the create route until it is closed, so a
+	// test can cancel a request while the call is in flight.
+	hold chan struct{}
 	// createStatus and createCode override the create route's answer.
 	createStatus int
 	createCode   string
@@ -115,6 +121,13 @@ func (f *fakeOrigo) createRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f.mu.Lock()
+	f.createCalls++
+	hold := f.hold
+	f.mu.Unlock()
+	if hold != nil {
+		<-hold
+	}
+	f.mu.Lock()
 	if f.unknownFor > 0 {
 		f.unknownFor--
 		f.mu.Unlock()
@@ -149,6 +162,14 @@ func (f *fakeOrigo) Created() []origo.CreateRequest {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]origo.CreateRequest(nil), f.created...)
+}
+
+// CreateCalls is how many times the create route was called, whatever it
+// answered.
+func (f *fakeOrigo) CreateCalls() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.createCalls
 }
 
 type fakeBlob struct {
