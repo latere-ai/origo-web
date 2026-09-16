@@ -1,3 +1,12 @@
+# The file that names the release. `lateregate release` rewrites the
+# pattern's version to the tag it cuts, in the same commit as the changelog,
+# so deploy/prod never lags the tag and main does not go red after a cut
+# (TestProductionOverlayNamesTheNewestRelease enforces the match).
+release:
+  stamp:
+    - file: deploy/prod/kustomization.yaml
+      pattern: 'newTag: v\d+\.\d+\.\d+'
+
 # The shared quality bar, read by `go tool lateregate`. The gates live in
 # latere.ai/x/ci-gate, pinned in go.mod; only the values of this module are
 # here.
