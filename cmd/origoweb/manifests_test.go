@@ -4,11 +4,14 @@
 package main
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/goccy/go-yaml"
 )
 
 // numericUser is the USER line of an image a Kubernetes pod may ask to run
@@ -68,4 +71,90 @@ func moduleRoot(t *testing.T) string {
 		}
 		dir = parent
 	}
+}
+
+// TestTheInterfaceAsksOnlyForTheOIDCMinimum pins the scope set the browser
+// flow requests. fosite refuses an authorization request naming a scope the
+// client row does not hold, so a scope that outlives its grant is a sign-in
+// that does not work rather than a feature that is absent: auth drops
+// `origo:ssh-keys` from the `origoweb` client now that key management has
+// moved to the platform control plane, which authorizes with the
+// `api.latere.ai` actor token and no login scope of its own.
+//
+// The merged set is what matters, not either file: kustomize keys `env` by
+// name, so the production overlay's entry replaces the base's. An exact set
+// also fails when the setting vanishes altogether, which would drop
+// offline_access and kill the session at the first token expiry.
+func TestTheInterfaceAsksOnlyForTheOIDCMinimum(t *testing.T) {
+	root := moduleRoot(t)
+	env := map[string]string{}
+	for _, name := range []string{"deploy/base/deployment.yaml", "deploy/prod/settings.yaml"} {
+		maps.Copy(env, containerEnv(t, filepath.Join(root, name)))
+	}
+
+	raw, ok := env["ORIGOWEB_AUTH_SCOPES"]
+	if !ok {
+		t.Fatal("no manifest sets ORIGOWEB_AUTH_SCOPES")
+	}
+	got := map[string]bool{}
+	for scope := range strings.SplitSeq(raw, ",") {
+		if scope = strings.TrimSpace(scope); scope != "" {
+			got[scope] = true
+		}
+	}
+	want := map[string]bool{"openid": true, "email": true, "profile": true, "offline_access": true}
+	for scope := range got {
+		if !want[scope] {
+			t.Errorf("the interface requests %q, which the issuer does not grant this client", scope)
+		}
+	}
+	for scope := range want {
+		if !got[scope] {
+			t.Errorf("the interface no longer requests %q", scope)
+		}
+	}
+}
+
+// containerEnv reads the origoweb container's environment out of a
+// Deployment or of a strategic-merge patch shaped like one. Only entries
+// with a literal value are returned: a secretKeyRef names no value here.
+func containerEnv(t *testing.T, path string) map[string]string {
+	t.Helper()
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest struct {
+		Spec struct {
+			Template struct {
+				Spec struct {
+					Containers []struct {
+						Name string `yaml:"name"`
+						Env  []struct {
+							Name  string `yaml:"name"`
+							Value string `yaml:"value"`
+						} `yaml:"env"`
+					} `yaml:"containers"`
+				} `yaml:"spec"`
+			} `yaml:"template"`
+		} `yaml:"spec"`
+	}
+	if err := yaml.Unmarshal(body, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	env := map[string]string{}
+	for _, container := range manifest.Spec.Template.Spec.Containers {
+		if container.Name != "origoweb" {
+			continue
+		}
+		for _, entry := range container.Env {
+			if entry.Value != "" {
+				env[entry.Name] = entry.Value
+			}
+		}
+	}
+	if len(env) == 0 {
+		t.Fatalf("%s sets no environment on the origoweb container", path)
+	}
+	return env
 }

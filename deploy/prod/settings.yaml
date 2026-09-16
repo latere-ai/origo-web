@@ -64,13 +64,14 @@ spec:
             # the public ones.
             - name: ORIGOWEB_KEYS_URL
               value: https://platform.latere.ai
-            # The scope auth requires before it will let this interface
-            # manage a person's keys. Adding a public key creates a
-            # credential that pushes to every repository that person can
-            # write, so auth gates it on a scope granted to this one client
-            # rather than on holding any valid token. The base asks for the
-            # OIDC minimum: a scope an issuer has not registered is refused
-            # at the authorization request, so it belongs here, where the
-            # issuer is known to grant it.
+            # The OIDC minimum, and nothing more. Key management is the
+            # control plane's now (spec 029): it authorizes on the actor
+            # token minted for api.latere.ai, not on a scope this client
+            # holds at the issuer, so the login scope that once gated the
+            # key screen buys nothing. auth's next release drops it from
+            # this client's row, and a scope the client does not hold is
+            # refused at the authorization request -- that is every
+            # sign-in failing, not one screen missing, so this comes out
+            # first.
             - name: ORIGOWEB_AUTH_SCOPES
-              value: openid,email,profile,offline_access,origo:ssh-keys
+              value: openid,email,profile,offline_access

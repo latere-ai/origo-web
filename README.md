@@ -151,8 +151,9 @@ The page understands three error codes: `invalid_public_key`,
 store means this client is not permitted to manage keys, which is a
 setting on the store.
 
-Latere's auth service implements this API. Point `ORIGOWEB_KEYS_URL` at it
-and grant this client the scope it requests.
+Latere's platform control plane implements this API. Point
+`ORIGOWEB_KEYS_URL` at it. The page needs no sign-in scope of its own: the
+store authorizes the actor token the interface presents.
 
 ## Naming the installation
 
