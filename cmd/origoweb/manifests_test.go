@@ -87,17 +87,20 @@ func moduleRoot(t *testing.T) string {
 // offline_access and kill the session at the first token expiry.
 func TestTheInterfaceAsksOnlyForTheOIDCMinimum(t *testing.T) {
 	root := moduleRoot(t)
-	env := map[string]string{}
+	env := map[string]envEntry{}
 	for _, name := range []string{"deploy/base/deployment.yaml", "deploy/prod/settings.yaml"} {
 		maps.Copy(env, containerEnv(t, filepath.Join(root, name)))
 	}
 
-	raw, ok := env["ORIGOWEB_AUTH_SCOPES"]
+	entry, ok := env["ORIGOWEB_AUTH_SCOPES"]
 	if !ok {
 		t.Fatal("no manifest sets ORIGOWEB_AUTH_SCOPES")
 	}
+	if entry.fromRef {
+		t.Fatal("ORIGOWEB_AUTH_SCOPES is declared from a reference, so the scope set that runs is not in the manifests and this test pins nothing")
+	}
 	got := map[string]bool{}
-	for scope := range strings.SplitSeq(raw, ",") {
+	for scope := range strings.SplitSeq(entry.value, ",") {
 		if scope = strings.TrimSpace(scope); scope != "" {
 			got[scope] = true
 		}
@@ -115,10 +118,68 @@ func TestTheInterfaceAsksOnlyForTheOIDCMinimum(t *testing.T) {
 	}
 }
 
+// TestASecretBackedSettingDoesNotFallBackToTheBase is the criterion the
+// scope test rests on. kustomize keys env by name, so an overlay that
+// declares ORIGOWEB_AUTH_SCOPES from a Secret replaces the base's literal
+// outright: the value that runs is then in no manifest. A reader that
+// returned literals only would report the base's string for a variable the
+// base no longer supplies, and the scope test would pass while pinning a
+// set nothing applies. So the merged declaration must carry the reference,
+// and the caller must refuse to assert on it.
+func TestASecretBackedSettingDoesNotFallBackToTheBase(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, env string) string {
+		t.Helper()
+		path := filepath.Join(dir, name)
+		body := "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: origoweb\n" +
+			"spec:\n  template:\n    spec:\n      containers:\n        - name: origoweb\n" +
+			"          env:\n" + env
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	base := write("base.yaml", "            - name: ORIGOWEB_AUTH_SCOPES\n              value: openid,email,profile,offline_access\n")
+	// The overlay carries a literal beside the reference, as the real one
+	// does: a reader that dropped references would still return a map for
+	// this file, and the scope set would quietly stay the base's.
+	overlay := write("overlay.yaml",
+		"            - name: ORIGOWEB_PRODUCT_NAME\n              value: Latere Code\n"+
+			"            - name: ORIGOWEB_AUTH_SCOPES\n              valueFrom:\n                secretKeyRef: {name: origoweb, key: auth-scopes}\n")
+
+	env := map[string]envEntry{}
+	for _, path := range []string{base, overlay} {
+		maps.Copy(env, containerEnv(t, path))
+	}
+
+	entry, ok := env["ORIGOWEB_AUTH_SCOPES"]
+	if !ok {
+		t.Fatal("the merged environment lost ORIGOWEB_AUTH_SCOPES: the overlay declares it and the reader dropped the declaration")
+	}
+	if !entry.fromRef {
+		t.Errorf("the overlay sources ORIGOWEB_AUTH_SCOPES from a Secret, and the merged declaration reports a literal %q: the base's value survived an overlay that replaced it", entry.value)
+	}
+	if entry.value != "" {
+		t.Errorf("a valueFrom declaration carries the value %q, and the manifest names none", entry.value)
+	}
+}
+
+// envEntry is one environment declaration on the container: a literal
+// value, or a reference the cluster resolves at start-up, which names no
+// value in the manifest.
+type envEntry struct {
+	value   string
+	fromRef bool
+}
+
 // containerEnv reads the origoweb container's environment out of a
-// Deployment or of a strategic-merge patch shaped like one. Only entries
-// with a literal value are returned: a secretKeyRef names no value here.
-func containerEnv(t *testing.T, path string) map[string]string {
+// Deployment or of a strategic-merge patch shaped like one. Every
+// declaration is returned, a valueFrom included with fromRef set and no
+// value: kustomize keys env by name, so an overlay that moved a setting to
+// a Secret replaces the base's literal, and a helper that dropped the
+// reference would leave a caller reading the base's value as though it were
+// the one that runs.
+func containerEnv(t *testing.T, path string) map[string]envEntry {
 	t.Helper()
 	body, err := os.ReadFile(path)
 	if err != nil {
@@ -131,8 +192,9 @@ func containerEnv(t *testing.T, path string) map[string]string {
 					Containers []struct {
 						Name string `yaml:"name"`
 						Env  []struct {
-							Name  string `yaml:"name"`
-							Value string `yaml:"value"`
+							Name      string         `yaml:"name"`
+							Value     string         `yaml:"value"`
+							ValueFrom map[string]any `yaml:"valueFrom"`
 						} `yaml:"env"`
 					} `yaml:"containers"`
 				} `yaml:"spec"`
@@ -142,15 +204,13 @@ func containerEnv(t *testing.T, path string) map[string]string {
 	if err := yaml.Unmarshal(body, &manifest); err != nil {
 		t.Fatal(err)
 	}
-	env := map[string]string{}
+	env := map[string]envEntry{}
 	for _, container := range manifest.Spec.Template.Spec.Containers {
 		if container.Name != "origoweb" {
 			continue
 		}
 		for _, entry := range container.Env {
-			if entry.Value != "" {
-				env[entry.Name] = entry.Value
-			}
+			env[entry.Name] = envEntry{value: entry.Value, fromRef: entry.ValueFrom != nil}
 		}
 	}
 	if len(env) == 0 {
