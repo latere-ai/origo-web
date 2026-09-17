@@ -10,6 +10,12 @@ holds what was committed.
 
 ## Unreleased
 
+- The identity gate now also reads the frontend for the retired admin flag,
+  so a page that still branches on it is caught beside the Go, and it refuses
+  a second copy of the authorizer envelope, the question and the decision
+  that `latere.ai/x/pkg` declares once (ci-gate v0.42.0). Nothing changes for
+  a user of the console.
+
 ## v0.10.2 - 2026-09-16
 
 - Creating a repository no longer retries the installation. A repository is
