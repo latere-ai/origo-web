@@ -263,6 +263,44 @@ func (m *Manager) Clear(w http.ResponseWriter) {
 	})
 }
 
+// LogoutURL is where the browser goes on after a sign-out here, so the
+// session ends at the issuer as well: RP-initiated logout, carrying the
+// address to come back to.
+//
+// Clearing the cookie is only this service's half of a sign-out, and the
+// issuer knows nothing about it. A sign-out that stopped there would be
+// undone by the next visit: the single sign-on session is still alive, the
+// issuer answers the flow without asking anything, and the person who
+// signed out is signed back in without touching a password. On a shared
+// machine that is the whole of the protection.
+//
+// postLogout is absolute because it is read at the issuer and not here.
+// The result is empty when no issuer is configured, which leaves the
+// caller to send the browser to its own signed-out page and nowhere else.
+func (m *Manager) LogoutURL(postLogout string) string {
+	base := strings.TrimRight(m.client.AuthURL(), "/")
+	if base == "" {
+		return ""
+	}
+	if postLogout == "" {
+		return base + "/logout"
+	}
+	return base + "/logout?post_logout_redirect_uri=" + url.QueryEscape(postLogout)
+}
+
+// LogoutNotify answers the issuer's front-channel logout: the issuer loads
+// this address in a hidden frame when the person signs out somewhere else,
+// and the session here ends with it rather than living on until the access
+// token fails to refresh.
+//
+// It reads nothing from the request and carries no token, and needs none.
+// CSRF protects a request whose effect an attacker wants; the only effect
+// here is ending a session, which is what the endpoint is for.
+func (m *Manager) LogoutNotify(w http.ResponseWriter, _ *http.Request) {
+	m.Clear(w)
+	w.WriteHeader(http.StatusOK)
+}
+
 // CSRFToken is the token the two POST routes require, issued once per
 // browser session and not once per page.
 //

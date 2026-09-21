@@ -180,6 +180,18 @@ Origo decides what you may read. A repository you cannot see and a
 repository that does not exist look the same, because Origo does not
 distinguish them.
 
+Signing out ends the session here and at the identity provider, so the next
+visit asks for an account again instead of returning one without a word.
+Signing out somewhere else ends it here too: the identity provider loads
+`/logout/notify` in a hidden frame, which is the one address here that
+consents to being framed, and only by the identity provider. Register
+`<ORIGOWEB_PUBLIC_URL>/logout/notify` as that client's front-channel logout
+URI, or nothing reaches this installation. It also needs the identity
+provider to be on the same site as this installation: the session cookie is
+`SameSite=Lax` and a browser does not send it across sites. Where either is
+missing, a session here lasts until its access token can no longer be
+refreshed.
+
 ## Creating a repository
 
 **New repository** on the repositories page asks for an owner and a name

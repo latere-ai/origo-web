@@ -396,7 +396,7 @@ func TestStaleNotice(t *testing.T) {
 func TestRoutesAreReadOnly(t *testing.T) {
 	want := []string{
 		"GET /{$}", "GET /sign-in", "GET /login", "GET /open", "GET /auth/start", "GET /auth/callback",
-		"POST /sign-out", "GET /assets/{file}",
+		"POST /sign-out", "GET /logout/notify", "GET /assets/{file}",
 		"GET /tokens", "POST /tokens", "GET /new", "POST /new", "GET /docs/agents",
 		"GET /{owner}/{slug}", "GET /{owner}/{slug}/refs", "GET /{owner}/{slug}/log",
 		"GET /{owner}/{slug}/commit/{sha}", "GET /{owner}/{slug}/patch/{sha}",

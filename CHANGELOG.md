@@ -16,6 +16,15 @@ holds what was committed.
   that `latere.ai/x/pkg` declares once (ci-gate v0.42.0). Nothing changes for
   a user of the console.
 
+- Signing out now ends the session at the identity provider as well as here.
+  It used to clear the cookie alone, which left the single sign-on session
+  alive: the next visit was answered without a word and the person who signed
+  out was signed straight back in. The interface also answers the identity
+  provider's front-channel logout at `/logout/notify`, so signing out
+  somewhere else ends a session here rather than leaving it to expire. An
+  operator registers `<ORIGOWEB_PUBLIC_URL>/logout/notify` as the client's
+  front-channel logout URI; the README says what else it needs.
+
 ## v0.10.2 - 2026-09-16
 
 - Creating a repository no longer retries the installation. A repository is
