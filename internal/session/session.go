@@ -293,10 +293,17 @@ func (m *Manager) LogoutURL(postLogout string) string {
 // and the session here ends with it rather than living on until the access
 // token fails to refresh.
 //
-// It reads nothing from the request and carries no token, and needs none.
-// CSRF protects a request whose effect an attacker wants; the only effect
-// here is ending a session, which is what the endpoint is for.
-func (m *Manager) LogoutNotify(w http.ResponseWriter, _ *http.Request) {
+// It carries no token: the issuer's hidden frame has none to send, and the
+// only effect is ending a session. What it does check is how it was loaded.
+// A browser that sends Sec-Fetch-Dest names the destination, and anything
+// other than a frame is refused, so a link or an image on another page
+// cannot sign a person out. A browser too old to send the header is
+// answered as before.
+func (m *Manager) LogoutNotify(w http.ResponseWriter, r *http.Request) {
+	if dest := r.Header.Get("Sec-Fetch-Dest"); dest != "" && dest != "iframe" && dest != "frame" {
+		http.Error(w, "This address is only loaded by the identity provider.", http.StatusBadRequest)
+		return
+	}
 	m.Clear(w)
 	w.WriteHeader(http.StatusOK)
 }

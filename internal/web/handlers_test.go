@@ -380,6 +380,47 @@ func TestTheFrontChannelLogoutEndsTheSession(t *testing.T) {
 	}
 }
 
+// TestTheFrontChannelLogoutAnswersOnlyAFrame asserts that the front-channel
+// logout, which carries no token, cannot be used by a link or an image on
+// another page to sign a person out. A browser names the destination in
+// Sec-Fetch-Dest, and only a frame ends the session; a request without the
+// header, from a browser too old to send it, still does.
+func TestTheFrontChannelLogoutAnswersOnlyAFrame(t *testing.T) {
+	h := newHarness(t)
+	c := h.signedIn("alice")
+
+	for _, tc := range []struct {
+		dest  string
+		code  int
+		clear bool
+	}{
+		{"iframe", http.StatusOK, true},
+		{"", http.StatusOK, true},
+		{"document", http.StatusBadRequest, false},
+		{"image", http.StatusBadRequest, false},
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/logout/notify", nil)
+		req.AddCookie(c)
+		if tc.dest != "" {
+			req.Header.Set("Sec-Fetch-Dest", tc.dest)
+		}
+		rec := httptest.NewRecorder()
+		h.server.ServeHTTP(rec, req)
+		if rec.Code != tc.code {
+			t.Errorf("Sec-Fetch-Dest %q answered %d, want %d", tc.dest, rec.Code, tc.code)
+		}
+		var cleared bool
+		for _, ck := range rec.Result().Cookies() {
+			if ck.Name == session.CookieName && ck.MaxAge < 0 {
+				cleared = true
+			}
+		}
+		if cleared != tc.clear {
+			t.Errorf("Sec-Fetch-Dest %q cleared the session: %v, want %v", tc.dest, cleared, tc.clear)
+		}
+	}
+}
+
 // TestOnlyTheIssuerMayFrameTheFrontChannelLogout guards the one hole in the
 // framing policy.
 //

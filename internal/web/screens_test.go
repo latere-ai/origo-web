@@ -387,7 +387,9 @@ func TestStaleNotice(t *testing.T) {
 // routes that are not a GET are sign-out, the mint form, the creation form,
 // the visibility form, the deletion form and the two on the key screen,
 // each of which requires a token issued to this session, and none of which
-// edits a file or moves a reference. Creating brings an empty repository
+// edits a file or moves a reference. One GET changes state:
+// /logout/notify, the front-channel logout, which ends the session and
+// touches no repository. Creating brings an empty repository
 // into being, which is a different thing from writing to one. Deleting is
 // the one that changes a repository that exists, on the terms spec 023
 // gives: asked about, the name typed back, and a hold at Origo rather than

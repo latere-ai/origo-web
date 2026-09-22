@@ -268,10 +268,7 @@ func (s *Server) handleSignOut(w http.ResponseWriter, r *http.Request) {
 // public address, the way the redirect URI is, and from nothing the
 // request carries.
 func (s *Server) signedOutURL() string {
-	if s.cfg.PublicURL == nil {
-		return ""
-	}
-	return strings.TrimRight(s.cfg.PublicURL.String(), "/") + "/sign-in"
+	return s.cfg.Absolute("/sign-in")
 }
 
 // handleLogoutNotify is the front-channel logout address, which the issuer
