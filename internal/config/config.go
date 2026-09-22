@@ -206,6 +206,21 @@ func (c Config) issuerURL() *url.URL {
 	return u
 }
 
+// IssuerOrigin is the scheme and host of the identity provider, empty when
+// none is configured.
+//
+// It is the one thing allowed to frame this interface, and only on the
+// front-channel logout address: the issuer loads that address in a hidden
+// frame to end this session when the person signs out elsewhere. Every
+// other screen here refuses to be framed by anyone.
+func (c Config) IssuerOrigin() string {
+	u := c.issuerURL()
+	if u == nil {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
+}
+
 // Name is what the interface calls itself, which is the project's own name
 // until an operator names the installation something else.
 func (c Config) Name() string { return cmp.Or(c.ProductName, ProjectName) }

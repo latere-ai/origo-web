@@ -295,7 +295,13 @@ func TestOpenSendsAPersonToTheRepositoryTheyNamed(t *testing.T) {
 	}
 }
 
-func TestSignOutClearsTheSession(t *testing.T) {
+// TestSignOutEndsTheSessionHereAndAtTheIssuer asserts both halves of a
+// sign-out. Clearing the cookie alone leaves the single sign-on session
+// alive, and the next visit signs the person straight back in without
+// asking for anything: on a shared machine that is the whole failure. So
+// the browser is handed on to the issuer's logout, carrying this service's
+// own address to come back to.
+func TestSignOutEndsTheSessionHereAndAtTheIssuer(t *testing.T) {
 	h := newHarness(t)
 	c := h.signedIn("alice")
 
@@ -321,14 +327,126 @@ func TestSignOutClearsTheSession(t *testing.T) {
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("sign-out answered %d", rec.Code)
 	}
-	var cleared bool
+
+	// Both cookies this service wrote are gone, not the credential alone.
+	cleared := map[string]bool{}
 	for _, ck := range rec.Result().Cookies() {
-		if ck.Name == session.CookieName && ck.MaxAge < 0 {
-			cleared = true
+		if ck.MaxAge < 0 {
+			cleared[ck.Name] = true
 		}
 	}
-	if !cleared {
-		t.Error("the session cookie survived sign-out")
+	for _, name := range []string{session.CookieName, session.RecentCookieName} {
+		if !cleared[name] {
+			t.Errorf("%s survived sign-out", name)
+		}
+	}
+
+	// And the browser goes on to the issuer, not to a local page.
+	loc := rec.Header().Get("Location")
+	if want := h.cfg.OIDC.AuthURL + "/logout?"; !strings.HasPrefix(loc, want) {
+		t.Fatalf("sign-out sent the browser to %q, not to the issuer's logout", loc)
+	}
+	u, err := url.Parse(loc)
+	if err != nil {
+		t.Fatalf("the logout address does not parse: %v", err)
+	}
+	if got := u.Query().Get("post_logout_redirect_uri"); got != "https://code.example/sign-in" {
+		t.Errorf("the issuer is told to come back to %q", got)
+	}
+}
+
+// TestTheFrontChannelLogoutEndsTheSession covers the other direction: the
+// person signed out somewhere else, and the issuer loads this address in a
+// hidden frame to end the session here too. Without it the session lives on
+// until an access token fails to refresh.
+func TestTheFrontChannelLogoutEndsTheSession(t *testing.T) {
+	h := newHarness(t)
+	c := h.signedIn("alice")
+
+	rec := h.get("/logout/notify", c)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("the front-channel logout answered %d", rec.Code)
+	}
+	cleared := map[string]bool{}
+	for _, ck := range rec.Result().Cookies() {
+		if ck.MaxAge < 0 {
+			cleared[ck.Name] = true
+		}
+	}
+	for _, name := range []string{session.CookieName, session.RecentCookieName} {
+		if !cleared[name] {
+			t.Errorf("%s survived the front-channel logout", name)
+		}
+	}
+}
+
+// TestTheFrontChannelLogoutAnswersOnlyAFrame asserts that the front-channel
+// logout, which carries no token, cannot be used by a link or an image on
+// another page to sign a person out. A browser names the destination in
+// Sec-Fetch-Dest, and only a frame ends the session; a request without the
+// header, from a browser too old to send it, still does.
+func TestTheFrontChannelLogoutAnswersOnlyAFrame(t *testing.T) {
+	h := newHarness(t)
+	c := h.signedIn("alice")
+
+	for _, tc := range []struct {
+		dest  string
+		code  int
+		clear bool
+	}{
+		{"iframe", http.StatusOK, true},
+		{"", http.StatusOK, true},
+		{"document", http.StatusBadRequest, false},
+		{"image", http.StatusBadRequest, false},
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/logout/notify", nil)
+		req.AddCookie(c)
+		if tc.dest != "" {
+			req.Header.Set("Sec-Fetch-Dest", tc.dest)
+		}
+		rec := httptest.NewRecorder()
+		h.server.ServeHTTP(rec, req)
+		if rec.Code != tc.code {
+			t.Errorf("Sec-Fetch-Dest %q answered %d, want %d", tc.dest, rec.Code, tc.code)
+		}
+		var cleared bool
+		for _, ck := range rec.Result().Cookies() {
+			if ck.Name == session.CookieName && ck.MaxAge < 0 {
+				cleared = true
+			}
+		}
+		if cleared != tc.clear {
+			t.Errorf("Sec-Fetch-Dest %q cleared the session: %v, want %v", tc.dest, cleared, tc.clear)
+		}
+	}
+}
+
+// TestOnlyTheIssuerMayFrameTheFrontChannelLogout guards the one hole in the
+// framing policy.
+//
+// The front-channel logout only works when the issuer may load it in a
+// frame, and every other address here refuses to be framed by anyone. A
+// policy of 'none' on this one address would leave the endpoint mounted and
+// inert: the issuer would report a clean sign-out and the session here would
+// live on, with nothing failing anywhere to say so. That is what this test
+// is for, so a later tightening of the policy cannot put it back quietly.
+func TestOnlyTheIssuerMayFrameTheFrontChannelLogout(t *testing.T) {
+	h := newHarness(t)
+
+	notice := h.get("/logout/notify").Header().Get("Content-Security-Policy")
+	if want := "frame-ancestors " + h.cfg.IssuerOrigin(); !strings.Contains(notice, want) {
+		t.Errorf("the front-channel logout does not admit the issuer: %q", notice)
+	}
+	if strings.Contains(notice, "frame-ancestors 'none'") {
+		t.Errorf("the front-channel logout refuses the frame it exists to be loaded in: %q", notice)
+	}
+
+	// Every other address keeps the policy it had.
+	for _, path := range []string{"/", "/sign-in"} {
+		csp := h.get(path).Header().Get("Content-Security-Policy")
+		if !strings.Contains(csp, "frame-ancestors 'none'") {
+			t.Errorf("%s may now be framed: %q", path, csp)
+		}
 	}
 }
 

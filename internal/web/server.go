@@ -61,6 +61,10 @@ type Server struct {
 	mux        *http.ServeMux
 }
 
+// logoutNotifyPath is the front-channel logout address, named here because
+// the route table and the framing policy both have to agree on it.
+const logoutNotifyPath = "/logout/notify"
+
 // Route is one entry of the route table.
 type Route struct {
 	Method  string
@@ -76,6 +80,11 @@ type Route struct {
 // a browser whose flow cookie is gone or whose state did not match, and
 // this interface answers it with the sign-in page rather than with the
 // page that says there is nothing at this address.
+//
+// /logout/notify is no screen either. It is the front-channel logout
+// address the issuer loads in a hidden frame when the person signs out
+// somewhere else, and it renders nothing: it ends the session here and
+// answers 200.
 //
 // None of them touches repository content. This interface has no write path
 // to the content of a repository: nothing here edits a file, moves a
@@ -96,6 +105,7 @@ func Routes(keys bool) []Route {
 		{"GET", "/auth/start"},
 		{"GET", "/auth/callback"},
 		{"POST", "/sign-out"},
+		{"GET", "/logout/notify"},
 		{"GET", "/assets/{file}"},
 		{"GET", "/tokens"},
 		{"POST", "/tokens"},
@@ -160,6 +170,7 @@ func New(o Options) *Server {
 		"GET /auth/start":                    s.handleAuthStart,
 		"GET /auth/callback":                 s.handleAuthCallback,
 		"POST /sign-out":                     s.handleSignOut,
+		"GET /logout/notify":                 s.handleLogoutNotify,
 		"GET /assets/{file}":                 s.handleAsset,
 		"GET /tokens":                        s.handleTokens,
 		"POST /tokens":                       s.handleTokensPost,
@@ -226,9 +237,23 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// No script, no frame, no third party. The policy is what makes "every
 	// page works without JavaScript" a property of the deployment and not
 	// only of the templates.
+	//
+	// The one address that consents to being framed is the front-channel
+	// logout endpoint, and only by the issuer. The issuer ends this
+	// session by loading that address in a hidden frame, and a policy of
+	// 'none' there would have the browser refuse the frame: the sign-out
+	// would report success at the issuer and the session here would live
+	// on, which is the failure this endpoint exists to prevent. It renders
+	// nothing, so framing it shows an attacker an empty document.
+	frameAncestors := "'none'"
+	if r.URL.Path == logoutNotifyPath {
+		if issuer := s.cfg.IssuerOrigin(); issuer != "" {
+			frameAncestors = issuer
+		}
+	}
 	h.Set("Content-Security-Policy", "default-src 'none'; script-src 'none'; "+
 		"style-src 'self'; font-src 'self'; img-src 'self' data:; "+
-		"form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
+		"form-action 'self'; base-uri 'none'; frame-ancestors "+frameAncestors)
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("Referrer-Policy", "same-origin")
 

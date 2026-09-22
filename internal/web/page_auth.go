@@ -237,13 +237,46 @@ func (s *Server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	s.sessions.Callback(w, r)
 }
 
+// handleSignOut ends the session here and then at the issuer.
+//
+// Clearing the cookie is only this service's half. The single sign-on
+// session outlives it, so a sign-out that stopped here would be undone by
+// the next visit: the issuer would answer the flow without asking
+// anything and the person who signed out would be signed straight back
+// in. So the browser goes on to the issuer's logout and returns to the
+// signed-out page from there.
+//
+// The address it returns to is this service's own, never one read off the
+// form: what a request says about where to go next belongs to whoever
+// made the request. An installation with no issuer configured has no
+// session to end anywhere else and lands on that page directly.
 func (s *Server) handleSignOut(w http.ResponseWriter, r *http.Request) {
 	if !s.sessions.CSRFValid(r) {
 		http.Error(w, "This form has expired. Go back and try again.", http.StatusForbidden)
 		return
 	}
 	s.sessions.Clear(w)
-	http.Redirect(w, r, "/sign-in", http.StatusSeeOther)
+	to := "/sign-in"
+	if issuer := s.sessions.LogoutURL(s.signedOutURL()); issuer != "" {
+		to = issuer
+	}
+	http.Redirect(w, r, to, http.StatusSeeOther)
+}
+
+// signedOutURL is the absolute address of the signed-out page, which the
+// issuer sends the browser back to. It is built from this service's own
+// public address, the way the redirect URI is, and from nothing the
+// request carries.
+func (s *Server) signedOutURL() string {
+	return s.cfg.Absolute("/sign-in")
+}
+
+// handleLogoutNotify is the front-channel logout address, which the issuer
+// loads in a hidden frame when the person signs out somewhere else. It is
+// the only address here that consents to being framed, and only by the
+// issuer: see the policy in ServeHTTP.
+func (s *Server) handleLogoutNotify(w http.ResponseWriter, r *http.Request) {
+	s.sessions.LogoutNotify(w, r)
 }
 
 // The two sentences this interface says about a sign-in that came back
