@@ -353,7 +353,7 @@ func TestTheTableShowsWhatTellsTwoKeysApart(t *testing.T) {
 		t.Error("a key with no label is not described as having none")
 	}
 	// The one red in the product, and it is beside the words rather than
-	// instead of them, so it survives greyscale.
+	// instead of them, so it survives grayscale.
 	if !strings.Contains(body, `<span class="unused">never used</span>`) {
 		t.Errorf("a never-used key is not marked as one:\n%s", body)
 	}
@@ -432,7 +432,7 @@ func TestKeyCallsAreExact(t *testing.T) {
 	}
 }
 
-// TestAlgorithmName pins the two words a person recognises a key by. The
+// TestAlgorithmName pins the two words a person recognizes a key by. The
 // family alone is enough where the family has one strength, and the strength
 // matters where it has several, because a 2048 bit RSA key is the weakest
 // thing an installation accepts.

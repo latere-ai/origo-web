@@ -84,7 +84,7 @@ func TestParseReadsWhatGitWrote(t *testing.T) {
 		t.Errorf("an added line is numbered %d/%d, want 40 on the head side alone", firstAdd.Old, firstAdd.New)
 	}
 	if firstAdd.Sign != "+" || firstDel.Sign != "-" {
-		t.Error("a changed line lost the literal sign git wrote, which is what makes the diff readable in greyscale")
+		t.Error("a changed line lost the literal sign git wrote, which is what makes the diff readable in grayscale")
 	}
 
 	if !p.Files[1].Binary || len(p.Files[1].Rows) != 0 {

@@ -241,7 +241,7 @@ func (m *Manager) actorToken(ctx context.Context, sess *oidc.Session, audience s
 //
 // The order is how human each claim is. A display name and a name are what a
 // person calls themselves, so either wins. An address is next: it is a name a
-// person recognises as theirs, and on an installation whose issuer mints no
+// person recognizes as theirs, and on an installation whose issuer mints no
 // name claim it is the only one there is. The subject is last, because it
 // identifies an account without naming anybody, and it is shown only when the
 // alternative is showing nothing.
@@ -342,7 +342,7 @@ func CSRFField() string { return authkit.CSRFFieldName() }
 
 // Opened is one repository this session has opened: the identifier, which
 // is its address in this interface, and its owner and name, which are what
-// a person recognises it by. Name is "owner/slug", and empty when the entry
+// a person recognizes it by. Name is "owner/slug", and empty when the entry
 // was written by a release that kept identifiers alone.
 type Opened struct {
 	ID   string

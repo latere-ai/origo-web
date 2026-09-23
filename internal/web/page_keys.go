@@ -33,7 +33,7 @@ type keyRow struct {
 
 	// Algorithm is the short name the screen puts beside a fingerprint,
 	// "ed25519" or "rsa-4096": what the key is and how strong, in the two
-	// words a person recognises.
+	// words a person recognizes.
 	Algorithm string
 
 	Fingerprint string
@@ -306,7 +306,7 @@ func keyRows(in []keys.Key) []keyRow {
 	return out
 }
 
-// algorithmName is the two words a person recognises a key by: the family
+// algorithmName is the two words a person recognizes a key by: the family
 // and, where the family has more than one strength, the strength.
 //
 // ed25519 has one size, so naming it would say nothing; the ECDSA curves and

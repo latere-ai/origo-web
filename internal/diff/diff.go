@@ -39,7 +39,7 @@ type Row struct {
 	// has no line.
 	Old, New int
 	// Text is the line without its leading +, - or space. The sign is
-	// rendered as its own column, so colour is never the only signal.
+	// rendered as its own column, so color is never the only signal.
 	Text string
 	// Sign is the literal +, - or space git wrote.
 	Sign string
@@ -203,7 +203,7 @@ func parseFiles(text string) []File {
 		files = append(files, *cur)
 	}
 	// A trailing empty line of the text becomes a context row of the last
-	// file; git's diff always ends with a newline, so it is an artefact.
+	// file; git's diff always ends with a newline, so it is an artifact.
 	if n := len(files); n > 0 {
 		f := &files[n-1]
 		if r := len(f.Rows); r > 0 && f.Rows[r-1].Kind == Context && f.Rows[r-1].Text == "" {

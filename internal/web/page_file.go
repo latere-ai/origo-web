@@ -324,7 +324,7 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The cap is enforced by the request. Origo honours Range, so the
+	// The cap is enforced by the request. Origo honors Range, so the
 	// bytes past it are never sent, never read, and never discarded.
 	blob, err := s.api.BlobRange(r.Context(), rc.tok, rc.repo.ID, entry.SHA, renderLimit)
 	if err != nil {
@@ -480,7 +480,7 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 // The Markdown renderer is goldmark through latere.ai/x/pkg/md, configured
 // without its unsafe option, so raw HTML inside a repository's readme is
 // dropped rather than rendered. The page's Content-Security-Policy is the
-// second line of the same defence.
+// second line of the same defense.
 func renderReadme(name string, body []byte) (html template.HTML, text string) {
 	lower := strings.ToLower(name)
 	if !strings.HasSuffix(lower, ".md") && !strings.HasSuffix(lower, ".markdown") {

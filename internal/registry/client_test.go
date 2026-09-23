@@ -151,7 +151,7 @@ func TestEachRefusalIsItsOwn(t *testing.T) {
 			})
 			_, err := c.Create(context.Background(), "t", "i", "o", "s")
 			if !tc.check(err) {
-				t.Fatalf("the predicate did not recognise %v", err)
+				t.Fatalf("the predicate did not recognize %v", err)
 			}
 			if got := CodeOf(err); got != tc.code {
 				t.Errorf("code = %q, want %q", got, tc.code)

@@ -324,7 +324,7 @@ func TestEveryScreenWorksWithoutScript(t *testing.T) {
 }
 
 // TestNoCacheIsSharedBetweenSubjects asserts the rule the spec writes down so
-// nobody optimises it away: a rendered page is never served to a second
+// nobody optimizes it away: a rendered page is never served to a second
 // subject. This service keeps no cache, and every page says so, so the
 // question cannot arise in a cache in front of it either.
 func TestNoCacheIsSharedBetweenSubjects(t *testing.T) {
@@ -803,7 +803,7 @@ func TestTheMarkBelongsToTheInstallationNotTheSoftware(t *testing.T) {
 		}
 		for _, svg := range marks {
 			if attr(svg, "fill") != "currentColor" {
-				t.Errorf("%s: the mark is filled with %q, so it is one colour in two themes", name, attr(svg, "fill"))
+				t.Errorf("%s: the mark is filled with %q, so it is one color in two themes", name, attr(svg, "fill"))
 			}
 			if attr(svg, "width") == "" || attr(svg, "height") == "" {
 				t.Errorf("%s: the mark has no size of its own, so it has none without the stylesheet", name)
@@ -1010,7 +1010,7 @@ var helpRoles = []string{"lead", "hint", "empty", "option-note"}
 // Style is not a thing a Go test can read, and this does not try to. It
 // measures the two things that go with prose written to sound considered:
 // length, and sentences that keep going. The line this replaced ran to 182
-// characters and a 30-word sentence to say "sign in with your organisation
+// characters and a 30-word sentence to say "sign in with your organization
 // account, there is no separate password".
 //
 // The ceilings are above what every line on every screen runs to today, so

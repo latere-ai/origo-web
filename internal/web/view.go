@@ -298,7 +298,7 @@ func staleSentence(m origo.Meta) string {
 	return plural(secs/3600, "hour")
 }
 
-// cleanPath normalises a path out of a URL: no leading or trailing slash, no
+// cleanPath normalizes a path out of a URL: no leading or trailing slash, no
 // . or .. segment, and no empty segment.
 func cleanPath(p string) string {
 	var out []string
@@ -375,7 +375,7 @@ func (r repoView) RefQueryValue() string {
 //
 // The values are collected into one disclosure rather than marked one by one
 // beside the text they come from, so the reading column stays a reading
-// column and each value is labelled. Each is a readonly field, which selects
+// column and each value is labeled. Each is a readonly field, which selects
 // on focus, so Tab and the platform's own copy key are the whole
 // interaction. There is no copy button, because a button that copies needs a
 // script and this interface runs none.

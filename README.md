@@ -8,7 +8,7 @@ repository's visibility, manages SSH keys and issues agent tokens.
 
 ## Using it
 
-Sign in with your organisation account, press **New repository**, and the
+Sign in with your organization account, press **New repository**, and the
 overview shows the clone address:
 
 ```sh
@@ -171,7 +171,7 @@ set.
 
 ## Signing in
 
-Sign in with the account your organisation provides. There is no password
+Sign in with the account your organization provides. There is no password
 and no sign-up here. Your access token lives in one encrypted cookie and is
 sent to Origo unchanged. It appears in no page, URL or log line. A session
 lasts twelve hours from sign-in.
@@ -198,7 +198,7 @@ refreshed.
 and opens the empty repository with push instructions. Nothing is imported
 and no first commit is made.
 
-Owners are your own account name and the organisations you administer. If
+Owners are your own account name and the organizations you administer. If
 you have not claimed a name, the page links to your account.
 
 The identity provider decides which names are yours and how many

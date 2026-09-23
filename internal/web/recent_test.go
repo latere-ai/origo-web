@@ -28,7 +28,7 @@ func recentTable(page *html.Node) *html.Node {
 
 // TestTheRecentListNamesTheRepository asserts that the list of what this
 // session opened says which repositories those were. A row that read as a
-// bare identifier named nothing a person recognises.
+// bare identifier named nothing a person recognizes.
 func TestTheRecentListNamesTheRepository(t *testing.T) {
 	h := newHarness(t)
 	c := h.signedIn("alice")

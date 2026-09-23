@@ -123,7 +123,7 @@ func TestACreationAsksTheInstallationOnce(t *testing.T) {
 	if got := h.fake.CreateCalls(); got != 1 {
 		t.Fatalf("the installation was asked %d times, want one attempt", got)
 	}
-	if body := rec.Body.String(); !strings.Contains(body, "does not recognise it") {
+	if body := rec.Body.String(); !strings.Contains(body, "does not recognize it") {
 		t.Errorf("the screen does not say plainly what happened: %s", body)
 	}
 	if made := h.fake.Created(); len(made) != 0 {

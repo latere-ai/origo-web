@@ -221,7 +221,7 @@ func TestRefusalsCarryTheirCode(t *testing.T) {
 				t.Errorf("Code = %q, want %q", got, c.code)
 			}
 			if c.is != nil && !c.is(err) {
-				t.Errorf("the predicate did not recognise %v", err)
+				t.Errorf("the predicate did not recognize %v", err)
 			}
 			if strings.Contains(err.Error(), "for an API") {
 				t.Errorf("the store's own message reached the caller: %v", err)

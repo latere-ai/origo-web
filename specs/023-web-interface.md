@@ -82,7 +82,7 @@ when it was written:
   surface uses: the authorization-code flow with PKCE, ID-token
   verification, an encrypted `__Host-` session cookie holding the
   access and refresh tokens, and refresh. `latere.ai/x/pkg/md` renders
-  GitHub-flavoured Markdown and `latere.ai/x/pkg/sanitize` cleans HTML.
+  GitHub-flavored Markdown and `latere.ai/x/pkg/sanitize` cleans HTML.
 
 Three things it needed and could not have when it was written, each
 with its own section below, have since landed in Origo: a way to list
@@ -125,7 +125,7 @@ reading the unified diff text `/v1/repos/{id}/compare/{base}...{head}`
 returns so it can be shown as a table; that is presentation, not
 computation, and it produces no fact the server did not send.
 
-A consequence that must be written down before someone optimises it
+A consequence that must be written down before someone optimizes it
 away: **no cache of a rendered page may be shared between subjects.**
 Origo's `ETag` is the repository's index sequence, which is the same for
 every reader, so a cache keyed on it alone would hand one person's
@@ -291,12 +291,12 @@ rename. So the order is: build against ids, gain names with mode 2, gain
 the list with mode 1.
 
 **One alternative, rejected on the record.** The signed-in person's
-token carries organisation and role claims, so the interface could read
-them and ask for each claimed organisation's repositories, with no
+token carries organization and role claims, so the interface could read
+them and ask for each claimed organization's repositories, with no
 change to any contract. That is the second access-control model this
 design forbids. It decides visibility from a claim instead of from the
 authorizer, and it diverges silently the first time the authorizer
-grants a repository outside a claimed organisation, or revokes one
+grants a repository outside a claimed organization, or revokes one
 inside it: the person sees a repository they cannot open, or fails to
 see one they can. A token says who someone is; only the authorizer says
 what they may see.
@@ -411,7 +411,7 @@ line you pasted; the algorithm beside the fingerprint, as "ed25519" or
 installation accepts and which one a key is matters; the day it was
 added; and when it was last used. "never used" is the one red in the
 product and it sits beside the words rather than instead of them, so it
-survives greyscale and a screen reader reads the same fact.
+survives grayscale and a screen reader reads the same fact.
 
 **What a refusal says** is written here and never quoted from the store.
 The store answers a code for whoever reads its API; a person meets one
@@ -437,7 +437,7 @@ may make it navigate on change.
 | page width | one rule: the shell is the viewport less a gutter, and the measure is a property of running text, set once, in `ch`, on the blocks that hold prose. A table, a tree, a commit log, a diff and a file are data rather than prose and take the whole shell |
 | narrow width | usable from 320 CSS pixels: the body never scrolls sideways; the tree, log, and diff tables scroll inside their own container |
 | identity | the masthead is where the installation names itself, once a screen: the name, and a mark beside it when one is configured. Nothing below it restates either |
-| focus and contrast | every interactive element has a visible focus ring that is not the colour alone; text and its background meet WCAG AA in both themes |
+| focus and contrast | every interactive element has a visible focus ring that is not the color alone; text and its background meet WCAG AA in both themes |
 | links | every navigation is an `<a href>` to a real URL, so a page can be bookmarked, opened in a new tab, and read by a crawler that runs nothing |
 | identifiers | line anchors on the file view (`#L42`) and per-file anchors on the diff |
 | syntax highlighting | not in v1. It is a large dependency, a large attack surface over untrusted file content, and it is not needed to read a diff |
@@ -519,7 +519,7 @@ of it has an installation that works exactly as before.
 ### What the visual design must supply
 
 The design is produced separately. This spec fixes structure, content,
-and behaviour and fixes no appearance. What the design owes back, as
+and behavior and fixes no appearance. What the design owes back, as
 slots rather than qualities:
 
 - The diff table: the added, removed, and context row treatments, the
@@ -538,7 +538,7 @@ slots rather than qualities:
   repository, or you cannot see it", and Origo unreachable.
 - The token pairs for both themes with their measured contrast ratios,
   the focus ring, and the monospace and text stacks with real fallbacks.
-- The narrow-width behaviour of the three tables, and what the header
+- The narrow-width behavior of the three tables, and what the header
   and the reference selector become at 320 pixels.
 - A prose block and a data screen side by side at a desktop width, which
   is where the one width rule is legible: the same shell, bounded text,
@@ -650,7 +650,7 @@ incomplete one.
 | the routes | `GET /new` renders the screen, `POST /new` creates, with the form token every other form requires |
 | the credential | none of its own. Both calls carry a token of the signed-in person's: the registry call the actor token minted for the control plane's audience, `api.latere.ai`, and the Origo call the one minted for Origo's. The `delegation \| none` row above still holds in full: a bug here can create nothing a person could not create with curl at the same two addresses. Written until 2026-09-16 as the session token to both, which is what the registry took while it was the identity provider's (`specs/029-platform-control-plane-token.md`) |
 | who decides | the installation's authorizer, which is the component that holds the names and the record of who owns what. This interface asks and renders; it holds no ownership model and no second copy of one |
-| what a person may create under | what the authorizer says: their own name, and an organisation they administer. The screen draws the answer and never derives one from a token claim, for the reason the repository list gives at length |
+| what a person may create under | what the authorizer says: their own name, and an organization they administer. The screen draws the answer and never derives one from a token claim, for the reason the repository list gives at length |
 | the order | the ownership row first, the repository second, which is the authorizer's own rule: the failure that leaves a repository unreachable is preferred to the one that leaves it unguarded |
 | where a person lands | on the repository, at `/{owner}/{slug}`, which is also added to the addresses this session has opened |
 | an installation with no such component | no screen and no affordance. `ORIGOWEB_AUTH_URL` is the address, because the provider that issues the token is the one that holds the names; unset, the creation screen is absent exactly as the key screen is |
@@ -988,16 +988,16 @@ repository, so they assert against the real read API and not a mock.
   `internal/web`, `TestTheFrontDoorClaimsNothingItCannotKnow`).
 - The body of a screen keeps the masthead's left and right edges: the
   measure binds a block of text and never a container, no box between
-  the masthead and the content narrows or centres itself, and the
+  the masthead and the content narrows or centers itself, and the
   documentation holds its far edge with the section list beside the
   words (proposed: `internal/web`, `TestTheBodyKeepsTheMastheadsEdges`).
-- The front door is the one screen bounded and centred, and the exception
+- The front door is the one screen bounded and centered, and the exception
   is named rather than left to a selector nobody listed. Every other
   screen holds its far edge with a table, a tree, a log, a diff or a
   document's samples; the door has a button and three short paragraphs,
   so at a desktop width its sentences would stop at the measure with the
   rest of the window empty beside them. Exactly one rule bounds the
-  door's column, and the column is centred, so the window sits either
+  door's column, and the column is centered, so the window sits either
   side of it rather than on one side (proposed: `internal/web`,
   `TestTheBodyKeepsTheMastheadsEdges`).
 - No screen carries a native menu: no `select`, `option`, `optgroup` or
@@ -1021,7 +1021,7 @@ repository, so they assert against the real read API and not a mock.
   `latere-ai/frontend/src/styles/tokens.css`: the neutral ground, surface
   and raised tones, the three-step neutral ink ramp, the two hairlines and
   the radii ladder. v2's rule is that the accent is the ink and a product
-  colour is a wordmark and never a page theme, so this product redeclares
+  color is a wordmark and never a page theme, so this product redeclares
   one accent over that base, the way cella, industria, lux and topos each
   do, and changes nothing else. The accent appears on a link, a focus ring
   and the one filled control on a screen, and on no panel, heading or
@@ -1032,7 +1032,7 @@ repository, so they assert against the real read API and not a mock.
   and the muted tone is left to a path separator, an inert pager half and
   a disclosure arrow. The rules allowed to read it are enumerated in the
   test (proposed: `internal/web`, `TestBothThemesMeetTheirContrast`).
-- Every colour pair the interface paints is measured in both themes, from
+- Every color pair the interface paints is measured in both themes, from
   the token values themselves, with a translucent token composited over
   the surface it is painted on: the body ink holds 7:1 on the ground, a
   panel and a raised tone, the secondary ink 4.5:1 on all three, the

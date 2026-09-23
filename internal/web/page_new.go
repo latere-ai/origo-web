@@ -67,7 +67,7 @@ const (
 	newOwnerSentence   = "You cannot create repositories under that owner. Choose one of the names below."
 	newTakenSentence   = "A repository with that name already exists under that owner. Choose another name."
 	newLimitSentence   = "That owner has reached its repository limit. Remove one first, or ask your administrator to raise it."
-	newUnknownSentence = "The repository was not created. The installation does not recognise it, and trying again will not change that. Ask your administrator."
+	newUnknownSentence = "The repository was not created. The installation does not recognize it, and trying again will not change that. Ask your administrator."
 	newRefusedSentence = "The repository was not created. The installation refused it. Ask your administrator."
 	newNoneSentence    = "Repository creation is not available on this installation."
 )

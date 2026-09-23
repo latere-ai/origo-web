@@ -28,9 +28,9 @@ var (
 )
 
 // TestBothThemesAreComplete asserts the property a page cannot be eyeballed
-// into having: every colour the interface uses is a token, every token it
-// uses is defined, and every colour token has a value in both themes. A
-// colour defined only in the light block is a page that goes unreadable in
+// into having: every color the interface uses is a token, every token it
+// uses is defined, and every color token has a value in both themes. A
+// color defined only in the light block is a page that goes unreadable in
 // the dark one, and nothing but this catches it.
 func TestBothThemesAreComplete(t *testing.T) {
 	css := string(mustAsset(t, "app.css"))
@@ -77,11 +77,11 @@ func TestBothThemesAreComplete(t *testing.T) {
 	}
 }
 
-// isColour reports whether a token names a colour rather than a size, a
+// isColour reports whether a token names a color rather than a size, a
 // radius, or a typeface.
 //
-// It names the families that are not colours and treats everything else as
-// one, rather than the other way round. A list of colour names goes quietly
+// It names the families that are not colors and treats everything else as
+// one, rather than the other way round. A list of color names goes quietly
 // out of date the moment the palette is renamed, and a token that has dropped
 // off it is a token no longer held to having a value in both themes, which is
 // the failure this whole test exists to catch.
@@ -257,7 +257,7 @@ func bareElements(sel string) bool {
 	return len(strings.Fields(sel)) == 1
 }
 
-// contrast is the WCAG 2.1 ratio between two sRGB hex colours.
+// contrast is the WCAG 2.1 ratio between two sRGB hex colors.
 func contrast(a, b string) float64 {
 	la, lb := luminance(a), luminance(b)
 	if la < lb {
@@ -333,7 +333,7 @@ func TestBothThemesMeetTheirContrast(t *testing.T) {
 			t.Helper()
 			a, b := solid(v, fg, v["--surface"]), solid(v, bg, v["--surface"])
 			if a == "" || b == "" {
-				t.Errorf("%s: %s on %s is not a pair of colours", theme.name, fg, bg)
+				t.Errorf("%s: %s on %s is not a pair of colors", theme.name, fg, bg)
 				return
 			}
 			if got := contrast(a, b); got < min {
@@ -380,7 +380,7 @@ func TestBothThemesMeetTheirContrast(t *testing.T) {
 	}
 }
 
-// themeValues reads the colours a :root block defines, hex and rgba alike.
+// themeValues reads the colors a :root block defines, hex and rgba alike.
 func themeValues(block string) map[string]string {
 	out := map[string]string{}
 	for _, m := range regexp.MustCompile(`(?m)^\s*(--[a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{6}|rgba\([^)]*\))\s*;`).FindAllStringSubmatch(block, -1) {
@@ -391,7 +391,7 @@ func themeValues(block string) map[string]string {
 
 // solid is a token as a reader sees it: a hex value as itself, and a
 // translucent one composited over the surface it is painted on, because a
-// tint at 10% black is not a colour until something is behind it.
+// tint at 10% black is not a color until something is behind it.
 func solid(v map[string]string, token, over string) string {
 	raw, ok := v[token]
 	if !ok {
@@ -563,7 +563,7 @@ func TestNoBlockIsMarkedByALeftRule(t *testing.T) {
 // A Go test cannot measure a rendered box, so it holds the stylesheet to the
 // rules that would narrow one. The shell is the viewport less a gutter. No
 // container between the masthead and the content sets a width of its own or
-// centres itself. The measure binds text and never the box around it, which
+// centers itself. The measure binds text and never the box around it, which
 // is the rule the two screens made of prose were breaking: a document capped
 // at the measure took a little over half the window and left the rest empty.
 func TestTheBodyKeepsTheMastheadsEdges(t *testing.T) {
@@ -606,7 +606,7 @@ func TestTheBodyKeepsTheMastheadsEdges(t *testing.T) {
 	}
 
 	// No box between the masthead and the content narrows itself or
-	// centres itself. Either one is how half a window goes empty.
+	// centers itself. Either one is how half a window goes empty.
 	//
 	// The front door is the one exception, and it is written down here
 	// rather than left to a selector nobody listed. Every other screen holds
@@ -639,7 +639,7 @@ func TestTheBodyKeepsTheMastheadsEdges(t *testing.T) {
 					}
 				case "margin":
 					if strings.Contains(value, "auto") {
-						t.Errorf("%s centres itself, which empties the window on both sides", sel)
+						t.Errorf("%s centers itself, which empties the window on both sides", sel)
 					}
 				}
 			}
@@ -667,7 +667,7 @@ func TestTheBodyKeepsTheMastheadsEdges(t *testing.T) {
 			continue
 		}
 		if !strings.Contains(rule.body, "justify-content: center") {
-			t.Error("the front door's column is bounded without being centred, so the window empties on one side")
+			t.Error("the front door's column is bounded without being centered, so the window empties on one side")
 		}
 	}
 
@@ -774,7 +774,7 @@ var (
 // the interface uses no select anywhere.
 //
 // A select's popup is drawn by the operating system, in the system's own
-// highlight colour, and no rule in this stylesheet reaches it, so a screen
+// highlight color, and no rule in this stylesheet reaches it, so a screen
 // with one is a screen the interface does not control. A fixed set of choices
 // is a radio group; a long set is a radio group in a box that scrolls. The
 // browser gives both arrow-key movement with no script.

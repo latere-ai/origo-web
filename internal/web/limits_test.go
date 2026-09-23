@@ -243,7 +243,7 @@ func TestAccessibleStructure(t *testing.T) {
 	}
 
 	// The stylesheet defines a visible focus treatment that is an outline
-	// and not a colour alone, and a dark theme for every token.
+	// and not a color alone, and a dark theme for every token.
 	css := string(mustAsset(t, "app.css"))
 	for _, want := range []string{":focus-visible", "outline:", "prefers-color-scheme: dark"} {
 		if !strings.Contains(css, want) {
