@@ -6,7 +6,7 @@
  * The tokens are Latere Design System v2, transcribed from
  * latere-ai/frontend/src/styles/tokens.css: a neutral ground, a neutral
  * surface, a three-step neutral ink ramp and two hairline weights. v2's
- * rule is that the accent is the ink, and a product colour survives only as
+ * rule is that the accent is the ink, and a product color survives only as
  * a wordmark and never as a page theme.
  *
  * The radii and the spacing are this product's own and not v2's: every
@@ -325,7 +325,7 @@ p { margin: 0; }
 .crumbs .here { color: var(--ink); }
 
 /* The section nav marks the current screen with ink and a rule under it,
- * so the state reads without colour and at any zoom. */
+ * so the state reads without color and at any zoom. */
 .sections { display: flex; gap: var(--s-2); flex-wrap: wrap; border-bottom: 1px solid var(--line); }
 .sections a {
   padding: var(--s-1) var(--s-3);
@@ -497,7 +497,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 /* A credential that has never been used, which is the one fact in this
  * interface that usually means "remove me". It is the only place outside a
  * diff that carries the palette's red, and it carries it beside the words
- * rather than instead of them, so it survives greyscale and a screen reader
+ * rather than instead of them, so it survives grayscale and a screen reader
  * reads the same fact a sighted reader does. */
 .unused { color: var(--del); }
 
@@ -616,7 +616,7 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
 
 /* ---- sign in ---- */
 
-/* The front door is one column, centred, and it is the only screen in the
+/* The front door is one column, centered, and it is the only screen in the
  * interface that is. Everywhere else the body holds the masthead's edges
  * because there is a table, a tree, a log or a diff to hold them with. This
  * screen has one button and three short paragraphs and nothing else: run it
@@ -694,8 +694,8 @@ dl.facts dd { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere;
 
 /* The states that are not news. A private repository is the ordinary one,
    and an answer the registry could not give is a state the reader has to
-   see without it shouting. Both take the line colour instead of the
-   accent, so only "public" is drawn in the colour that means something
+   see without it shouting. Both take the line color instead of the
+   accent, so only "public" is drawn in the color that means something
    changed. */
 .badge-quiet {
   border-color: var(--line);
@@ -853,7 +853,7 @@ fieldset.field legend { padding: 0; }
 
 /* The one inverted block in the interface. A secret on a screen must not
  * read as an ornament, and inverted ink is the strongest mark available
- * that borrows no colour: full ink, edge to edge, no card. */
+ * that borrows no color: full ink, edge to edge, no card. */
 .secret {
   background: var(--ink);
   color: var(--bg);
@@ -900,7 +900,7 @@ fieldset.field legend { padding: 0; }
  * the measure, so a column sized by anything else leaves the difference
  * empty, and empty space between two pieces of content reads as a mistake
  * where the same space after the last one reads as a margin. With the list
- * first, every column touches its neighbour across one gutter, the words
+ * first, every column touches its neighbor across one gutter, the words
  * begin where the list ends, and the document's tables and samples run on to
  * the right edge and hold it. */
 .doc-body {

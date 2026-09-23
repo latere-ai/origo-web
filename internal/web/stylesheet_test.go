@@ -61,7 +61,7 @@ func TestBothThemesAreComplete(t *testing.T) {
 	}
 	for _, m := range tokenDefine.FindAllStringSubmatch(light[1], -1) {
 		name := m[1]
-		if !isColour(name) || inDark[name] {
+		if !isColor(name) || inDark[name] {
 			continue
 		}
 		t.Errorf("%s has a light value and no dark one", name)
@@ -77,7 +77,7 @@ func TestBothThemesAreComplete(t *testing.T) {
 	}
 }
 
-// isColour reports whether a token names a color rather than a size, a
+// isColor reports whether a token names a color rather than a size, a
 // radius, or a typeface.
 //
 // It names the families that are not colors and treats everything else as
@@ -85,9 +85,9 @@ func TestBothThemesAreComplete(t *testing.T) {
 // out of date the moment the palette is renamed, and a token that has dropped
 // off it is a token no longer held to having a value in both themes, which is
 // the failure this whole test exists to catch.
-func isColour(token string) bool {
-	for _, notColour := range []string{"--font-", "--t-", "--s-", "--radius", "--row", "--measure", "--tap"} {
-		if strings.HasPrefix(token, notColour) {
+func isColor(token string) bool {
+	for _, notColor := range []string{"--font-", "--t-", "--s-", "--radius", "--row", "--measure", "--tap"} {
+		if strings.HasPrefix(token, notColor) {
 			return false
 		}
 	}
