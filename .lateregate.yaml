@@ -14,10 +14,10 @@ release:
 # latere.ai/x/ci-gate, pinned in go.mod; only the values of this module are
 # here.
 #
-# This module is the browsing interface of Origo's spec 023. It lives beside
-# Origo until latere-ai/origo-web exists, with its own module, its own gate
-# and its own dependencies, so the boundary the spec draws is one Go itself
-# enforces: nothing here can import origo/internal.
+# This module is the browsing interface of Origo's spec 023. It is its own
+# repository and its own module, with its own gate and its own dependencies,
+# so the boundary the spec draws is one Go itself enforces: nothing here can
+# import Origo's internal packages.
 
 cover:
   trim_prefix: github.com/latere-ai/origo-web/
