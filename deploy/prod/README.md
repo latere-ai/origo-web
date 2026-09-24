@@ -22,15 +22,15 @@ the split is exact.
 | `/…/…/info/refs`, `/…/…/git-upload-pack`, `/…/…/git-receive-pack` | `origod` | regex `/[^/]+/[^/]+/(info/refs\|git-upload-pack\|git-receive-pack)$` |
 | `/…/…/info/lfs/…` | `origod` | regex `/[^/]+/[^/]+/info/lfs(/.*)?$` |
 | `/v1/…` | `origod` | prefix |
-| `/readyz`, `/version`, `/favicon.ico`, `/.well-known/jwks.json` | `origod` | exact |
+| `/readyz`, `/version`, `/openapi.yaml`, `/favicon.ico`, `/.well-known/jwks.json` | `origod` | exact |
 | everything else, including `/` | `origoweb` | prefix `/` |
 
 Two consequences:
 
 - `/r/` belongs to the interface. Origo serves only the three git endpoints
-  and LFS under `/r/{id}`. All of the interface's browsing pages live under
-  `/r/{id}` as well. The two regular expressions route git without claiming
-  the prefix.
+  and LFS under `/r/{id}`, and the interface answers every other address
+  under it with a redirect to the repository's name. The two regular
+  expressions route git without claiming the prefix.
 - `/` is the interface's home page, replacing Origo's landing page.
 
 The `origod` rules live in `latere-ai/origo` under
@@ -49,7 +49,7 @@ and break certificate renewal.
 
 The interface's own first path segments win over a repository owner of
 the same name, because a literal segment is the more specific route:
-`assets` and `r` entirely, and `auth` and `docs` for the repository names
-`start`, `callback` and `agents`. Origo refuses `r` and `v1` as owners
+`assets` and `r` entirely, `auth` for the repository names `start` and
+`callback`, `docs` for `agents`, and `logout` for `notify`. Origo refuses `r` and `v1` as owners
 itself. The authorizer that hands out owner names is where the rest
 belong.
