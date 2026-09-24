@@ -27,13 +27,7 @@ rules:
     resources: ["services", "serviceaccounts"]
     verbs: ["get", "list", "create", "update", "patch"]
   - apiGroups: ["networking.k8s.io"]
-    resources: ["ingresses", "networkpolicies"]
-    verbs: ["get", "list", "create", "update", "patch"]
-  - apiGroups: ["policy"]
-    resources: ["poddisruptionbudgets"]
-    verbs: ["get", "list", "create", "update", "patch"]
-  - apiGroups: ["autoscaling"]
-    resources: ["horizontalpodautoscalers"]
+    resources: ["ingresses"]
     verbs: ["get", "list", "create", "update", "patch"]
   # `rollout status` gets the Deployment, then lists and watches it by
   # name, and reads the rollout's state from its status alone.
