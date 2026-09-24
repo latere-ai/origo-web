@@ -23,7 +23,14 @@ holds what was committed.
   provider's front-channel logout at `/logout/notify`, so signing out
   somewhere else ends a session here rather than leaving it to expire. An
   operator registers `<ORIGOWEB_PUBLIC_URL>/logout/notify` as the client's
-  front-channel logout URI; the README says what else it needs.
+  front-channel logout URI; `docs/install.md` says what else it needs.
+
+- The documentation is split by reader. The README is for people using the
+  interface. Running it is in `docs/install.md` and
+  `docs/configuration.md`, which now lists every variable the binary reads,
+  including the sign-in settings it did not name before, and the calls an
+  identity provider, a repository registry, and a key store must answer are
+  in `docs/integrations.md`.
 
 ## v0.10.2 - 2026-09-16
 
