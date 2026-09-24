@@ -12,8 +12,10 @@ namespace: latere
 resources:
   - ../base
 
-# The release the target runs. The base carries `latest`, which says nothing
-# about what is running; a target pins the tag the release workflow built.
+# The release the target runs. The base carries the placeholder tag
+# `unreleased`, which never resolves, so a target that pins nothing fails to
+# pull rather than running an unknown build; a target pins the tag the
+# release workflow built.
 images:
   - name: ghcr.io/latere-ai/origoweb
     newTag: v0.10.2

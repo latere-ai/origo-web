@@ -113,9 +113,10 @@ has four keys, which the Deployment reads by name:
 
 **The overlay.** Name `deploy/base` and set, at least:
 
-- **the image tag.** The base names `ghcr.io/latere-ai/origoweb:latest`, and
-  no `latest` tag is published, so pin a release with a kustomize `images:`
-  entry.
+- **the release**, in a kustomize `images:` entry naming
+  `ghcr.io/latere-ai/origoweb` and the tag. The base carries the
+  placeholder `unreleased`, which is never published, so an overlay that
+  pins nothing fails to pull rather than running an unknown build.
 - **the namespace.**
 - **the hostname**, in the Ingress and in `ORIGOWEB_PUBLIC_URL`. They must
   agree: the sign-in flow returns to `ORIGOWEB_PUBLIC_URL`.
@@ -200,4 +201,4 @@ names are handed out, usually the identity provider or the registry.
 | **New repository** says creation is not available | the registry address answers 404 to the registry's routes | set `ORIGOWEB_REGISTRY_URL` to the registry's base address |
 | a session ends after a few minutes instead of twelve hours | there is no refresh token | add `offline_access` to the scopes and to the client |
 | signing out elsewhere leaves this session alive | the front-channel logout URI is not registered, or the provider is on another site | step 1 |
-| a pod cannot pull its image | the base's `latest` tag is not published | pin a release tag in your overlay |
+| a pod cannot pull `ghcr.io/latere-ai/origoweb:unreleased` | the overlay pins no release, and the base's placeholder tag is never published | pin a release tag in your overlay |

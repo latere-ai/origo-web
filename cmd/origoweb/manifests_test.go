@@ -18,6 +18,95 @@ import (
 // as non-root: two ids, no names.
 var numericUser = regexp.MustCompile(`(?m)^USER \d+:\d+$`)
 
+// imageLine is a container's image reference in a manifest, in block style,
+// as the first key of a list item or as a key of its own. A commented line
+// starts with `#` and does not match.
+var imageLine = regexp.MustCompile(`(?m)^\s*(?:-\s+)?image:\s*(\S+)`)
+
+// TestNoManifestNamesAMovingOrMissingTag holds every manifest under deploy/
+// to a tag that names something. An overlay that pins no release runs the
+// base's tag, and the release workflow publishes only vX.Y.Z tags: a
+// `latest` in the base is a reference nothing publishes that reads as the
+// newest release, and an image with no tag is the same reference, because
+// the runtime pulls `latest` for it. The base carries the placeholder
+// `unreleased` instead, which is never published either, so the failed pull
+// names its own cause.
+func TestNoManifestNamesAMovingOrMissingTag(t *testing.T) {
+	root := moduleRoot(t)
+	found := 0
+	err := filepath.WalkDir(filepath.Join(root, "deploy"), func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || (filepath.Ext(path) != ".yaml" && filepath.Ext(path) != ".yml") {
+			return nil
+		}
+		body, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		for _, m := range imageLine.FindAllStringSubmatch(string(body), -1) {
+			found++
+			if problem := imageTagProblem(m[1]); problem != "" {
+				t.Errorf("%s names %s, %s", rel, m[1], problem)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found == 0 {
+		t.Fatal("no manifest under deploy/ names an image, so this test pins nothing")
+	}
+}
+
+// imageTagProblem says what is wrong with an image reference's tag, or
+// returns the empty string when the reference pins one. A digest pins the
+// bytes whatever the tag says. The tag follows the last colon after the last
+// slash, so a registry port is not read as one.
+func imageTagProblem(ref string) string {
+	ref = strings.Trim(ref, `"'`)
+	if strings.Contains(ref, "@") {
+		return ""
+	}
+	name := ref[strings.LastIndex(ref, "/")+1:]
+	i := strings.LastIndex(name, ":")
+	switch {
+	case i < 0 || i == len(name)-1:
+		return "which has no tag and pulls `latest`"
+	case name[i+1:] == "latest":
+		return "and no `latest` tag is published"
+	}
+	return ""
+}
+
+// TestTheTagRuleRefusesLatestAndNoTag holds the rule to the references it
+// exists to catch, so a parser that read every reference as pinned would not
+// leave the manifest test passing.
+func TestTheTagRuleRefusesLatestAndNoTag(t *testing.T) {
+	for ref, pinned := range map[string]bool{
+		"ghcr.io/latere-ai/origoweb:latest":           false,
+		"ghcr.io/latere-ai/origoweb":                  false,
+		"ghcr.io/latere-ai/origoweb:":                 false,
+		"localhost:5000/origoweb":                     false,
+		`"ghcr.io/latere-ai/origoweb:latest"`:         false,
+		"ghcr.io/latere-ai/origoweb:unreleased":       true,
+		"ghcr.io/latere-ai/origoweb:v0.10.2":          true,
+		"localhost:5000/origoweb:v0.10.2":             true,
+		"ghcr.io/latere-ai/origoweb@sha256:0123abcd":  true,
+		"ghcr.io/latere-ai/origoweb:latest@sha256:01": true,
+	} {
+		if got := imageTagProblem(ref) == ""; got != pinned {
+			t.Errorf("imageTagProblem(%s) reports pinned=%t, want %t", ref, got, pinned)
+		}
+	}
+}
+
 // TestTheImageAndThePodAgreeOnANumericUser is the criterion a name cost a
 // failed rollout: a pod with runAsNonRoot never starts against an image
 // whose USER is a name, because the kubelet resolves no names and answers
