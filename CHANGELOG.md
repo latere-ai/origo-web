@@ -40,6 +40,7 @@ holds what was committed.
   including the sign-in settings it did not name before, and the calls an
   identity provider, a repository registry, and a key store must answer are
   in `docs/integrations.md`.
+- Fixed: A release no longer fails requests at the moment an old pod stops. The pod keeps serving for five seconds after it is told to stop, until the ingress has stopped sending it traffic; before, requests in that second could get a 502.
 
 ## v0.10.2 - 2026-09-16
 
