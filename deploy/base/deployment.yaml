@@ -27,6 +27,16 @@ spec:
           type: RuntimeDefault
       containers:
         - name: origoweb
+          # The pod keeps serving for five seconds after Kubernetes decides to
+          # stop it, the time the ingress and Service endpoints take to drop its
+          # address. Without the pause the server closes its listener the
+          # moment the stop signal arrives while traffic is still routed to it,
+          # and a rollout answers 502 for about a second. The native sleep
+          # action needs no binary in the image.
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
           # A placeholder that is never published: an overlay pins the
           # release it runs with a kustomize `images:` entry. The release
           # workflow publishes only vX.Y.Z tags and no `latest`, so an
