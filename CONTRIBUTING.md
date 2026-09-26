@@ -94,11 +94,12 @@ wrote. The rule and the review checklist are in
 ## Releasing
 
 `go tool lateregate release vX.Y.Z` turns the `Unreleased` section of the
-changelog into the release's section, rewrites the version the production
-overlay and the install page name, commits, tags, and pushes. The release
-workflow builds the image for `linux/amd64` and `linux/arm64`, publishes
-it as `ghcr.io/latere-ai/origoweb:vX.Y.Z`, and creates the GitHub release
-from that section.
+changelog into the release's section, rewrites the version the install page
+names, commits, tags, and pushes. The release workflow builds the image for
+`linux/amd64` and `linux/arm64`, publishes it as
+`ghcr.io/latere-ai/origoweb:vX.Y.Z`, and creates the GitHub release from
+that section. A release deploys nothing: each installation pins the tag in
+its own overlay.
 
 ## Reporting a vulnerability
 

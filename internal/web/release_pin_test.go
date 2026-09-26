@@ -7,17 +7,14 @@ import (
 	"os"
 	"regexp"
 	"testing"
-
-	"github.com/goccy/go-yaml"
 )
 
-// The production overlay names the image tag the cluster runs. The release
-// workflow does not write it, so a tag cut without bumping it leaves the
-// repository describing an older release than the one that shipped, and
-// anyone applying the overlay rolls production backwards. It drifted twice
-// before this test existed: v0.4.2 while the cluster ran v0.5.0, and v0.5.2
-// while v0.5.3 was published.
-func TestProductionOverlayNamesTheNewestRelease(t *testing.T) {
+// The install page names the release twice: the image `docker run` starts,
+// and the tag its example overlay pins. `lateregate release` rewrites both
+// in the commit that cuts the tag, so a version here that is not the newest
+// release in the changelog is a stamp that missed, and a reader copying the
+// page would run an older release than the one published.
+func TestTheInstallPageNamesTheNewestRelease(t *testing.T) {
 	body, err := os.ReadFile("../../CHANGELOG.md")
 	if err != nil {
 		t.Fatal(err)
@@ -28,31 +25,21 @@ func TestProductionOverlayNamesTheNewestRelease(t *testing.T) {
 	}
 	want := string(m[1])
 
-	overlay, err := os.ReadFile("../../deploy/prod/kustomization.yaml")
+	page, err := os.ReadFile("../../docs/install.md")
 	if err != nil {
 		t.Fatal(err)
 	}
-	var config struct {
-		Images []struct {
-			Name   string `yaml:"name"`
-			NewTag string `yaml:"newTag"`
-			Digest string `yaml:"digest"`
-		} `yaml:"images"`
-	}
-	if err := yaml.Unmarshal(overlay, &config); err != nil {
-		t.Fatal(err)
-	}
-	for _, image := range config.Images {
-		if image.Name != "ghcr.io/latere-ai/origoweb" {
+	for what, re := range map[string]*regexp.Regexp{
+		"the image":           regexp.MustCompile(`ghcr\.io/latere-ai/origoweb:(v\d+\.\d+\.\d+)`),
+		"the example overlay": regexp.MustCompile(`newTag: (v\d+\.\d+\.\d+)`),
+	} {
+		found := re.FindAllSubmatch(page, -1)
+		if len(found) != 1 {
+			t.Errorf("docs/install.md names %s's release %d times, want exactly one", what, len(found))
 			continue
 		}
-		if image.NewTag != want {
-			t.Errorf("deploy/prod pins %s, the newest release is %s", image.NewTag, want)
+		if got := string(found[0][1]); got != want {
+			t.Errorf("docs/install.md names %s at %s, the newest release is %s", what, got, want)
 		}
-		if image.Digest != "" {
-			t.Errorf("digest %s overrides the release tag", image.Digest)
-		}
-		return
 	}
-	t.Fatal("deploy/prod/kustomization.yaml does not pin the origoweb image")
 }

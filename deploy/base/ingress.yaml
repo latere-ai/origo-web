@@ -2,11 +2,12 @@
 # an installation should reach for first: nothing routes, and no rule can be
 # wrong.
 #
-# One hostname can serve both, and deploy/prod does. Origo's browser-facing
-# surface is a closed list -- the API under /v1/, the two probes, the key
-# set, the favicon, and smart HTTP, which is always exactly two path
-# segments followed by info/refs, git-upload-pack or git-receive-pack --
-# so the split is a finite rule rather than a guess about repository names.
+# One hostname can serve both, as docs/install.md describes. Origo's
+# browser-facing surface is a closed list -- the API under /v1/, the two
+# probes, the key set, the favicon, and smart HTTP, which is always exactly
+# two path segments followed by info/refs, git-upload-pack or
+# git-receive-pack -- so the split is a finite rule rather than a guess
+# about repository names.
 # Sharing a hostname puts the clone URL and the page that shows it on one
 # origin; it also gives up Origo's landing page, which the interface's home
 # screen replaces.

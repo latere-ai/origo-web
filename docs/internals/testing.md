@@ -34,7 +34,7 @@ cookie directly, so no test drives the browser sign-in flow. Options on
 | `new_test.go`, `delete_test.go`, `page_visibility_test.go`, `tokens_test.go`, `page_keys_test.go` | the writes: order, compensation, refusals, and CSRF |
 | `limits_test.go`, `page_blob_test.go`, `page_commit_test.go`, `page_log_test.go`, `page_tree_test.go` | the reading screens, the file limits, and the diff controls |
 | `plain_test.go`, `copy_test.go`, `format_test.go` | the sentences a person reads, the values offered for copying, and how times and sizes are written |
-| `release_pin_test.go` | the production overlay names the newest release in the changelog |
+| `release_pin_test.go` | the install page's image and example overlay name the newest release in the changelog |
 | `internal/config/document_test.go` | `docs/configuration.md` names every variable the process reads, and nothing it does not |
 | `cmd/origoweb/manifests_test.go` | the image and the pod agree on a numeric user; the manifests ask only for the OpenID Connect minimum scopes; a Secret-backed setting has no fallback in the base; no manifest under `deploy/` names a `latest` tag or an image with no tag |
 | `tools/ci/workflow_test.go` | the public verification workflow runs on hosted runners |

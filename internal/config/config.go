@@ -35,9 +35,9 @@ const (
 	DefaultProjectURL = "https://github.com/latere-ai/origo"
 )
 
-// MarkLatere is the one brand mark this binary carries. The mark is Latere's
-// and belongs to Latere's own installation, so an operator asks for it by
-// name and no default hands it to anyone else.
+// MarkLatere is the one brand mark this binary carries. The mark is Latere's,
+// so an operator asks for it by name and no default hands it to anyone
+// else.
 const MarkLatere = "latere"
 
 // Config is the whole configuration of one process.

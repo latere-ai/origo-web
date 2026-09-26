@@ -163,23 +163,19 @@ func moduleRoot(t *testing.T) string {
 }
 
 // TestTheInterfaceAsksOnlyForTheOIDCMinimum pins the scope set the browser
-// flow requests. fosite refuses an authorization request naming a scope the
-// client row does not hold, so a scope that outlives its grant is a sign-in
-// that does not work rather than a feature that is absent: auth drops
-// `origo:ssh-keys` from the `origoweb` client now that key management has
-// moved to the platform control plane, which authorizes with the
-// `api.latere.ai` actor token and no login scope of its own.
+// flow requests. An identity provider refuses an authorization request
+// naming a scope the client does not hold, so a scope that outlives its
+// grant is a sign-in that does not work rather than a feature that is
+// absent. The interface needs no scope beyond the OpenID Connect minimum:
+// the key store and the repository registry authorize the `api.latere.ai`
+// actor token, not a login scope.
 //
-// The merged set is what matters, not either file: kustomize keys `env` by
-// name, so the production overlay's entry replaces the base's. An exact set
-// also fails when the setting vanishes altogether, which would drop
-// offline_access and kill the session at the first token expiry.
+// The base is what every overlay inherits, and an overlay that names no
+// scopes runs this set. An exact set also fails when the setting vanishes
+// altogether, which would drop offline_access and kill the session at the
+// first token expiry.
 func TestTheInterfaceAsksOnlyForTheOIDCMinimum(t *testing.T) {
-	root := moduleRoot(t)
-	env := map[string]envEntry{}
-	for _, name := range []string{"deploy/base/deployment.yaml", "deploy/prod/settings.yaml"} {
-		maps.Copy(env, containerEnv(t, filepath.Join(root, name)))
-	}
+	env := containerEnv(t, filepath.Join(moduleRoot(t), "deploy/base/deployment.yaml"))
 
 	entry, ok := env["ORIGOWEB_AUTH_SCOPES"]
 	if !ok {
@@ -207,14 +203,14 @@ func TestTheInterfaceAsksOnlyForTheOIDCMinimum(t *testing.T) {
 	}
 }
 
-// TestASecretBackedSettingDoesNotFallBackToTheBase is the criterion the
+// TestASecretBackedSettingDoesNotFallBackToTheBase holds the reader the
 // scope test rests on. kustomize keys env by name, so an overlay that
 // declares ORIGOWEB_AUTH_SCOPES from a Secret replaces the base's literal
 // outright: the value that runs is then in no manifest. A reader that
 // returned literals only would report the base's string for a variable the
-// base no longer supplies, and the scope test would pass while pinning a
-// set nothing applies. So the merged declaration must carry the reference,
-// and the caller must refuse to assert on it.
+// base no longer supplies, and a test of the scope set would pass while
+// pinning a set nothing applies. So the merged declaration must carry the
+// reference, and the caller must refuse to assert on it.
 func TestASecretBackedSettingDoesNotFallBackToTheBase(t *testing.T) {
 	dir := t.TempDir()
 	write := func(name, env string) string {
@@ -229,9 +225,9 @@ func TestASecretBackedSettingDoesNotFallBackToTheBase(t *testing.T) {
 		return path
 	}
 	base := write("base.yaml", "            - name: ORIGOWEB_AUTH_SCOPES\n              value: openid,email,profile,offline_access\n")
-	// The overlay carries a literal beside the reference, as the real one
-	// does: a reader that dropped references would still return a map for
-	// this file, and the scope set would quietly stay the base's.
+	// The overlay carries a literal beside the reference: a reader that
+	// dropped references would still return a map for this file, and the
+	// scope set would quietly stay the base's.
 	overlay := write("overlay.yaml",
 		"            - name: ORIGOWEB_PRODUCT_NAME\n              value: Latere Code\n"+
 			"            - name: ORIGOWEB_AUTH_SCOPES\n              valueFrom:\n                secretKeyRef: {name: origoweb, key: auth-scopes}\n")

@@ -1,14 +1,14 @@
 # The files that name the release. `lateregate release` rewrites each
 # pattern's version to the tag it cuts, in the same commit as the changelog,
-# so deploy/prod and the image the install page runs never lag the tag and
-# main does not go red after a cut (TestProductionOverlayNamesTheNewestRelease
-# enforces the overlay's match).
+# so the image the install page runs and the tag its example overlay pins
+# never lag the tag, and main does not go red after a cut
+# (TestTheInstallPageNamesTheNewestRelease enforces the match).
 release:
   stamp:
-    - file: deploy/prod/kustomization.yaml
-      pattern: 'newTag: v\d+\.\d+\.\d+'
     - file: docs/install.md
       pattern: 'ghcr\.io/latere-ai/origoweb:v\d+\.\d+\.\d+'
+    - file: docs/install.md
+      pattern: 'newTag: v\d+\.\d+\.\d+'
 
 # The shared quality bar, read by `go tool lateregate`. The gates live in
 # latere.ai/x/ci-gate, pinned in go.mod; only the values of this module are

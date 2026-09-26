@@ -10,14 +10,22 @@ holds what was committed.
 
 ## Unreleased
 
+- A release publishes the image and the GitHub release, and deploys nothing.
+  Latere no longer runs this interface: `code.latere.ai` serves git alone,
+  and the repositories hosted there are browsed in the Latere console. So
+  Latere's overlay, `deploy/prod`, and the rollout identity its deploy job
+  used, `deploy/bootstrap/rollout-identity.yaml`, are gone, along with the
+  job. `deploy/base` and `deploy/bootstrap/secrets.example.yaml` are
+  unchanged, and `docs/install.md` now shows an example overlay in place of
+  Latere's. An installation that applied its own overlay is unaffected.
+
 - Fixed: the base manifests named `ghcr.io/latere-ai/origoweb:latest`, and
   no `latest` tag is published, so an overlay that pinned no release could
   not pull its image, while the manifest read as though it ran the newest
   one. The base now carries the placeholder tag `unreleased`, which is never
   published either: an overlay pins the release it runs with a kustomize
   `images:` entry, as `docs/install.md` says, and one that pins nothing
-  fails to pull a tag that names the cause. Latere's own overlay pins its
-  release already and is unchanged.
+  fails to pull a tag that names the cause.
 
 - The identity gate now also reads the frontend for the retired admin flag,
   so a page that still branches on it is caught beside the Go, and it refuses

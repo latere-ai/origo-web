@@ -92,7 +92,6 @@ reason is in the address bar as `auth_error` and in this service's log.
 ```
 deploy/base/        Deployment (two replicas), Service, Ingress, ServiceAccount
 deploy/bootstrap/   secrets.example.yaml, the one Secret the Deployment reads
-deploy/prod/        Latere's own overlay, as an example of one
 ```
 
 Apply the base through an overlay of your own, never directly. The
@@ -130,6 +129,62 @@ has four keys, which the Deployment reads by name:
 
 `ORIGOWEB_AUTH_SCOPES` is already `openid,email,profile,offline_access` in
 the base. The rest of [`configuration.md`](configuration.md) is optional.
+
+An overlay that does all of that is two files. Each `example.com` name is
+yours to replace, and `resources` names a checkout of this repository at the
+release the overlay pins:
+
+```yaml
+# kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: code
+
+resources:
+  - ../origo-web/deploy/base
+
+images:
+  - name: ghcr.io/latere-ai/origoweb
+    newTag: v0.10.2
+
+patches:
+  - path: settings.yaml
+  - target: {kind: Ingress, name: origoweb}
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: code.example.com
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: code.example.com
+      - op: add
+        path: /spec/ingressClassName
+        value: nginx
+```
+
+```yaml
+# settings.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: origoweb
+spec:
+  template:
+    spec:
+      containers:
+        - name: origoweb
+          env:
+            - name: ORIGOWEB_ORIGO_URL
+              value: http://origod.origo.svc.cluster.local
+            - name: ORIGOWEB_PUBLIC_URL
+              value: https://code.example.com
+            - name: ORIGOWEB_CLONE_HOST
+              value: https://git.example.com
+```
+
+kustomize merges `env` by name, so the patch replaces the base's value of
+each variable it names and keeps every other one.
 
 ```sh
 kubectl apply -k path/to/your/overlay
