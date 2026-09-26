@@ -10,6 +10,8 @@ holds what was committed.
 
 ## Unreleased
 
+## v0.10.3 - 2026-09-27
+
 - A release publishes the image and the GitHub release, and deploys nothing.
   Latere no longer runs this interface: `code.latere.ai` serves git alone,
   and the repositories hosted there are browsed in the Latere console. So

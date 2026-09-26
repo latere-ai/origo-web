@@ -55,7 +55,7 @@ docker run --rm -p 8080:8080 \
 	-e ORIGOWEB_AUTH_CLIENT_ID=origoweb \
 	-e ORIGOWEB_AUTH_COOKIE_KEY="$(openssl rand -hex 32)" \
 	-e ORIGOWEB_AUTH_SCOPES=openid,email,profile,offline_access \
-	ghcr.io/latere-ai/origoweb:v0.10.2
+	ghcr.io/latere-ai/origoweb:v0.10.3
 ```
 
 Or build it from a checkout with Go 1.27 or newer:
@@ -146,7 +146,7 @@ resources:
 
 images:
   - name: ghcr.io/latere-ai/origoweb
-    newTag: v0.10.2
+    newTag: v0.10.3
 
 patches:
   - path: settings.yaml
