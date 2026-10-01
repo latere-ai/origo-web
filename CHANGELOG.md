@@ -10,6 +10,9 @@ holds what was committed.
 
 ## Unreleased
 
+- `latere.ai/x/pkg` v0.90.2 and OpenTelemetry Go v1.46.0, past GO-2026-6615 and
+  GO-2026-6505.
+
 ## v0.10.3 - 2026-09-27
 
 - A release publishes the image and the GitHub release, and deploys nothing.
