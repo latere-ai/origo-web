@@ -7,7 +7,7 @@ depends_on:
 affects: [deploy/prod/settings.yaml, CHANGELOG.md]
 effort: medium
 created: 2026-09-16
-updated: 2026-09-16
+updated: 2026-10-06
 author: changkun
 ---
 
@@ -76,11 +76,15 @@ whether a person is signed in from `Reader.Token`; nothing else reads it.
 
 | Call site | Client | Token |
 |---|---|---|
-| `page_new.go` namespaces, create, forget | registry | `Platform` |
+| `page_new.go` namespaces, create | registry | `Platform` |
 | `page_delete.go`, `page_visibility.go`, `page_repo.go` visibility | registry | `Platform` |
 | `page_keys.go` list, parse, add, remove | keys | `Platform` |
 | every read and write at Origo | origo | `Origo` |
 | sign-in, callback, refresh, the mints themselves | authkit | `Token` |
+
+Written until 2026-10-06 with a compensating forget beside the create and
+a deletion at Origo, both gone since the one-writer amendment of
+`specs/023-web-interface.md`.
 
 `req.auth` is renamed `req.platform`, because a field named for the
 issuer that holds a token for another service is how the wrong credential

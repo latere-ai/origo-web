@@ -10,7 +10,7 @@ depends_on:
 affects: [specs/README.md]
 effort: large
 created: 2026-09-10
-updated: 2026-09-16
+updated: 2026-10-06
 author: changkun
 ---
 
@@ -337,9 +337,9 @@ serves except the two the section above proposes.
 | file | `/{owner}/{slug}/blob/{rev}/{path}` | the file with line numbers and anchors, its size and mode, links to raw and to history | `/v1/repos/{id}/tree/{rev}?path={dir}` to find the entry's blob sha and size, then `/v1/repos/{id}/blob/{sha}`; spec 009's blob route takes no `path`, which is why the tree call comes first and why the size is known before any bytes are fetched |
 | raw | `/{owner}/{slug}/raw/{rev}/{path}` | the bytes, streamed through with the `Content-Type` Origo detected and `Content-Disposition: attachment` | the same two calls; the blob body is copied, never buffered |
 | visibility | `/{owner}/{slug}/visibility` | whether anyone may read the repository, and the button that changes it; administrators only | the registry's visibility read and write |
-| delete | `/{owner}/{slug}/delete` | what deleting does, and a form that asks for the name to be typed back; administrators only | the registry's visibility read for who administers; `DELETE /v1/repos/{id}`; the registry's row removal |
+| delete | `/{owner}/{slug}/delete` | what deleting does, and a form that asks for the name to be typed back; administrators only | the registry's visibility read for who administers; the registry's deletion, which deletes the repository at Origo as well |
 | SSH keys | `/keys` | the signed-in person's public keys with their labels, fingerprints, dates and last use; a two-step add; a removal that asks first | the installation's key store: `GET /me/ssh-keys`, `POST /me/ssh-keys`, `DELETE /me/ssh-keys/{id}`; see below |
-| new repository | `/new` | the creation form, for a person who holds a name; the section "Creating a repository" below | the ownership registry, then `POST /v1/repos` |
+| new repository | `/new` | the creation form, for a person who holds a name; the section "Creating a repository" below | the ownership registry's creation, which makes the repository at Origo as well |
 | agent tokens | `/tokens` | one form that mints a repository-bound token and shows it once, and the explanation that nothing is listed because nothing is kept | `POST /v1/repos/{id}/tokens` |
 | patch | `/{owner}/{slug}/patch/{sha}` | the commit's diff as the bytes Origo produced, for `git apply` | the same compare call the commit screen makes |
 | open | `/open` | the box on the home screen, taking `<owner>/<slug>` or an identifier and redirecting to the repository | `/v1/repos?owner=&slug=` or `/v1/repos/{id}` |
@@ -648,10 +648,10 @@ incomplete one.
 | Decision | Value |
 |---|---|
 | the routes | `GET /new` renders the screen, `POST /new` creates, with the form token every other form requires |
-| the credential | none of its own. Both calls carry a token of the signed-in person's: the registry call the actor token minted for the control plane's audience, `api.latere.ai`, and the Origo call the one minted for Origo's. The `delegation \| none` row above still holds in full: a bug here can create nothing a person could not create with curl at the same two addresses. Written until 2026-09-16 as the session token to both, which is what the registry took while it was the identity provider's (`specs/029-platform-control-plane-token.md`) |
+| the credential | none of its own. The one call carries the actor token minted for the signed-in person for the control plane's audience, `api.latere.ai`. The `delegation \| none` row above still holds in full: a bug here can create nothing a person could not create with curl at the same address. Written until 2026-10-06 as two calls, the second to Origo with the token minted for Origo's audience, and until 2026-09-16 as the session token to both, which is what the registry took while it was the identity provider's (`specs/029-platform-control-plane-token.md`) |
 | who decides | the installation's authorizer, which is the component that holds the names and the record of who owns what. This interface asks and renders; it holds no ownership model and no second copy of one |
 | what a person may create under | what the authorizer says: their own name, and an organization they administer. The screen draws the answer and never derives one from a token claim, for the reason the repository list gives at length |
-| the order | the ownership row first, the repository second, which is the authorizer's own rule: the failure that leaves a repository unreachable is preferred to the one that leaves it unguarded |
+| the call | one, to the registry, which writes its row and makes the repository at Origo as one operation and answers once for both. Written until 2026-10-06 as the ownership row first and the repository second, each a call from here; the amendment below says what replaced it |
 | where a person lands | on the repository, at `/{owner}/{slug}`, which is also added to the addresses this session has opened |
 | an installation with no such component | no screen and no affordance. `ORIGOWEB_AUTH_URL` is the address, because the provider that issues the token is the one that holds the names; unset, the creation screen is absent exactly as the key screen is |
 
@@ -667,17 +667,34 @@ incomplete one.
 > unregistered id for twelve seconds, so it is gone. The control plane's
 > side of this is the family's identity epic leaf
 > `infrastructure/identity/id-06-code-control-plane.md` in
-> `latere-ai/specs`. The paragraph below is the arrangement as it is.
+> `latere-ai/specs`.
 
-The second call is made once, and the refusal is the answer.
-`unknown_repository` after an ownership row the registry accepted is a
-repository registered nowhere, which no waiting changes, and the screen
-says that rather than asking for another try. When the call does not
-succeed the row is withdrawn, on a context detached from the request: the
-case the withdrawal exists for is the person who submitted the form and
-closed the tab, and a call made on the request's own context would fail
-the moment the browser went and leave behind exactly the row it was added
-to remove.
+> Amended 2026-10-06. Until this date a creation was two calls from here:
+> the registry row, then Origo's create, made once. When Origo refused,
+> the row was withdrawn on a context detached from the request with a
+> five second deadline, so a closed tab could not orphan it, and a
+> withdrawal that failed was a log line and nothing else. A deletion ran
+> the other way, Origo first and the row second. Either second step could
+> fail and leave a row with no repository or a repository with no row,
+> with no reconciliation and no operator surface: issue 1 of this
+> repository. The control plane, `platformd`, answered it in its spec 27
+> by becoming the one writer of a repository's existence. Its create and
+> its delete each write the registry and call Origo with its own
+> credential inside one transaction, and an outbox repairs a commit that
+> did not land. Against that control plane the second call asked Origo
+> for a repository the control plane had already made, and Origo refuses
+> a person's own delete. The paragraph below is the arrangement as it is.
+
+The registry is asked once, and its answer is the outcome. It decides
+whether the name is the person's, writes its row and makes the repository
+at Origo as one operation, so an answer means both exist and a refusal
+means neither does. There is nothing here to take back and nothing to
+retry. A refusal Origo gave the registry arrives as `origo_refused` and is
+said on the form as a repository the installation refused; an Origo the
+registry could not reach, or one it has no way to reach, is the screen
+every unanswered call gets. The person lands at the owner and name the
+registry answered, which names the owner as the registry holds it rather
+than in the case it was typed.
 
 Renaming, transferring and freezing stay out, and so does granting
 another person access. The line this section draws is between bringing a
@@ -699,17 +716,18 @@ person with a repository they made by mistake and no answer but "ask an
 administrator". Nothing in Origo makes that the right answer. Its delete
 (spec 020) is a hold, not a purge: the repository stops answering at
 once, the content is kept for `wal.DeleteHold` and an administrator can
-undelete it through the API within that time. The audit trail is
-Origo's own: an entry in the repository's log carrying the subject and
-the actor, and an event.
+undelete it through the API within that time. The audit trail is the
+control plane's log line naming the person who deleted, beside Origo's
+own entry in the repository's log and its event, which name the control
+plane as the subject because it makes the call.
 
 | Decision | Value |
 |---|---|
 | the routes | `GET /{owner}/{slug}/delete` renders the screen, `POST /{owner}/{slug}/delete` deletes, with the form token every other form requires |
-| the credential | the person's own token, as everywhere. A bug here can delete nothing a person could not delete with curl at Origo's own address |
-| who decides | the authorizer, twice. The screen is shown to the people the registry says administer the repository, which is the same answer it gives for the visibility screen, and Origo asks its authorizer again on the deletion itself. A reader who is not an administrator gets the one refusal |
+| the credential | the person's own token, as everywhere, minted for the control plane's audience. A bug here can delete nothing a person could not delete with curl at the registry's address. Written until 2026-10-06 as Origo's own address, where the deletion was made |
+| who decides | the registry, twice. The screen is shown to the people the registry says administer the repository, which is the same answer it gives for the visibility screen, and the registry decides again on the deletion itself. A reader who is not an administrator gets the one refusal |
 | the confirmation | the screen names the repository, says what happens, and the person types `owner/slug` back. There is no script, so there is no dialog; the typed name is the safeguard, and the server checks it |
-| the order | Origo first, the ownership row second, which is the reverse of creation for the same reason: the authorizer answers from the row, so a row withdrawn first turns the deletion into a refusal and leaves the repository standing under no name. A row that outlives the deletion holds the name and is logged, which is the lesser failure |
+| the call | one, to the registry, which removes its row and deletes the repository at Origo as one operation. A refusal about the repository's own state keeps the person on the screen with the name they typed: another service manages the repository, another change to it is still in progress, or Origo refused. A refused credential, a repository this person may not delete, and an installation that did not answer get the sign-in page, the one refusal, and the unavailable screen. Written until 2026-10-06 as Origo first and the ownership row second; the amendment in "Creating a repository" says what replaced it |
 | where a person lands | on the repository list, which says what was deleted; the repository is taken out of the addresses this session has opened |
 | what this interface does not offer | undelete, and everything else in spec 020: rename, transfer, freeze, import, export. The hold is Origo's, and restoring within it is an administrator's call through the API |
 | an installation with no ownership component | no screen, as with creation |
@@ -756,13 +774,16 @@ repository, so they assert against the real read API and not a mock.
   `TestOpenTakesANameOrAnIdentifier`).
 - Deleting is offered to an administrator from the overview, asked about
   on a screen that names the repository and says what happens, refused
-  until the name is typed back exactly, done at Origo before the
-  ownership row is withdrawn and not at all when Origo refuses, taken
-  out of the addresses this session opened, and said on the list it
-  lands on; a reader gets the one refusal from both the screen and the
-  form (`internal/web`, `TestDeletingARepositoryAsksFirst`,
+  until the name is typed back exactly, done by one call to the registry
+  and none to Origo, taken out of the addresses this session opened, and
+  said on the list it lands on; each refusal of that call is its own
+  answer and deletes nothing; a reader gets the one refusal from both the
+  screen and the form (`internal/web`, `TestDeletingARepositoryAsksFirst`,
   `TestDeletingARepositoryNeedsItsNameTyped`, `TestDeletionIsNotForAReader`,
-  `TestADeletionOrigoRefusesWithdrawsNoRow`).
+  `TestEveryDeletionRefusalIsItsOwnAnswer`). Written until 2026-10-06 as
+  done at Origo before the ownership row was withdrawn and not at all when
+  Origo refused, the last test then named
+  `TestADeletionOrigoRefusesWithdrawsNoRow`.
 - The overview asks the registry once per reader per repository rather
   than once per render, and a flip is visible on the next render without
   waiting out the lifetime (`internal/web`,
@@ -899,28 +920,34 @@ repository, so they assert against the real read API and not a mock.
   the key screen, each requiring a CSRF token (proposed: `internal/web`,
   `TestRoutesAreReadOnly`, `TestAKeyFormNeedsItsToken`).
 - A signed-in person creates a repository under a name the authorizer
-  says is theirs and lands on it; the ownership row and the repository
-  carry one id; both calls carry the person's own token and no other
+  says is theirs and lands on it, at the owner and name the registry
+  answered; the call carries the person's own token and no other
   credential (proposed: `internal/web`,
   `TestCreatingARepositoryLandsOnIt`,
-  `TestTheCreationScreenSendsOnlyTheReadersToken`).
+  `TestTheCreationScreenSendsOnlyTheReadersToken`,
+  `TestACreationLandsWhereTheRegistrySays`).
 - A creation refused for a name that is not theirs, a name already
-  taken, an owner at its limit, and a request the authorizer will not
-  read are four sentences and four statuses, each with the form filled
-  in as it was left, and none of them reaches Origo (proposed:
-  `internal/web`, `TestEveryRefusalIsItsOwnSentence`). A name Origo
-  would reject never becomes a row (proposed: `internal/web`,
+  taken, an owner at its limit, a request the authorizer will not read,
+  and a repository the installation refused are five sentences, each
+  with the form filled in as it was left (proposed: `internal/web`,
+  `TestEveryRefusalIsItsOwnSentence`); a creation the registry could not
+  get Origo to answer is the unavailable screen (proposed:
+  `internal/web`, `TestACreationTheGitHostDidNotFinishIsUnavailable`). A
+  name Origo would reject never reaches the registry (proposed:
+  `internal/web`,
   `TestANameTheInstallationWillNotTakeIsRefusedBeforeARowIsWritten`).
-- Origo is asked once, whatever it refuses with, and a creation that does
-  not succeed withdraws the row it wrote (proposed: `internal/web`,
+- A creation is one call to the registry, whatever it answers, with no
+  call to Origo's create and nothing withdrawn afterwards (proposed:
+  `internal/web`, `TestACreationIsOneCallToTheRegistry`). Written until
+  2026-10-06 as one call to Origo after the row, with the row withdrawn
+  when that call failed, including when the browser had gone, held by
   `TestACreationAsksTheInstallationOnce`,
-  `TestACreationThatFailsKeepsNothing`), including when the browser that
-  submitted the form has gone (proposed: `internal/web`,
-  `TestTheRowIsWithdrawnEvenWhenTheBrowserIsGone`). Written until
-  2026-09-16 as a retry of the one refusal the registry's snapshot lag
-  produced, the first test then named
-  `TestACreationRetriesOnlyTheRefusalTheRegistryLagProduces`; the
-  amendment in "Creating a repository" says what closed the lag.
+  `TestACreationThatFailsKeepsNothing` and
+  `TestTheRowIsWithdrawnEvenWhenTheBrowserIsGone`; and until 2026-09-16
+  as a retry of the one refusal the registry's snapshot lag produced, the
+  first test then named
+  `TestACreationRetriesOnlyTheRefusalTheRegistryLagProduces`. The
+  amendments in "Creating a repository" say what changed each time.
 - A person who holds no name is told what to do next rather than shown a
   form, and an installation with no ownership component offers no
   affordance and answers the address as one it does not serve (proposed:
@@ -1156,3 +1183,23 @@ pinned `origod`, pushed the history, denied the subject, and reported
 skipped. With every other criterion green in the gate of the same run,
 the spec is `complete`. The run is the evidence for that criterion on
 that commit and is not refreshed afterwards.
+
+### One writer, 2026-10-06
+
+Creation and deletion became one call each to the registry, for the
+amendment in "Creating a repository". The two screens, `page_new.go` and
+`page_delete.go`, ask the registry once and render its answer, and the
+compensation went with the second call: the detached withdrawal on a
+failed creation and the withdrawal after a deletion. The Origo client lost
+its create and delete, so the only call it makes that is not a read is
+the mint again. The criteria above name the tests that hold the change.
+`TestACreationIsOneCallToTheRegistry`,
+`TestACreationLandsWhereTheRegistrySays`, the fifth row of
+`TestEveryRefusalIsItsOwnSentence`,
+`TestEveryDeletionRefusalIsItsOwnAnswer`, and the Origo half of
+`TestDeletingARepositoryNeedsItsNameTyped` failed against the two-call
+code; `TestACreationTheGitHostDidNotFinishIsUnavailable` holds an answer
+that did not change. The gate passes on the change. The interface now needs a
+registry that is the one writer: a registry that writes its row alone
+would report a creation with no repository behind it, which
+`docs/integrations.md` states for an operator. The spec stays `complete`.
