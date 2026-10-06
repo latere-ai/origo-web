@@ -4,17 +4,13 @@
 package web
 
 import (
-	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 
-	"github.com/latere-ai/origo-web/internal/origo"
 	"github.com/latere-ai/origo-web/internal/registry"
 )
 
@@ -22,10 +18,10 @@ import (
 //
 // Everything else here reads. This does not, and the boundary it keeps is
 // the same one: it holds no credential, decides nothing about who may create
-// what, and runs no git. A creation is two calls with the person's own
-// token. The registry says who owns the name and writes the row; Origo makes
-// the repository and asks its authorizer about the row. Refuse either and
-// nothing is created.
+// what, and runs no git. A creation is one call to the registry with the
+// person's own token. The registry decides whether the name is theirs, then
+// writes its row and makes the repository at Origo as one operation, so it
+// answers with both or with neither. The screen carries that answer back.
 //
 // It is not a write path to repository content. Nothing here edits a file,
 // moves a reference, or changes a repository that exists; the result is an
@@ -34,8 +30,8 @@ import (
 // pushing, because a push to a name that resolves to nothing is refused.
 
 // nameFormatRe is the repository name this screen accepts. It is Origo's own
-// label shape, checked here so a name is refused before a registry row is
-// written rather than after.
+// label shape, checked here so a name is refused before the registry is
+// asked.
 var nameFormatRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$`)
 
 // newRepoData is the creation screen.
@@ -67,7 +63,6 @@ const (
 	newOwnerSentence   = "You cannot create repositories under that owner. Choose one of the names below."
 	newTakenSentence   = "A repository with that name already exists under that owner. Choose another name."
 	newLimitSentence   = "That owner has reached its repository limit. Remove one first, or ask your administrator to raise it."
-	newUnknownSentence = "The repository was not created. The installation does not recognize it, and trying again will not change that. Ask your administrator."
 	newRefusedSentence = "The repository was not created. The installation refused it. Ask your administrator."
 	newNoneSentence    = "Repository creation is not available on this installation."
 )
@@ -120,17 +115,10 @@ func (s *Server) renderNew(w http.ResponseWriter, r *http.Request, rq req, statu
 
 // handleNewPost creates one repository and sends the person to it.
 //
-// The order is the registry first and Origo second, because the failure that
-// leaves a repository unreachable is preferred to the one that leaves it
-// unguarded: a row with no repository authorizes an address Origo answers
-// 404 for, while a repository with no row would be a repository nobody can
-// reach and nobody owns.
-//
-// Each half is one call. The registry reads a row it has no copy of through
-// to its store, so a repository is usable at every replica the moment it is
-// registered, and "unknown_repository" from Origo is a repository the
-// registry has no row for rather than a replica that has not caught up.
-// There is nothing for a second attempt to wait for.
+// The registry is asked once. It writes the row and makes the repository at
+// Origo inside one operation of its own, so an answer means both exist and a
+// refusal means neither does. There is nothing here to take back and nothing
+// to try again.
 func (s *Server) handleNewPost(w http.ResponseWriter, r *http.Request) {
 	if !s.sessions.CSRFValid(r) {
 		http.Error(w, "This form has expired. Go back and try again.", http.StatusForbidden)
@@ -157,66 +145,41 @@ func (s *Server) handleNewPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The id is this service's to choose, which is what lets the row be
-	// written before the repository exists and what names the same
-	// repository in both halves.
-	id := uuid.NewString()
-	if _, err := s.registry.Create(r.Context(), rq.platform, id, form.Owner, form.Name); err != nil {
+	// The registry takes the id from its caller, and the same id names the
+	// repository at Origo.
+	repo, err := s.registry.Create(r.Context(), rq.platform, uuid.NewString(), form.Owner, form.Name)
+	if err != nil {
 		s.createRefused(w, r, rq, form, err)
 		return
 	}
 
-	repo, err := s.api.Create(r.Context(), rq.tok,
-		origo.CreateRequest{ID: id, Owner: form.Owner, Slug: form.Name})
-	if err != nil {
-		// Nothing was created, so nothing is kept. A row left behind
-		// would hold the name against its own owner.
-		s.forget(r.Context(), rq.platform, id)
-		s.originRefused(w, r, rq, form, err)
-		return
-	}
-
-	s.sessions.Remember(w, r, repo.ID, repo.Owner+"/"+repo.Slug)
-	http.Redirect(w, r, nameURL(repo.Owner, repo.Slug), http.StatusSeeOther)
+	// The address is the registry's answer, which names the owner as the
+	// registry holds it rather than in the case it was typed.
+	s.sessions.Remember(w, r, repo.ID, repo.OwnerLabel+"/"+repo.Slug)
+	http.Redirect(w, r, nameURL(repo.OwnerLabel, repo.Slug), http.StatusSeeOther)
 }
 
-// forgetTimeout bounds the compensating call, which runs on a context of its
-// own and so needs a deadline of its own.
-const forgetTimeout = 5 * time.Second
-
-// forget removes the registry row a failed creation left behind.
-//
-// It runs on a context detached from the request, because the case it exists
-// for is the person who closed the tab: the browser goes while the create at
-// Origo is in flight, the request context is cancelled with it, and a
-// compensating call made on that same context would fail at once and orphan
-// the row it was added to remove. The deadline is its own and short, since
-// nobody is waiting for it.
-//
-// A failure here is logged and not shown: the person has already been told
-// the repository was not created, and a second sentence about a row they
-// never saw would tell them nothing they can act on.
-func (s *Server) forget(ctx context.Context, tok, id string) {
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), forgetTimeout)
-	defer cancel()
-	if err := s.registry.Forget(ctx, tok, id); err != nil {
-		slog.ErrorContext(ctx, "origoweb: a registry row outlived the creation that failed",
-			"repository_id", id, "error", err)
-	}
-}
-
-// createRefused answers a refusal from the registry, which is the half that
-// decides who may create under which name.
+// createRefused answers a refusal from the registry, which decides who may
+// create under which name and carries back what Origo answered it.
 func (s *Server) createRefused(w http.ResponseWriter, r *http.Request, rq req, form newRepoForm, err error) {
 	switch {
 	case registry.Unauthenticated(err):
 		s.sessions.Clear(w)
 		s.signIn(w, r, rq, http.StatusUnauthorized)
+	case registry.CodeOf(err) == registry.CodeOrigoRefused:
+		// Read by its code, because the registry answers it with the 502 it
+		// also gives an Origo it could not reach, and the person is told a
+		// different thing for each.
+		s.renderNew(w, r, rq, http.StatusConflict, form, newRefusedSentence)
 	case registry.Refused(err):
 		s.renderNew(w, r, rq, http.StatusForbidden, form, newOwnerSentence)
 	case registry.CodeOf(err) == registry.CodeAtTheLimit:
 		s.renderNew(w, r, rq, http.StatusConflict, form, newLimitSentence)
 	case registry.Conflict(err):
+		// The name is taken, or the owner name holds another owner's
+		// repositories. The registry gives the same code to a second change
+		// on an id while the first is in flight, which a fresh id never
+		// meets.
 		s.renderNew(w, r, rq, http.StatusConflict, form, newTakenSentence)
 	case registry.Invalid(err):
 		s.renderNew(w, r, rq, http.StatusBadRequest, form, newNameSentence)
@@ -224,31 +187,6 @@ func (s *Server) createRefused(w http.ResponseWriter, r *http.Request, rq req, f
 		s.noCreation(w, r, rq.v)
 	default:
 		s.unavailable(w, r, rq.v)
-	}
-}
-
-// originRefused answers a refusal from Origo, which is the half that makes
-// the repository. The row is already gone by the time this runs.
-func (s *Server) originRefused(w http.ResponseWriter, r *http.Request, rq req, form newRepoForm, err error) {
-	switch {
-	case origo.Unauthenticated(err):
-		s.sessions.Clear(w)
-		s.signIn(w, r, rq, http.StatusUnauthorized)
-	case origo.DeniedAs(err, origo.ReasonUnknownRepository):
-		// The registry wrote the row and Origo's authorizer has no
-		// repository for it. Nothing waiting will fix that, so the screen
-		// says so rather than asking for another try.
-		s.renderNew(w, r, rq, http.StatusConflict, form, newUnknownSentence)
-	case origo.Absent(err):
-		// Origo answers 403, 404 and 410 to the same question and says
-		// which for none of them, so one sentence covers all three.
-		s.renderNew(w, r, rq, http.StatusConflict, form, newRefusedSentence)
-	case origo.Unavailable(err):
-		s.unavailable(w, r, rq.v)
-	default:
-		// A name Origo will not take, and a conflict on a name Origo
-		// already holds that the registry did not know about.
-		s.renderNew(w, r, rq, http.StatusConflict, form, newTakenSentence)
 	}
 }
 

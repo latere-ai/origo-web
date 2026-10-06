@@ -101,9 +101,9 @@ func TestDeletingARepositoryAsksFirst(t *testing.T) {
 
 // TestDeletingARepositoryNeedsItsNameTyped asserts the safeguard and the
 // deletion itself: a name that does not match deletes nothing and says so;
-// the right one deletes the repository at Origo, then withdraws its
-// ownership row, drops it from what this session opened, and lands on the
-// list, which says what happened.
+// the right one asks the registry once, which removes the repository and its
+// ownership row together, drops it from what this session opened, and lands
+// on the list, which says what happened.
 func TestDeletingARepositoryNeedsItsNameTyped(t *testing.T) {
 	h := newHarness(t)
 	h.registry.canChange = true
@@ -131,8 +131,8 @@ func TestDeletingARepositoryNeedsItsNameTyped(t *testing.T) {
 	if got := rec.Header().Get("Location"); got != "/?deleted=infra%2Forigo" {
 		t.Errorf("deleting lands on %q", got)
 	}
-	if got := h.fake.Deleted(); len(got) != 1 || got[0] != "1f2e3d" {
-		t.Errorf("Origo was asked to delete %v", got)
+	if got := h.fake.Deleted(); len(got) != 0 {
+		t.Errorf("the screen asked Origo to delete %v; the registry deletes the repository", got)
 	}
 	if got := h.registry.Forgotten(); len(got) != 1 || got[0] != "1f2e3d" {
 		t.Errorf("the registry was asked to forget %v", got)
@@ -192,20 +192,59 @@ func TestDeletionIsNotForAReader(t *testing.T) {
 	}
 }
 
-// TestADeletionOrigoRefusesWithdrawsNoRow asserts the order: Origo first,
-// the ownership row second. A deletion Origo refuses leaves the row, so
-// the repository stands under its name instead of standing under none.
-func TestADeletionOrigoRefusesWithdrawsNoRow(t *testing.T) {
-	h := newHarness(t)
-	h.registry.canChange = true
-	h.fake.deleteStatus = http.StatusForbidden
-	c := h.signedIn("alice")
+// TestEveryDeletionRefusalIsItsOwnAnswer: the registry's deletion is the
+// whole of it, so its refusal is the screen's answer. A refusal that names
+// the repository's state keeps the person on the screen with what they
+// typed; a refused credential, a repository this person may not delete and
+// an installation that did not answer get the answers every other screen
+// gives them. Nothing is deleted in any of these, so the repository stays in
+// what this session opened.
+func TestEveryDeletionRefusalIsItsOwnAnswer(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		status int
+		code   string
+		want   int
+		says   string
+	}{
+		{"a refused credential", http.StatusUnauthorized, "unauthenticated", http.StatusUnauthorized, "Sign in"},
+		{"a repository this person may not delete", http.StatusForbidden, "forbidden", http.StatusNotFound, "does not exist or you do not have access"},
+		{"a repository the registry does not hold", http.StatusNotFound, "not_found", http.StatusNotFound, "does not exist or you do not have access"},
+		{"another change in progress", http.StatusConflict, "conflict", http.StatusConflict, "was not deleted. Another change to it is still in progress"},
+		{"a repository another service manages", http.StatusConflict, "repository_registered", http.StatusConflict, "was not deleted. It belongs to another service"},
+		{"a deletion the installation refused", http.StatusBadGateway, "origo_refused", http.StatusConflict, "was not deleted. The installation refused it"},
+		{"a git host that did not answer", http.StatusBadGateway, "origo_unreachable", http.StatusBadGateway, "not responding"},
+		{"an installation that cannot delete", http.StatusServiceUnavailable, "origo_unavailable", http.StatusBadGateway, "not responding"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newHarness(t)
+			h.registry.canChange = true
+			h.registry.refuseForget(tc.status, tc.code)
+			c := h.signedIn("alice")
 
-	rec := h.post(h.repoPath("/delete"), url.Values{"name": {"infra/origo"}}, c)
-	if rec.Code != http.StatusNotFound {
-		t.Errorf("a refused deletion answers %d, want the one refusal", rec.Code)
-	}
-	if got := h.registry.Forgotten(); len(got) != 0 {
-		t.Errorf("the row was withdrawn after Origo refused: %v", got)
+			rec := h.post(h.repoPath("/delete"), url.Values{"name": {"infra/origo"}}, c)
+			if rec.Code != tc.want {
+				t.Fatalf("answers %d, want %d: %s", rec.Code, tc.want, rec.Body.String())
+			}
+			body := rec.Body.String()
+			if !strings.Contains(body, tc.says) {
+				t.Errorf("the screen does not say %q: %s", tc.says, body)
+			}
+			if tc.want == http.StatusConflict && !strings.Contains(body, `value="infra/origo"`) {
+				t.Error("a refused deletion lost the name that was typed")
+			}
+			if got := h.fake.Deleted(); len(got) != 0 {
+				t.Errorf("the screen asked Origo to delete %v", got)
+			}
+			var forgets int
+			for _, call := range h.registry.Calls() {
+				if strings.HasPrefix(call, "DELETE /repositories/") {
+					forgets++
+				}
+			}
+			if forgets != 1 {
+				t.Errorf("the registry was asked to delete %d times, want once", forgets)
+			}
+		})
 	}
 }

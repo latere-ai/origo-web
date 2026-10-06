@@ -60,116 +60,56 @@ type fakeOrigo struct {
 	// way a proxy that strips the header would.
 	ignoreRange bool
 
-	// created is every repository the create route made, in order, and
-	// createCalls counts every call of the route, refused ones included,
-	// which is what a test asserts one attempt against.
-	created     []origo.CreateRequest
-	createCalls int
-	// unknownFor is how many creates the authorizer denies with
-	// unknown_repository, which is the refusal a repository the
-	// authorizer has no row for produces.
-	unknownFor int
-	// hold, when set, stops the create route until it is closed, so a
-	// test can cancel a request while the call is in flight.
-	hold chan struct{}
-	// createStatus and createCode override the create route's answer.
-	createStatus int
-	createCode   string
-	// deleted is every repository the delete route marked, in order, and
-	// deleteStatus overrides that route's answer.
-	deleted      []string
-	deleteStatus int
+	// created and deleted are every repository the create and the delete
+	// route were asked for, in order. The registry makes and deletes a
+	// repository at Origo itself, so a screen that reaches either route
+	// has made a second write of something the registry already did.
+	created []string
+	deleted []string
 }
 
-// Deleted is every repository the delete route marked.
+// Deleted is every repository the delete route was asked for.
 func (f *fakeOrigo) Deleted() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]string(nil), f.deleted...)
 }
 
-// deleteRoute is Origo's delete (spec 020): a hold, not a purge. The
-// repository is marked at once and its content kept for a time an
-// administrator can undelete it in.
+// deleteRoute is Origo's delete (spec 020): a hold, not a purge.
 func (f *fakeOrigo) deleteRoute(w http.ResponseWriter, p string) {
 	id := strings.TrimPrefix(p, "/v1/repos/")
 	f.mu.Lock()
-	code := f.deleteStatus
-	if code == 0 {
-		f.deleted = append(f.deleted, id)
-	}
+	f.deleted = append(f.deleted, id)
 	f.mu.Unlock()
-	if code != 0 {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(code)
-		_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "forbidden"}})
-		return
-	}
 	at := time.Now().UTC()
 	w.WriteHeader(http.StatusAccepted)
 	writeJSON(w, map[string]any{"id": id, "deleted_at": at, "purge_after": at.Add(7 * 24 * time.Hour)})
 }
 
-// createRoute is Origo's create: the caller chooses the id, and the
-// authorizer is asked whether this subject may administer it under this
-// owner before anything is written.
+// createRoute is Origo's create: the caller chooses the id.
 func (f *fakeOrigo) createRoute(w http.ResponseWriter, r *http.Request) {
-	var req origo.CreateRequest
+	var req struct {
+		ID    string `json:"id"`
+		Owner string `json:"owner"`
+		Slug  string `json:"slug"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": "invalid"}})
 		return
 	}
 	f.mu.Lock()
-	f.createCalls++
-	hold := f.hold
+	f.created = append(f.created, req.ID)
 	f.mu.Unlock()
-	if hold != nil {
-		<-hold
-	}
-	f.mu.Lock()
-	if f.unknownFor > 0 {
-		f.unknownFor--
-		f.mu.Unlock()
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
-		_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]any{
-			"code": "forbidden", "details": map[string]any{"reason": "unknown_repository"},
-		}})
-		return
-	}
-	status, code := f.createStatus, f.createCode
-	if status == 0 {
-		f.created = append(f.created, req)
-	}
-	f.mu.Unlock()
-	if status != 0 {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(status)
-		_ = json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"code": code}})
-		return
-	}
-	branch := req.DefaultBranch
-	if branch == "" {
-		branch = "main"
-	}
 	w.WriteHeader(http.StatusCreated)
-	writeJSON(w, origo.Repo{ID: req.ID, Owner: req.Owner, Slug: req.Slug, DefaultBranch: branch})
+	writeJSON(w, origo.Repo{ID: req.ID, Owner: req.Owner, Slug: req.Slug, DefaultBranch: "main"})
 }
 
-// Created is every repository the create route made.
-func (f *fakeOrigo) Created() []origo.CreateRequest {
+// Created is every repository the create route was asked for.
+func (f *fakeOrigo) Created() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return append([]origo.CreateRequest(nil), f.created...)
-}
-
-// CreateCalls is how many times the create route was called, whatever it
-// answered.
-func (f *fakeOrigo) CreateCalls() int {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return f.createCalls
+	return append([]string(nil), f.created...)
 }
 
 type fakeBlob struct {

@@ -7,9 +7,10 @@
 // Origo stores no user and no permission. Before every repository operation
 // it asks an operator-run endpoint whether a subject may read, write or
 // administer one repository, and that endpoint is the only component that
-// knows who owns what. Creating a repository therefore has two halves: a row
-// in that registry saying who owns it, and the repository itself at Origo.
-// This package is the first half.
+// knows who owns what. The registry it answers from is also the one writer
+// of a repository's existence: creating one writes its row and makes it at
+// Origo, deleting one removes both, and each is one call to the registry
+// that it decides and carries out whole.
 //
 // It holds the same rule the rest of this service holds. There is no
 // credential of its own here: every call carries a token the issuer minted
@@ -120,8 +121,10 @@ func Refused(err error) bool { return statusIs(err, http.StatusForbidden) }
 // learns nothing about which of the two it was.
 func NotFound(err error) bool { return statusIs(err, http.StatusNotFound) }
 
-// Conflict reports that the name is taken, the owner is at its limit, or the
-// name belongs to a different owner. CodeOf says which.
+// Conflict reports that the name is taken, the owner is at its limit, the
+// name belongs to a different owner, the repository belongs to another
+// service, or another change to the same repository is still in progress.
+// CodeOf names the limit and the other service; the rest share one code.
 func Conflict(err error) bool { return statusIs(err, http.StatusConflict) }
 
 // Invalid reports that the registry would not read the request.
@@ -136,9 +139,21 @@ func Unavailable(err error) bool {
 	return e.Status == 0 || e.Status >= 500
 }
 
-// CodeAtTheLimit is the conflict code that means this owner already holds as
-// many repositories as it may.
-const CodeAtTheLimit = "repository_limit"
+// The codes a screen tells apart from the rest of their status.
+const (
+	// CodeAtTheLimit is the conflict code that means this owner already
+	// holds as many repositories as it may.
+	CodeAtTheLimit = "repository_limit"
+	// CodeRegistered is the conflict code that means another service
+	// registered the repository and deletes it with whatever it belongs
+	// to, so a person's deletion is refused.
+	CodeRegistered = "repository_registered"
+	// CodeOrigoRefused means Origo refused the creation or the deletion the
+	// registry asked it for, and the registry changed nothing. It comes
+	// with a 502, the status an Origo the registry could not reach also
+	// gets, so only the code tells the two apart.
+	CodeOrigoRefused = "origo_refused"
+)
 
 // CodeOf is the code the registry named, empty when the error is not one of
 // its refusals.
@@ -181,13 +196,13 @@ type Repository struct {
 	Slug       string `json:"slug"`
 }
 
-// Create writes one registry row: this id, under this name, owned by
-// whoever holds that name.
+// Create brings one repository into being: this id, under this name, owned
+// by whoever holds that name.
 //
-// The row comes first and the repository at Origo second, which is the order
-// the registry's own contract fixes: the failure that leaves a repository
-// unreachable is preferred to the one that leaves it unguarded. It is
-// idempotent by id, so a caller may repeat it.
+// It is one whole operation, decided and written by the registry. The
+// registry checks the name is this person's, writes its row and makes the
+// repository at Origo, and answers only once both exist; a refusal means
+// neither does. It is idempotent by id, so a caller may repeat it.
 func (c *Client) Create(ctx context.Context, tok, id, label, slug string) (Repository, error) {
 	if c == nil || c.base == nil {
 		return Repository{}, ErrNoRegistry
@@ -208,13 +223,12 @@ func (c *Client) Create(ctx context.Context, tok, id, label, slug string) (Repos
 	return out, nil
 }
 
-// Forget removes a row this person owns.
+// Forget deletes one repository this person owns.
 //
-// It is the compensating half of a creation whose second step failed. If
-// the repository was never made, both sides are empty again and the name is
-// free; if only the answer was lost, the row is gone and the repository is
-// unreachable, which is the preferred failure of the two and which writing
-// the row again by the same id repairs.
+// It is one whole operation, decided and written by the registry. The
+// registry checks this person may delete it, removes its row and deletes the
+// repository at Origo, and answers only once both are gone; a refusal means
+// both remain. Origo keeps the content for its hold before purging it.
 func (c *Client) Forget(ctx context.Context, tok, id string) error {
 	if c == nil || c.base == nil {
 		return ErrNoRegistry

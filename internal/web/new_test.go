@@ -4,26 +4,22 @@
 package web
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
-	"time"
-
-	"latere.ai/x/pkg/authkit"
 
 	"github.com/latere-ai/origo-web/internal/config"
 	"github.com/latere-ai/origo-web/internal/registry"
 )
 
-// The creation screen: who it offers, what it writes, where it lands, and
-// what it leaves behind when the second half fails.
+// The creation screen: who it offers, the one call it makes, where it lands,
+// and what it says when the installation refuses.
 
-// TestCreatingARepositoryLandsOnIt is the whole path a person walks. The row
-// is written first and the repository second, and the browser ends up on the
-// repository rather than back on a form.
+// TestCreatingARepositoryLandsOnIt is the whole path a person walks. The
+// registry writes the row and makes the repository, and the browser ends up
+// on the repository rather than back on a form.
 func TestCreatingARepositoryLandsOnIt(t *testing.T) {
 	h := newHarness(t)
 	c := h.signedIn("alice")
@@ -48,13 +44,8 @@ func TestCreatingARepositoryLandsOnIt(t *testing.T) {
 	if len(written) != 1 || written[0].OwnerLabel != "alice" || written[0].Slug != "notes" {
 		t.Fatalf("the registry holds %+v, want one row for alice/notes", written)
 	}
-	made := h.fake.Created()
-	if len(made) != 1 || made[0].Owner != "alice" || made[0].Slug != "notes" {
-		t.Fatalf("the installation made %+v, want one repository alice/notes", made)
-	}
-	if made[0].ID != written[0].ID {
-		t.Fatalf("the row names %q and the repository %q; one creation is one id",
-			written[0].ID, made[0].ID)
+	if made := h.fake.Created(); len(made) != 0 {
+		t.Fatalf("the screen asked Origo to create %v; the registry makes the repository", made)
 	}
 	if got := rec.Header().Get("Location"); got != "/alice/notes" {
 		t.Fatalf("lands on %q, want the repository at /alice/notes", got)
@@ -65,11 +56,9 @@ func TestCreatingARepositoryLandsOnIt(t *testing.T) {
 }
 
 // TestTheCreationScreenSendsOnlyTheReadersToken: this service holds no
-// credential of its own, so both halves of a creation carry the person's
-// authority and nothing else. Each half carries the token minted for the
-// service it addresses: the registry takes the one for the control plane's
-// audience, Origo takes the one for Origo, and the session token, which is
-// the issuer's, goes to neither.
+// credential of its own, so a creation carries the person's authority and
+// nothing else. The registry takes the token minted for the control plane's
+// audience, and the session token, which is the issuer's, never leaves.
 func TestTheCreationScreenSendsOnlyTheReadersToken(t *testing.T) {
 	h := newHarness(t)
 	c := h.signedIn("alice")
@@ -94,86 +83,61 @@ func TestTheCreationScreenSendsOnlyTheReadersToken(t *testing.T) {
 	if registryCalls == 0 {
 		t.Fatal("the registry was never called")
 	}
-	// And Origo received the token the issuer minted for it on that session,
-	// which is what makes the two halves one person's authority rather than
-	// this service's.
-	want := "Bearer " + actorTokenFor("origo", session)
-	if got := h.fake.Tokens(); len(got) == 0 || got[len(got)-1] != want {
-		t.Fatalf("Origo saw %v, want the actor token %q for the session the registry saw", got, want)
+}
+
+// TestACreationIsOneCallToTheRegistry: the registry decides, writes its row
+// and makes the repository at Origo as one operation, and answers once for
+// both. The screen asks it once and asks Origo nothing, whether the answer
+// is a repository or a refusal, and has nothing to take back afterwards.
+func TestACreationIsOneCallToTheRegistry(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		status int
+		code   string
+	}{
+		{"a creation", 0, ""},
+		{"a refused creation", http.StatusBadGateway, "origo_refused"},
+		{"a creation the git host did not answer", http.StatusBadGateway, "origo_unreachable"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newHarness(t)
+			if tc.status != 0 {
+				h.registry.refuseCreate(tc.status, tc.code)
+			}
+			c := h.signedIn("alice")
+			h.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, c)
+
+			var creates int
+			for _, call := range h.registry.Calls() {
+				switch {
+				case call == "POST /repositories":
+					creates++
+				case strings.HasPrefix(call, "DELETE "):
+					t.Errorf("the screen withdrew a row: %s", call)
+				}
+			}
+			if creates != 1 {
+				t.Errorf("the registry was asked to create %d times, want once", creates)
+			}
+			if made := h.fake.Created(); len(made) != 0 {
+				t.Errorf("the screen asked Origo to create %v", made)
+			}
+		})
 	}
 }
 
-// TestACreationAsksTheInstallationOnce.
-//
-// The row this screen writes is readable at every replica the moment the
-// registry has it, so unknown_repository is a repository the installation
-// has no row for and not a replica that has not caught up. Origo is asked
-// once, whatever it answers, and the refusal reaches the person at once.
-func TestACreationAsksTheInstallationOnce(t *testing.T) {
+// TestACreationLandsWhereTheRegistrySays: the registry answers with the
+// owner name as it holds it, which can differ in case from what was typed,
+// and the repository's address is the registry's.
+func TestACreationLandsWhereTheRegistrySays(t *testing.T) {
 	h := newHarness(t)
-	// The authorizer has no row for this id and answers every create the
-	// same way, so a screen that tried again would be refused again.
-	h.fake.unknownFor = 9
 	c := h.signedIn("alice")
-
-	rec := h.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, c)
-	if rec.Code != http.StatusConflict {
-		t.Fatalf("a creation the authorizer refused answers %d, want 409", rec.Code)
+	rec := h.post("/new", url.Values{"owner": {"ALICE"}, "name": {"notes"}}, c)
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("creating answers %d, want 303: %s", rec.Code, rec.Body.String())
 	}
-	if got := h.fake.CreateCalls(); got != 1 {
-		t.Fatalf("the installation was asked %d times, want one attempt", got)
-	}
-	if body := rec.Body.String(); !strings.Contains(body, "does not recognize it") {
-		t.Errorf("the screen does not say plainly what happened: %s", body)
-	}
-	if made := h.fake.Created(); len(made) != 0 {
-		t.Fatalf("a refused creation made %v", made)
-	}
-	if got := h.registry.Forgotten(); len(got) != 1 {
-		t.Fatalf("a refused creation left %v behind; the row must go with it", got)
-	}
-
-	// A refusal that names no authorizer reason is the answer too, on the
-	// same one attempt.
-	other := newHarness(t)
-	other.fake.createStatus, other.fake.createCode = http.StatusForbidden, "forbidden"
-	oc := other.signedIn("alice")
-	rec = other.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, oc)
-	if rec.Code != http.StatusConflict {
-		t.Fatalf("a refused creation answers %d, want 409", rec.Code)
-	}
-	if got := other.fake.CreateCalls(); got != 1 {
-		t.Fatalf("a refused creation asked the installation %d times, want one", got)
-	}
-	if len(other.fake.Created()) != 0 {
-		t.Fatal("a refused creation made a repository")
-	}
-	if got := other.registry.Forgotten(); len(got) != 1 {
-		t.Fatalf("a refused creation left %v behind; the row must go with it", got)
-	}
-}
-
-// TestACreationThatFailsKeepsNothing: the person closed the tab rather than
-// retrying, so a row that outlived its repository would hold the name
-// against its own owner forever.
-func TestACreationThatFailsKeepsNothing(t *testing.T) {
-	h := newHarness(t)
-	h.fake.unknownFor = 1
-	c := h.signedIn("alice")
-
-	rec := h.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, c)
-	if rec.Code != http.StatusConflict {
-		t.Fatalf("a creation the authorizer refused answers %d, want 409", rec.Code)
-	}
-	if !strings.Contains(rec.Body.String(), "was not created") {
-		t.Errorf("the screen does not say the repository was not created: %s", rec.Body.String())
-	}
-	written := h.registry.Written()
-	if len(written) != 1 {
-		t.Fatalf("the registry saw %d writes, want one", len(written))
-	}
-	if got := h.registry.Forgotten(); len(got) != 1 || got[0] != written[0].ID {
-		t.Fatalf("withdrew %v, want the one row %q that was written", got, written[0].ID)
+	if got := rec.Header().Get("Location"); got != "/alice/notes" {
+		t.Fatalf("lands on %q, want the address the registry answered, /alice/notes", got)
 	}
 }
 
@@ -192,6 +156,7 @@ func TestEveryRefusalIsItsOwnSentence(t *testing.T) {
 		{"a name already taken", http.StatusConflict, "conflict", http.StatusConflict, "already exists under that owner"},
 		{"an owner at its limit", http.StatusConflict, registry.CodeAtTheLimit, http.StatusConflict, "reached its repository limit"},
 		{"a request the registry will not read", http.StatusBadRequest, "invalid_request", http.StatusBadRequest, "Choose an owner and a name"},
+		{"a repository the installation refused", http.StatusBadGateway, "origo_refused", http.StatusConflict, "was not created. The installation refused it"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h := newHarness(t)
@@ -211,6 +176,32 @@ func TestEveryRefusalIsItsOwnSentence(t *testing.T) {
 			}
 			if len(h.fake.Created()) != 0 {
 				t.Error("a refused creation reached the installation")
+			}
+		})
+	}
+}
+
+// TestACreationTheGitHostDidNotFinishIsUnavailable: the registry did not
+// get an answer from Origo, or cannot reach it at all on this installation.
+// Nothing was created, and the screen is the one every unanswered call gets.
+func TestACreationTheGitHostDidNotFinishIsUnavailable(t *testing.T) {
+	for _, tc := range []struct {
+		status int
+		code   string
+	}{
+		{http.StatusBadGateway, "origo_unreachable"},
+		{http.StatusServiceUnavailable, "origo_unavailable"},
+	} {
+		t.Run(tc.code, func(t *testing.T) {
+			h := newHarness(t)
+			h.registry.refuseCreate(tc.status, tc.code)
+			c := h.signedIn("alice")
+			rec := h.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, c)
+			if rec.Code != http.StatusBadGateway {
+				t.Fatalf("answers %d, want 502", rec.Code)
+			}
+			if !strings.Contains(rec.Body.String(), unavailableSentence) {
+				t.Errorf("the screen does not say the server is not responding: %s", rec.Body.String())
 			}
 		})
 	}
@@ -298,59 +289,5 @@ func TestTheCreationScreenNeedsASession(t *testing.T) {
 	}
 	if len(h.registry.Written()) != 0 || len(h.fake.Created()) != 0 {
 		t.Error("a submission with no form token created something")
-	}
-}
-
-// TestTheRowIsWithdrawnEvenWhenTheBrowserIsGone.
-//
-// The compensating withdrawal exists for the person who submits the form and
-// closes the tab. That cancels the request while the create at Origo is in
-// flight, so a withdrawal made on the request's own context would fail at
-// once and leave behind exactly the row it was added to remove.
-func TestTheRowIsWithdrawnEvenWhenTheBrowserIsGone(t *testing.T) {
-	h := newHarness(t)
-	h.fake.unknownFor = 1
-	// The installation holds the create open, which is the window the
-	// browser goes in.
-	hold := make(chan struct{})
-	h.fake.hold = hold
-	c := h.signedIn("alice")
-
-	// The form token first, on a request that completes.
-	token := h.csrf("/new", c)
-	form := url.Values{"owner": {"alice"}, "name": {"notes"}}
-	form.Set(authkit.CSRFFieldName(), token)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	req := httptest.NewRequest(http.MethodPost, "/new", strings.NewReader(form.Encode())).WithContext(ctx)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.AddCookie(c)
-	for _, ck := range h.csrfCookies {
-		req.AddCookie(ck)
-	}
-
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		h.server.ServeHTTP(httptest.NewRecorder(), req)
-	}()
-
-	// The browser goes while the installation is still answering.
-	for i := 0; h.fake.CreateCalls() == 0; i++ {
-		if i == 2000 {
-			t.Fatal("the creation never reached the installation")
-		}
-		time.Sleep(time.Millisecond)
-	}
-	cancel()
-	close(hold)
-	<-done
-
-	written := h.registry.Written()
-	if len(written) != 1 {
-		t.Fatalf("the registry saw %d writes, want one", len(written))
-	}
-	if got := h.registry.Forgotten(); len(got) != 1 || got[0] != written[0].ID {
-		t.Fatalf("withdrew %v after the browser went, want the one row %q", got, written[0].ID)
 	}
 }

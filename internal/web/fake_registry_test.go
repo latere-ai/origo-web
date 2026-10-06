@@ -13,13 +13,13 @@ import (
 	"github.com/latere-ai/origo-web/internal/session"
 )
 
-// fakeRegistry is the component that records who owns a repository: the
-// half of a creation Origo does not hold.
+// fakeRegistry is the component that records who owns a repository, and
+// the one that creates and deletes a repository at Origo.
 //
-// It answers the two questions the creation screen asks, records every call
-// with the credential it carried, and can be made to refuse each one the way
-// a real registry refuses, so a test drives the screen's refusals without
-// standing up an identity provider.
+// It answers the questions the creation and deletion screens ask, records
+// every call with the credential it carried, and can be made to refuse each
+// one the way a real registry refuses, so a test drives the screen's
+// refusals without standing up an identity provider.
 type fakeRegistry struct {
 	mu    sync.Mutex
 	calls []string
@@ -29,15 +29,18 @@ type fakeRegistry struct {
 	tokens []string
 
 	spaces registry.Namespaces
-	// written is every row the screen asked for, in order, and forgotten
-	// every row it withdrew.
+	// written is every repository the screen asked to create, in order, and
+	// forgotten every one it asked to delete.
 	written   []registry.Repository
 	forgotten []string
 
-	// createStatus and createBody override the answer of a write, so a
-	// test can drive each refusal the screen renders.
+	// createStatus and createCode override the answer of a write, so a
+	// test can drive each refusal the screen renders. forgetStatus and
+	// forgetCode do the same for a deletion.
 	createStatus int
 	createCode   string
+	forgetStatus int
+	forgetCode   string
 	// namespacesStatus overrides the answer of the namespaces question.
 	namespacesStatus int
 	// absent makes every route answer 404, which is an installation whose
@@ -89,6 +92,7 @@ func (f *fakeRegistry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.tokens = append(f.tokens, r.Header.Get("Authorization"))
 	absent, nsStatus := f.absent, f.namespacesStatus
 	createStatus, createCode := f.createStatus, f.createCode
+	forgetStatus, forgetCode := f.forgetStatus, f.forgetCode
 	refuseMint, refuseAudience := f.refuseMint, f.refuseAudience
 	f.mu.Unlock()
 
@@ -126,11 +130,19 @@ func (f *fakeRegistry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeRegistryError(w, http.StatusBadRequest, "invalid_request")
 			return
 		}
+		f.mu.Lock()
+		// The registry answers with the owner name as it holds it, whatever
+		// case the person typed it in.
+		label := body.OwnerLabel
+		for _, n := range f.spaces.Namespaces {
+			if strings.EqualFold(n.Label, label) {
+				label = n.Label
+			}
+		}
 		row := registry.Repository{
 			ID: body.ID, OwnerType: "principal", OwnerID: "p-alice",
-			OwnerLabel: body.OwnerLabel, Slug: body.Slug,
+			OwnerLabel: label, Slug: body.Slug,
 		}
-		f.mu.Lock()
 		f.written = append(f.written, row)
 		f.mu.Unlock()
 		w.WriteHeader(http.StatusCreated)
@@ -169,6 +181,10 @@ func (f *fakeRegistry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f.mu.Unlock()
 		w.WriteHeader(http.StatusNoContent)
 	case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/repositories/"):
+		if forgetStatus != 0 {
+			writeRegistryError(w, forgetStatus, forgetCode)
+			return
+		}
 		f.mu.Lock()
 		f.forgotten = append(f.forgotten, strings.TrimPrefix(r.URL.Path, "/repositories/"))
 		f.mu.Unlock()
@@ -211,14 +227,14 @@ func (f *fakeRegistry) Tokens() []string {
 	return append([]string(nil), f.tokens...)
 }
 
-// Written is every row the screen asked for.
+// Written is every repository the screen asked to create.
 func (f *fakeRegistry) Written() []registry.Repository {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]registry.Repository(nil), f.written...)
 }
 
-// Forgotten is every row the screen withdrew.
+// Forgotten is every repository the screen asked to delete.
 func (f *fakeRegistry) Forgotten() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -241,6 +257,13 @@ func (f *fakeRegistry) refuseCreate(status int, code string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.createStatus, f.createCode = status, code
+}
+
+// refuseForget makes the next deletion answer this status and code.
+func (f *fakeRegistry) refuseForget(status int, code string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.forgetStatus, f.forgetCode = status, code
 }
 
 // setNamespaces replaces what the screen is told it may create under.

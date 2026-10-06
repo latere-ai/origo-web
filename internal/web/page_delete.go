@@ -4,12 +4,12 @@
 package web
 
 import (
-	"context"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/latere-ai/origo-web/internal/registry"
 )
 
 // The deletion screen.
@@ -17,9 +17,13 @@ import (
 // Deleting is the one thing this interface does to a repository that
 // exists, and spec 023 says on what terms: asked about on a page that names
 // the repository, with the name typed back, by the person's own credential,
-// and answered by Origo as a hold and not a purge. The screen says what
-// happens before it offers the button, because this interface runs no
-// script and there is no dialog to say it in.
+// and kept by Origo as a hold and not a purge. The screen says what happens
+// before it offers the button, because this interface runs no script and
+// there is no dialog to say it in.
+//
+// A deletion is one call to the registry, which decides whether this person
+// may delete the repository, then removes its row and deletes it at Origo as
+// one operation. The screen carries that answer back.
 
 // deleteData is the screen.
 type deleteData struct {
@@ -37,12 +41,17 @@ type deleteData struct {
 
 // deleteHold is how long Origo keeps the content of a deleted repository
 // before purging it, its spec 020's DeleteHold, as the sentence the screen
-// says. Origo reports the exact moment on the deletion itself, but the
-// person reads this before they press the button.
+// says. The person reads it before they press the button.
 const deleteHold = "seven days"
 
-// deleteSentence is what a submission whose name does not match says.
-const deleteSentence = "Type the repository's name exactly as shown to confirm."
+// The sentences this screen refuses with.
+const (
+	// deleteSentence is what a submission whose name does not match says.
+	deleteSentence        = "Type the repository's name exactly as shown to confirm."
+	deleteBusySentence    = "The repository was not deleted. Another change to it is still in progress. Try again in a moment."
+	deleteManagedSentence = "The repository was not deleted. It belongs to another service on this installation, and is deleted through that service."
+	deleteRefusedSentence = "The repository was not deleted. The installation refused it. Ask your administrator."
+)
 
 // handleDelete draws the screen for one repository.
 func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
@@ -80,19 +89,10 @@ func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Origo first, the ownership row second, which is the reverse of a
-	// creation for the same reason. Origo asks the authorizer whether this
-	// person may administer the repository, and the authorizer answers
-	// from the row: a row withdrawn first would turn the deletion into a
-	// refusal and leave the repository standing under no name. A row that
-	// outlives the deletion holds the name until an operator removes it,
-	// which is the lesser failure, and the log line below is what they
-	// remove it from.
-	if _, err := s.api.Delete(r.Context(), rc.tok, rc.repo.ID); err != nil {
-		s.readFailed(w, r, rc.req, err)
+	if err := s.registry.Forget(r.Context(), rc.platform, rc.repo.ID); err != nil {
+		s.deleteRefused(w, r, rc, typed, err)
 		return
 	}
-	s.withdrawRow(r.Context(), rc.platform, rc.repo.ID)
 	s.sessions.Forget(w, r, rc.repo.ID)
 	if key, keyed := visibilityKey(rc.sub, rc.repo.ID); keyed {
 		s.visibility.Invalidate(key)
@@ -105,11 +105,11 @@ func (s *Server) handleDeletePost(w http.ResponseWriter, r *http.Request) {
 //
 // The registry decides, because it holds the record of who owns what, and
 // the question is the one it already answers for the visibility screen:
-// who may change this repository is who administers it. Origo asks its
-// authorizer the same question again on the deletion itself. A reader who
-// is not an administrator gets the one refusal every refusal gets, so
-// nobody learns which of absent and withheld it was; a signed-out visitor
-// is sent to sign in.
+// who may change this repository is who administers it. The registry
+// decides again on the deletion itself. A reader who is not an
+// administrator gets the one refusal every refusal gets, so nobody learns
+// which of absent and withheld it was; a signed-out visitor is sent to sign
+// in.
 func (s *Server) administers(w http.ResponseWriter, r *http.Request, rc repoContext) bool {
 	if !s.requirePlatform(w, r, rc.req) {
 		return false
@@ -126,16 +126,26 @@ func (s *Server) administers(w http.ResponseWriter, r *http.Request, rc repoCont
 	return true
 }
 
-// withdrawRow removes the ownership row of a repository Origo has deleted,
-// on a context detached from the request for the reason the creation
-// screen gives: the person may have closed the tab, and a call on the
-// request's own context would fail the moment the browser went.
-func (s *Server) withdrawRow(ctx context.Context, tok, id string) {
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), forgetTimeout)
-	defer cancel()
-	if err := s.registry.Forget(ctx, tok, id); err != nil {
-		slog.ErrorContext(ctx, "origoweb: a registry row outlived the repository it named",
-			"repository_id", id, "error", err)
+// deleteRefused answers a deletion the registry refused. Nothing was deleted
+// in any of these.
+//
+// A refusal about the repository's own state keeps the person on the
+// screen with the name they typed. The rest are the answers the screen's
+// first question gets: a refused credential signs in again, a repository
+// this person may not delete is the one refusal, and an installation that
+// did not answer is unavailable. Origo's refusal is read by its code,
+// because the registry answers it with the 502 it also gives an Origo it
+// could not reach.
+func (s *Server) deleteRefused(w http.ResponseWriter, r *http.Request, rc repoContext, typed string, err error) {
+	switch {
+	case registry.CodeOf(err) == registry.CodeOrigoRefused:
+		s.renderDelete(w, r, rc, http.StatusConflict, typed, deleteRefusedSentence)
+	case registry.CodeOf(err) == registry.CodeRegistered:
+		s.renderDelete(w, r, rc, http.StatusConflict, typed, deleteManagedSentence)
+	case registry.Conflict(err):
+		s.renderDelete(w, r, rc, http.StatusConflict, typed, deleteBusySentence)
+	default:
+		s.visibilityFailed(w, r, rc, err)
 	}
 }
 
