@@ -525,6 +525,11 @@ func TestAFailedSignInSaysSoInWords(t *testing.T) {
 	if body := h.get("/?auth_error=access_denied").Body.String(); !strings.Contains(body, authRefusedSentence) {
 		t.Errorf("a refusal reads as a fault:\n%s", body)
 	}
+	// A session too large for the browser is the other: no second try
+	// changes it, so it does not ask for one.
+	if body := h.get("/?auth_error=session_too_large").Body.String(); !strings.Contains(body, authTooLargeSentence) || strings.Contains(body, authFailedSentence) {
+		t.Errorf("a session too large to keep asks for another try:\n%s", body)
+	}
 	if body := h.get("/?auth_error=weather").Body.String(); !strings.Contains(body, authFailedSentence) {
 		t.Errorf("an unknown code says nothing:\n%s", body)
 	}

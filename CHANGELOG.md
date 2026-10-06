@@ -10,6 +10,11 @@ holds what was committed.
 
 ## Unreleased
 
+- Sign-in requires a verified ID token, and a session too large for the
+  browser to keep is refused rather than dropped without a word. The sign-in
+  screen says so in its own sentence, asking for the administrator instead
+  of another try. Both come with `latere.ai/x/pkg` v0.94.0.
+
 - `latere.ai/x/pkg` v0.90.2 and OpenTelemetry Go v1.46.0, past GO-2026-6615 and
   GO-2026-6505.
 

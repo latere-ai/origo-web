@@ -292,6 +292,11 @@ const (
 	authFailedSentence  = "Sign-in did not finish. Try again."
 	authRefusedSentence = "Sign-in was refused. Try again, or ask your administrator whether your account may use this installation."
 
+	// authTooLargeSentence is said when the session the issuer's tokens
+	// make is larger than a browser keeps for one cookie. Trying again
+	// builds the same session, so it asks for the administrator instead.
+	authTooLargeSentence = "Sign-in did not finish because the sign-in for your account is too large for the browser to keep. Ask your administrator."
+
 	// issuerFaultSentence is said behind a live session when the issuer did
 	// not mint one of the two tokens this interface forwards, Origo's or
 	// the control plane's: the person is signed in and this interface still
@@ -303,15 +308,18 @@ const (
 // authErrorSentence is what the screen says about the auth_error code the
 // callback may have arrived with, empty when it arrived with none.
 //
-// Only the refusal is told apart, because it is the only one a person can
-// do anything about: every other code is a fault between this service and
-// the issuer, and the same sentence covers all of them.
+// The refusal and a session too large to keep are told apart, because a
+// second try changes neither and the person can act on both: every other
+// code is a fault between this service and the issuer, and the same
+// sentence covers all of them.
 func authErrorSentence(code string) string {
 	switch code {
 	case "":
 		return ""
 	case "access_denied":
 		return authRefusedSentence
+	case "session_too_large":
+		return authTooLargeSentence
 	default:
 		return authFailedSentence
 	}
