@@ -170,9 +170,9 @@ at the identity provider. A name uses letters, digits, `.`, `_`, and `-`,
 up to 64 characters.
 
 The installation decides which names are yours and how many repositories
-each may hold, and Origo checks again before it writes anything. A refusal
-from either keeps your form as you typed it. The button appears only on
-installations that run a repository registry.
+each may hold, and makes the repository only once it has decided. A refusal
+keeps your form as you typed it, and leaves nothing behind. The button
+appears only on installations that run a repository registry.
 
 ## Visibility
 
@@ -193,11 +193,11 @@ An administrator can delete a repository from its overview. The page says
 what happens and asks for the repository's name, typed exactly as shown.
 
 Origo keeps the content for seven days before removing it for good. Deleting
-here also withdraws the registry's record of who owns the repository, so the
-name is free to use again at once. The interface has no restore button:
-restoring within the seven days is an operator's call to Origo's API, and on
-an installation whose permissions come from that record, it is registered
-again first.
+here also removes the registry's record of who owns the repository, in the
+same step, so the name is free to use again at once. The interface has no
+restore button: restoring within the seven days is an operator's call to
+Origo's API, and on an installation whose permissions come from that record,
+it is registered again first.
 
 ## When something is refused
 
@@ -208,3 +208,5 @@ again first.
 | "The identity provider did not answer for this installation." | you are signed in, but the provider did not issue the token this page needs. Pages that need no such token keep working |
 | "This form has expired" | the form was open across a sign-out; go back and submit it again |
 | "Repository creation is not available on this installation" | the installation runs no repository registry |
+| "The installation refused it. Ask your administrator." | the repository was not created or not deleted, and nothing changed |
+| "Another change to it is still in progress" | another request is changing this repository at the same moment; nothing changed, so try again in a moment |

@@ -13,6 +13,19 @@ holds what was committed.
 - `latere.ai/x/pkg` v0.90.2 and OpenTelemetry Go v1.46.0, past GO-2026-6615 and
   GO-2026-6505.
 
+- Creating and deleting a repository are each one call to the repository
+  registry, which writes its record and creates or deletes the repository at
+  Origo itself. The interface used to make the second call at Origo with the
+  person's token and, when that failed, withdraw the registry's record on a
+  call nobody watched, so a failure could leave a record with no repository
+  or a repository with no record. It no longer calls Origo's create or
+  delete. An installation's registry has to be the component that creates
+  and deletes at Origo, as `docs/integrations.md` says: one that writes only
+  its record would report a creation with no repository behind it. When Origo
+  refuses, either screen says the installation refused it, and the deletion
+  screen says when another service manages the repository or another change
+  to it is still in progress.
+
 ## v0.10.3 - 2026-09-27
 
 - A release publishes the image and the GitHub release, and deploys nothing.

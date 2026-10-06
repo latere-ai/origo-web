@@ -31,7 +31,7 @@ cookie directly, so no test drives the browser sign-in flow. Options on
 | `screens_test.go` | the calls each screen makes, exactly; a refusal and an absence rendering the same page; no script on any screen; no shared cache between readers; the stale notice; the route table being read-only apart from its forms; clone addresses built from configuration only; degrading without a directory |
 | `smoke_test.go`, `layout_test.go`, `stylesheet_test.go` | every screen renders; the layouts; both themes define every color |
 | `actor_test.go` | which token reaches which service, and what a signed-in person sees when one of the two mints fails |
-| `new_test.go`, `delete_test.go`, `page_visibility_test.go`, `tokens_test.go`, `page_keys_test.go` | the writes: order, compensation, refusals, and CSRF |
+| `new_test.go`, `delete_test.go`, `page_visibility_test.go`, `tokens_test.go`, `page_keys_test.go` | the writes: one call each, the refusals, and CSRF |
 | `limits_test.go`, `page_blob_test.go`, `page_commit_test.go`, `page_log_test.go`, `page_tree_test.go` | the reading screens, the file limits, and the diff controls |
 | `plain_test.go`, `copy_test.go`, `format_test.go` | the sentences a person reads, the values offered for copying, and how times and sizes are written |
 | `release_pin_test.go` | the install page's image and example overlay name the newest release in the changelog |

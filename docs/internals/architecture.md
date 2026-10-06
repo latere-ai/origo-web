@@ -181,14 +181,17 @@ token and each made with the person's own tokens:
 
 | Form | Calls, in order |
 |---|---|
-| New repository | registry `POST /repositories` with an identifier chosen here, then Origo `POST /v1/repos`. If Origo refuses, the row is removed again on a context detached from the request, so a closed tab does not orphan it |
-| Delete | Origo `DELETE /v1/repos/{id}`, then registry `DELETE /repositories/{id}`. The reverse order would turn the deletion into a refusal once the row was gone. A row that outlives the repository is logged for an operator |
+| New repository | registry `POST /repositories` with an identifier chosen here, and nothing else |
+| Delete | registry `DELETE /repositories/{id}`, and nothing else |
 | Visibility | registry `PUT /repositories/{id}/visibility` |
 | Agent token | Origo `POST /v1/repos/{id}/tokens`. The token is shown once and stored nowhere |
 
-The registry is written first on a creation because a row without a
-repository leaves an address Origo answers 404 for, while a repository
-without a row would be one nobody owns and nobody can reach.
+A creation and a deletion are one call each because the registry is the one
+writer of a repository's existence. It decides, writes its row, and creates
+or deletes the repository at Origo as one operation, then answers once for
+both. The interface makes no call to Origo's own create or delete, so it
+holds nothing to take back after a refusal, and a refusal from Origo
+reaches it as the registry's `origo_refused`.
 
 Whether a person may delete a repository or change its visibility is the
 registry's `can_change`, read on each render. The overview's visibility

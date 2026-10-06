@@ -13,7 +13,7 @@ slash.
 | Variable | Required | Default | What it is |
 |---|---|---|---|
 | `ORIGOWEB_ADDR` | no | `:8080` | the address the listener binds. It serves the pages, the stylesheet and fonts, and the probes `/livez`, `/readyz`, and `/version`. |
-| `ORIGOWEB_ORIGO_URL` | yes | none | the Origo installation this interface calls. Every read, the creation of a repository, its deletion, and the minting of an agent token go here. In a cluster that also runs Origo, name Origo's in-cluster Service. |
+| `ORIGOWEB_ORIGO_URL` | yes | none | the Origo installation this interface calls. Every read and the minting of an agent token go here. In a cluster that also runs Origo, name Origo's in-cluster Service. |
 | `ORIGOWEB_PUBLIC_URL` | yes | none | this interface's own address, as browsers reach it. The sign-in redirect, the address the identity provider returns to after a sign-out, and every absolute link a page shows are built from it and never from a request header. |
 | `ORIGOWEB_CLONE_HOST` | no | `ORIGOWEB_ORIGO_URL` | the base of the HTTPS clone address on the overview, and of the addresses the agent pages hand out. Set it whenever `ORIGOWEB_ORIGO_URL` is an address people cannot reach, such as an in-cluster Service. |
 | `ORIGOWEB_SSH_CLONE_HOST` | no | unset | the host of the SSH clone address, `git@<host>:owner/name.git`. Unset, the overview shows the HTTPS address alone. |

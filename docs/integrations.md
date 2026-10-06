@@ -107,8 +107,6 @@ endpoint decides each one. The interface calls these routes of Origo's API:
 | `GET /v1/repos?owner=&slug=` | every repository screen, to resolve the name | `repo.read` |
 | `GET /v1/repos/{id}` | `/r/{id}` redirects and agent tokens | `repo.read` |
 | `GET /v1/repos/{id}/refs`, `/commits`, `/commits/{sha}`, `/compare/{base}...{head}`, `/tree/{sha}`, `/blob/{sha}` | the reading screens | `repo.read` |
-| `POST /v1/repos` | **New repository** | `repo.admin` |
-| `DELETE /v1/repos/{id}` | **Delete** | `repo.admin` |
 | `POST /v1/repos/{id}/tokens` | **Agent tokens** | `repo.admin` |
 
 A 501 `directory_unsupported` on the list, or a 400, 404, or 405 from an
@@ -117,14 +115,13 @@ repository by name. The interface also asks
 `GET /v1/repos/{id}/tokens`, a listing Origo does not serve today; its
 absence is what makes the tokens page say tokens are not listed.
 
-Origo asks its authorization endpoint before it creates a repository, so
-that endpoint must already know the repository the registry has just
-recorded. A deny carrying the reason `unknown_repository` is reported as a
-repository the installation does not recognize.
+The interface never creates or deletes a repository at Origo: the
+repository registry below does both.
 
 ## The repository registry
 
-The registry records who owns which repository and whether it is public.
+The registry records who owns which repository and whether it is public,
+and it is the component that creates and deletes repositories at Origo.
 Without one, the interface cannot create, delete, or change the visibility
 of a repository, and everything else works. Its base address is
 `ORIGOWEB_REGISTRY_URL`, and each call appends a path to it:
@@ -132,15 +129,19 @@ of a repository, and everything else works. Its base address is
 | Call | Body | Answer |
 |---|---|---|
 | `GET /repositories/namespaces` | | `{"namespaces": [{"owner_type", "owner_id", "label", "name", "remaining"}], "handle"}`: where this person may create. `label` is the owner in the address, `name` what a screen calls it, `remaining` how many more repositories that owner may hold. An empty list with an empty `handle` is a person who has claimed no name |
-| `POST /repositories` | `{"id", "owner_label", "slug"}` | 2xx `{"id", "owner_type", "owner_id", "owner_label", "slug"}`. Idempotent by `id` |
-| `DELETE /repositories/{id}` | | 2xx |
+| `POST /repositories` | `{"id", "owner_label", "slug"}` | 2xx `{"id", "owner_type", "owner_id", "owner_label", "slug"}`, once the row is written and the repository exists at Origo. Idempotent by `id`. The person lands on `/{owner_label}/{slug}` |
+| `DELETE /repositories/{id}` | | 2xx, once the row is gone and the repository is deleted at Origo |
 | `GET /repositories/{id}/visibility` | | `{"visibility": "public" \| "private", "can_change"}`. `can_change` is whether this person administers the repository, and it gates deleting as well as visibility |
 | `PUT /repositories/{id}/visibility` | `{"visibility": "public" \| "private"}` | 2xx |
 
-**Order of a creation.** The interface chooses the repository's identifier,
-writes the registry row, then creates the repository at Origo. When Origo
-refuses, it deletes the row again, so a failed creation leaves neither half
-behind. A deletion runs the other way: Origo first, then the row.
+**One call each.** A creation is one `POST /repositories`, with an
+identifier the interface chooses, and a deletion is one `DELETE
+/repositories/{id}`. The registry decides, writes its row, and creates or
+deletes the repository at Origo as one operation, and it answers only once
+the two agree: a 2xx means both changed and a refusal means neither did.
+The interface takes nothing back after a refusal and never retries. A
+registry that writes its row alone is not enough, because a creation would
+then report success with no repository behind it.
 
 **Refusals.** An error body is `{"error": "<code>", "message", "detail"}`.
 The interface reads the status and `error`, writes `detail` to its log, and
@@ -150,11 +151,14 @@ never shows `message`: every sentence a person reads is its own.
 |---|---|
 | 401 | the sign-in page |
 | 403 | on creation, that they cannot create under that owner; on the other screens, not found |
-| 404 on any call but `DELETE` | an installation with no registry: creation is not available, and the visibility and delete screens answer not found |
+| 404 on `DELETE` | not found |
+| 404 on any other call | an installation with no registry: creation is not available, and the visibility and delete screens answer not found |
 | 409 with `error` `repository_limit` | the owner has reached its repository limit |
-| any other 409 | the name is taken |
+| 409 with `error` `repository_registered` | on deletion, that another service on the installation manages the repository |
+| any other 409 | on creation, that the name is taken; on deletion, that another change to the repository is still in progress |
+| 502 with `error` `origo_refused` | that the installation refused the change, and nothing was created or deleted |
 | 400 | the name is not valid |
-| 5xx, or no answer | the service is unavailable |
+| any other 5xx, or no answer | the service is unavailable |
 
 ## The SSH key store
 
