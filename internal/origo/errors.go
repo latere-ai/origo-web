@@ -18,35 +18,8 @@ import (
 type Error struct {
 	Status int
 	Code   string
-	// Details is the developer half of Origo's error document. One key
-	// matters to this service: on a 403 from the authorizer it carries
-	// "reason", the token the operator's endpoint denied with.
-	Details map[string]any
-	cause   error
+	cause  error
 }
-
-// Reason is the authorizer's own deny token, empty when the refusal did not
-// come from one. It is what lets a screen tell one refusal from another: a
-// creation refused with "unknown_repository" is a repository the registry
-// has no row for, and not the same thing as a subject the authorizer will
-// not let administer this owner.
-func (e *Error) Reason() string {
-	reason, _ := e.Details["reason"].(string)
-	return reason
-}
-
-// DeniedAs reports that err is a refusal the authorizer gave with this
-// reason.
-func DeniedAs(err error, reason string) bool {
-	var e *Error
-	return errors.As(err, &e) && e.Reason() == reason
-}
-
-// ReasonUnknownRepository is what an authorizer answers for a repository it
-// has no row for. The platform control plane reads a miss through to its
-// store, so a row it has just written is an allow at every replica at once:
-// this reason means the repository is registered nowhere.
-const ReasonUnknownRepository = "unknown_repository"
 
 func (e *Error) Error() string {
 	if e.cause != nil {
@@ -99,20 +72,14 @@ func readError(resp *http.Response) *Error {
 	e := &Error{Status: resp.StatusCode}
 	var doc struct {
 		Error struct {
-			Code    string         `json:"code"`
-			Details map[string]any `json:"details"`
+			Code string `json:"code"`
 		} `json:"error"`
-		Code    string         `json:"code"`
-		Details map[string]any `json:"details"`
+		Code string `json:"code"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<16)).Decode(&doc); err == nil {
 		e.Code = doc.Error.Code
-		e.Details = doc.Error.Details
 		if e.Code == "" {
 			e.Code = doc.Code
-		}
-		if e.Details == nil {
-			e.Details = doc.Details
 		}
 	}
 	if e.Code == "" {

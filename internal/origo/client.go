@@ -538,48 +538,18 @@ func (c *Client) Tokens(ctx context.Context, tok, id string) ([]TokenRecord, err
 	return out.Tokens, err
 }
 
-// Deletion is what Origo answers a delete with: when the repository was
-// marked, and when its content will be purged. Between the two an
-// administrator can undelete it through the API. This interface offers no
-// screen for that.
-type Deletion struct {
-	ID         string     `json:"id"`
-	DeletedAt  *time.Time `json:"deleted_at"`
-	PurgeAfter *time.Time `json:"purge_after"`
-}
-
-// Delete marks one repository deleted (spec 020). Origo evicts it at once
-// and answers 404 for it from then on; the content is held and purged
-// later. Repeating the call is the same deletion.
-func (c *Client) Delete(ctx context.Context, tok, id string) (Deletion, error) {
-	var out Deletion
-	err := c.send(ctx, http.MethodDelete, tok, "/v1/repos/"+url.PathEscape(id), nil, &out)
-	return out, err
-}
-
-// postJSON sends one JSON body and reads one JSON answer.
+// postJSON makes the one call that is not a read: the mint. It writes no
+// repository content, and it is a thing the person could do with curl at the
+// same address with the same token, which is the property the delegation
+// row of spec 023 rests on.
 func (c *Client) postJSON(ctx context.Context, tok, path string, body []byte, out any) error {
-	return c.send(ctx, http.MethodPost, tok, path, body, out)
-}
-
-// send makes the one kind of call that is not a read: the mint, the create
-// and the delete. None of them writes repository content, and each is a
-// thing the person could do with curl at the same address with the same
-// token, which is the property the delegation row of spec 023 rests on.
-func (c *Client) send(ctx context.Context, method, tok, path string, body []byte, out any) error {
 	u := *c.base
 	u.Path = strings.TrimRight(u.Path, "/") + path
-	var payload io.Reader = http.NoBody
-	if body != nil {
-		payload = bytes.NewReader(body)
-	}
-	req, err := http.NewRequestWithContext(ctx, method, u.String(), payload)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
+	req.Header.Set("Content-Type", "application/json")
 	if tok != "" {
 		req.Header.Set("Authorization", "Bearer "+tok)
 	}
@@ -595,31 +565,4 @@ func (c *Client) send(ctx context.Context, method, tok, path string, body []byte
 		return fmt.Errorf("decode %s: %w", path, err)
 	}
 	return nil
-}
-
-// CreateRequest is the body of Origo's create: the caller chooses the id,
-// which is how a registry row can be written before the repository exists
-// and how a retry of a half-finished create is the same call again.
-type CreateRequest struct {
-	ID            string `json:"id"`
-	Owner         string `json:"owner"`
-	Slug          string `json:"slug"`
-	DefaultBranch string `json:"default_branch,omitempty"`
-}
-
-// Create makes one repository at the installation.
-//
-// It is the one call this service makes that brings a repository into
-// being, and it still holds the rule the rest of the package holds: the
-// person's own token is what is sent, and Origo asks its authorizer whether
-// that person may administer this id under this owner. This service decides
-// nothing; it only carries the answer back.
-func (c *Client) Create(ctx context.Context, tok string, req CreateRequest) (Repo, error) {
-	body, err := json.Marshal(req)
-	if err != nil {
-		return Repo{}, fmt.Errorf("build request: %w", err)
-	}
-	var out Repo
-	err = c.postJSON(ctx, tok, "/v1/repos", body, &out)
-	return out, err
 }
