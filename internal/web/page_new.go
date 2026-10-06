@@ -183,7 +183,7 @@ func (s *Server) createRefused(w http.ResponseWriter, r *http.Request, rq req, f
 		s.renderNew(w, r, rq, http.StatusConflict, form, newTakenSentence)
 	case registry.Invalid(err):
 		s.renderNew(w, r, rq, http.StatusBadRequest, form, newNameSentence)
-	case errors.Is(err, registry.ErrNoRegistry):
+	case errors.Is(err, registry.ErrNoRegistry), registry.CodeOf(err) == registry.CodeOrigoUnavailable:
 		s.noCreation(w, r, rq.v)
 	default:
 		s.unavailable(w, r, rq.v)

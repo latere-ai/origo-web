@@ -214,7 +214,7 @@ func TestEveryDeletionRefusalIsItsOwnAnswer(t *testing.T) {
 		{"a repository another service manages", http.StatusConflict, "repository_registered", http.StatusConflict, "was not deleted. It belongs to another service"},
 		{"a deletion the installation refused", http.StatusBadGateway, "origo_refused", http.StatusConflict, "was not deleted. The installation refused it"},
 		{"a git host that did not answer", http.StatusBadGateway, "origo_unreachable", http.StatusBadGateway, "not responding"},
-		{"an installation that cannot delete", http.StatusServiceUnavailable, "origo_unavailable", http.StatusBadGateway, "not responding"},
+		{"an installation that cannot delete", http.StatusServiceUnavailable, "origo_unavailable", http.StatusConflict, "was not deleted. Deleting repositories is not available on this installation"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h := newHarness(t)

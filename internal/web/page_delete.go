@@ -51,6 +51,7 @@ const (
 	deleteBusySentence    = "The repository was not deleted. Another change to it is still in progress. Try again in a moment."
 	deleteManagedSentence = "The repository was not deleted. It belongs to another service on this installation, and is deleted through that service."
 	deleteRefusedSentence = "The repository was not deleted. The installation refused it. Ask your administrator."
+	deleteNoneSentence    = "The repository was not deleted. Deleting repositories is not available on this installation."
 )
 
 // handleDelete draws the screen for one repository.
@@ -142,6 +143,8 @@ func (s *Server) deleteRefused(w http.ResponseWriter, r *http.Request, rc repoCo
 		s.renderDelete(w, r, rc, http.StatusConflict, typed, deleteRefusedSentence)
 	case registry.CodeOf(err) == registry.CodeRegistered:
 		s.renderDelete(w, r, rc, http.StatusConflict, typed, deleteManagedSentence)
+	case registry.CodeOf(err) == registry.CodeOrigoUnavailable:
+		s.renderDelete(w, r, rc, http.StatusConflict, typed, deleteNoneSentence)
 	case registry.Conflict(err):
 		s.renderDelete(w, r, rc, http.StatusConflict, typed, deleteBusySentence)
 	default:

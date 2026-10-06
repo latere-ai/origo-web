@@ -153,6 +153,9 @@ const (
 	// with a 502, the status an Origo the registry could not reach also
 	// gets, so only the code tells the two apart.
 	CodeOrigoRefused = "origo_refused"
+	// CodeOrigoUnavailable means the registry has no Origo configured to
+	// create or delete at, so it changes nothing and no retry will either.
+	CodeOrigoUnavailable = "origo_unavailable"
 )
 
 // CodeOf is the code the registry named, empty when the error is not one of

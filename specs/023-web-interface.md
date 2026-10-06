@@ -727,7 +727,7 @@ plane as the subject because it makes the call.
 | the credential | the person's own token, as everywhere, minted for the control plane's audience. A bug here can delete nothing a person could not delete with curl at the registry's address. Written until 2026-10-06 as Origo's own address, where the deletion was made |
 | who decides | the registry, twice. The screen is shown to the people the registry says administer the repository, which is the same answer it gives for the visibility screen, and the registry decides again on the deletion itself. A reader who is not an administrator gets the one refusal |
 | the confirmation | the screen names the repository, says what happens, and the person types `owner/slug` back. There is no script, so there is no dialog; the typed name is the safeguard, and the server checks it |
-| the call | one, to the registry, which removes its row and deletes the repository at Origo as one operation. A refusal about the repository's own state keeps the person on the screen with the name they typed: another service manages the repository, another change to it is still in progress, or Origo refused. A refused credential, a repository this person may not delete, and an installation that did not answer get the sign-in page, the one refusal, and the unavailable screen. Written until 2026-10-06 as Origo first and the ownership row second; the amendment in "Creating a repository" says what replaced it |
+| the call | one, to the registry, which removes its row and deletes the repository at Origo as one operation. A refusal about the repository's own state keeps the person on the screen with the name they typed: another service manages the repository, another change to it is still in progress, Origo refused, or the registry has no Origo to delete at. A refused credential, a repository this person may not delete, and an installation that did not answer get the sign-in page, the one refusal, and the unavailable screen. Written until 2026-10-06 as Origo first and the ownership row second; the amendment in "Creating a repository" says what replaced it |
 | where a person lands | on the repository list, which says what was deleted; the repository is taken out of the addresses this session has opened |
 | what this interface does not offer | undelete, and everything else in spec 020: rename, transfer, freeze, import, export. The hold is Origo's, and restoring within it is an administrator's call through the API |
 | an installation with no ownership component | no screen, as with creation |
@@ -932,7 +932,10 @@ repository, so they assert against the real read API and not a mock.
   with the form filled in as it was left (proposed: `internal/web`,
   `TestEveryRefusalIsItsOwnSentence`); a creation the registry could not
   get Origo to answer is the unavailable screen (proposed:
-  `internal/web`, `TestACreationTheGitHostDidNotFinishIsUnavailable`). A
+  `internal/web`, `TestACreationTheGitHostDidNotFinishIsUnavailable`),
+  and one whose registry has no Origo configured is the screen of an
+  installation without creation, since no retry changes it (proposed:
+  `internal/web`, `TestACreationTheInstallationCannotMakeIsNotOffered`). A
   name Origo would reject never reaches the registry (proposed:
   `internal/web`,
   `TestANameTheInstallationWillNotTakeIsRefusedBeforeARowIsWritten`).
@@ -1199,7 +1202,10 @@ the mint again. The criteria above name the tests that hold the change.
 `TestEveryDeletionRefusalIsItsOwnAnswer`, and the Origo half of
 `TestDeletingARepositoryNeedsItsNameTyped` failed against the two-call
 code; `TestACreationTheGitHostDidNotFinishIsUnavailable` holds an answer
-that did not change. The gate passes on the change. The interface now needs a
+that did not change. `TestACreationTheInstallationCannotMakeIsNotOffered`
+and the `origo_unavailable` row of `TestEveryDeletionRefusalIsItsOwnAnswer`
+hold that a registry with no Origo configured is answered as an
+installation without the operation rather than one to try again. The gate passes on the change. The interface now needs a
 registry that is the one writer: a registry that writes its row alone
 would report a creation with no repository behind it, which
 `docs/integrations.md` states for an operator. The spec stays `complete`.

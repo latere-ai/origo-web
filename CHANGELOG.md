@@ -24,7 +24,9 @@ holds what was committed.
   its record would report a creation with no repository behind it. When Origo
   refuses, either screen says the installation refused it, and the deletion
   screen says when another service manages the repository or another change
-  to it is still in progress.
+  to it is still in progress. A registry with no Origo configured gets the
+  answer an installation without creation or deletion gets, not a request
+  to try again.
 
 ## v0.10.3 - 2026-09-27
 

@@ -182,15 +182,14 @@ func TestEveryRefusalIsItsOwnSentence(t *testing.T) {
 }
 
 // TestACreationTheGitHostDidNotFinishIsUnavailable: the registry did not
-// get an answer from Origo, or cannot reach it at all on this installation.
-// Nothing was created, and the screen is the one every unanswered call gets.
+// get an answer from Origo. Nothing was created, and the screen is the one
+// every unanswered call gets.
 func TestACreationTheGitHostDidNotFinishIsUnavailable(t *testing.T) {
 	for _, tc := range []struct {
 		status int
 		code   string
 	}{
 		{http.StatusBadGateway, "origo_unreachable"},
-		{http.StatusServiceUnavailable, "origo_unavailable"},
 	} {
 		t.Run(tc.code, func(t *testing.T) {
 			h := newHarness(t)
@@ -289,5 +288,26 @@ func TestTheCreationScreenNeedsASession(t *testing.T) {
 	}
 	if len(h.registry.Written()) != 0 || len(h.fake.Created()) != 0 {
 		t.Error("a submission with no form token created something")
+	}
+}
+
+// TestACreationTheInstallationCannotMakeIsNotOffered: a registry with no
+// Origo configured answers 503 origo_unavailable, which no wait changes, so
+// the screen is the one an installation without creation gets rather than
+// a request to try again.
+func TestACreationTheInstallationCannotMakeIsNotOffered(t *testing.T) {
+	h := newHarness(t)
+	h.registry.refuseCreate(http.StatusServiceUnavailable, "origo_unavailable")
+	c := h.signedIn("alice")
+	rec := h.post("/new", url.Values{"owner": {"alice"}, "name": {"notes"}}, c)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("answers %d, want 404", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, newNoneSentence) {
+		t.Errorf("the screen does not say %q: %s", newNoneSentence, body)
+	}
+	if strings.Contains(body, unavailableSentence) {
+		t.Error("the screen asks for another try on an installation that cannot create")
 	}
 }
