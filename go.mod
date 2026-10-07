@@ -6,7 +6,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/uuid v1.6.0
 	golang.org/x/net v0.59.0
-	latere.ai/x/pkg v0.90.2
+	latere.ai/x/pkg v0.94.0
 )
 
 require (

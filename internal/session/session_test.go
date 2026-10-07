@@ -15,13 +15,20 @@ import (
 	"testing"
 	"time"
 
+	"latere.ai/x/pkg/authkit/issuertest"
 	"latere.ai/x/pkg/authkit/oidc"
 )
 
 // issuer is an identity provider as far as the authorization-code flow is
-// concerned: it exchanges a code and refreshes a token.
+// concerned: it exchanges a code for an access token and a signed ID token,
+// and refreshes a token.
 type issuer struct {
 	*httptest.Server
+	// keys signs the ID token and publishes its key set. nonce is the one
+	// the login sent, which the ID token must carry back; a real issuer
+	// keeps it from the authorization request, which no test here makes.
+	keys      *issuertest.Server
+	nonce     atomic.Value
 	exchanges atomic.Int32
 	refreshes atomic.Int32
 	refuse    atomic.Bool
@@ -70,16 +77,30 @@ func newIssuer(t *testing.T) *issuer {
 		} else {
 			is.exchanges.Add(1)
 		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		answer := map[string]any{
 			"access_token":  jwtFor("alice"),
 			"refresh_token": "refresh-token",
 			"token_type":    "Bearer",
 			"expires_in":    int(is.life.Seconds()),
-		})
+		}
+		if r.Form.Get("grant_type") == "authorization_code" {
+			nonce, _ := is.nonce.Load().(string)
+			answer["id_token"] = is.keys.Mint(issuertest.Claims{
+				Sub: "alice", Aud: issuertest.StringList{"origoweb"}, Extra: map[string]any{"nonce": nonce},
+			})
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(answer)
+	})
+	// The client reads the key set at the auth service's fixed address.
+	mux.HandleFunc("GET /.well-known/jwks.json", func(w http.ResponseWriter, r *http.Request) {
+		r = r.Clone(r.Context())
+		r.URL.Path = "/jwks"
+		is.keys.Handler().ServeHTTP(w, r)
 	})
 	is.Server = httptest.NewServer(mux)
 	t.Cleanup(is.Close)
+	is.keys = issuertest.NewHandler(issuertest.WithIssuer(is.URL))
 	return is
 }
 
@@ -138,6 +159,7 @@ func TestSignInRoundTrip(t *testing.T) {
 	}
 
 	// The callback, carrying the flow cookie the redirect set.
+	is.nonce.Store(q.Get("nonce"))
 	flow := cookieNamed(t, rec, oidc.FlowCookieName)
 	cb := httptest.NewRequest(http.MethodGet, "/auth/callback?code=the-code&state="+q.Get("state"), nil)
 	cb.AddCookie(flow)
@@ -240,9 +262,13 @@ func TestRefreshAndSessionLifetime(t *testing.T) {
 	t.Run("a refresh that fails clears the session", func(t *testing.T) {
 		is.refuse.Store(true)
 		defer is.refuse.Store(false)
+		// A refresh token of its own: the library answers a token it
+		// refreshed moments ago with that refresh's outcome rather than
+		// spending it again, so reusing the first subtest's token would
+		// never reach the refusing issuer.
 		req := requestWith(t, m, &oidc.Session{
 			AccessToken:  jwtFor("alice"),
-			RefreshToken: "refresh-token",
+			RefreshToken: "refused-refresh-token",
 			Expiry:       time.Now().Add(10 * time.Second),
 		})
 		rec := httptest.NewRecorder()
