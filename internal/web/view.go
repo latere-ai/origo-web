@@ -318,8 +318,8 @@ func cleanPath(p string) string {
 
 // parentPath is the directory holding p, empty at the root.
 func parentPath(p string) string {
-	if i := strings.LastIndex(p, "/"); i >= 0 {
-		return p[:i]
+	if dir, _, ok := strings.CutLast(p, "/"); ok {
+		return dir
 	}
 	return ""
 }
