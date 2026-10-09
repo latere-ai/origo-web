@@ -2,10 +2,12 @@ module github.com/latere-ai/origo-web
 
 go 1.27.0
 
+toolchain go1.27.2
+
 require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/uuid v1.6.0
-	golang.org/x/net v0.59.0
+	golang.org/x/net v0.60.0
 	latere.ai/x/pkg v0.94.0
 )
 
@@ -38,12 +40,12 @@ require (
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.49.0 // indirect
+	golang.org/x/tools v0.51.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688 // indirect
 	google.golang.org/grpc v1.83.1 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
-	latere.ai/x/ci-gate v0.50.3 // indirect
+	latere.ai/x/ci-gate v0.51.0 // indirect
 )
 
 tool latere.ai/x/ci-gate/cmd/lateregate

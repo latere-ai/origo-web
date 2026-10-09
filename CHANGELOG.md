@@ -33,6 +33,10 @@ holds what was committed.
   answer an installation without creation or deletion gets, not a request
   to try again.
 
+### Security
+
+- Built with Go 1.27.2 and golang.org/x/net v0.60.0, which fix GO-2026-6611, GO-2026-6612, GO-2026-6613 and GO-2026-6617.
+
 ## v0.10.3 - 2026-09-27
 
 - A release publishes the image and the GitHub release, and deploys nothing.
