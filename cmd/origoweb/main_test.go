@@ -97,7 +97,7 @@ func clearEnv(t *testing.T) {
 
 // TestRunRefusesAnAddressInUse asserts the failure an operator is most
 // likely to meet: the listener cannot bind, and the process says so and
-// stops instead of serving nothing.
+// stops instead of serving nothing, with a key store configured or not.
 func TestRunRefusesAnAddressInUse(t *testing.T) {
 	held, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -106,15 +106,18 @@ func TestRunRefusesAnAddressInUse(t *testing.T) {
 	defer held.Close()
 	addr := held.Addr().String()
 
-	clearEnv(t)
-	t.Setenv("ORIGOWEB_ADDR", addr)
-	t.Setenv("ORIGOWEB_ORIGO_URL", "https://git.example")
-	t.Setenv("ORIGOWEB_PUBLIC_URL", "https://code.example")
-	t.Setenv("ORIGOWEB_AUTH_CLIENT_ID", "origoweb")
-	t.Setenv("ORIGOWEB_AUTH_COOKIE_KEY", "0123456789abcdef0123456789abcdef")
+	for name, keysURL := range map[string]string{"no key store": "", "a key store": "https://keys.example"} {
+		clearEnv(t)
+		t.Setenv("ORIGOWEB_ADDR", addr)
+		t.Setenv("ORIGOWEB_ORIGO_URL", "https://git.example")
+		t.Setenv("ORIGOWEB_PUBLIC_URL", "https://code.example")
+		t.Setenv("ORIGOWEB_AUTH_CLIENT_ID", "origoweb")
+		t.Setenv("ORIGOWEB_AUTH_COOKIE_KEY", "0123456789abcdef0123456789abcdef")
+		t.Setenv("ORIGOWEB_KEYS_URL", keysURL)
 
-	if err := run(); err == nil {
-		t.Error("the process kept running with no listener")
+		if err := run(); err == nil {
+			t.Errorf("%s: the process kept running with no listener", name)
+		}
 	}
 }
 
