@@ -84,7 +84,7 @@ jobs:
       # would have to agree with `lateregate release` on the shape of a
       # section heading by hand, and the first time they disagreed a
       # release would fail after the image was already pushed.
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v6.0.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: false
